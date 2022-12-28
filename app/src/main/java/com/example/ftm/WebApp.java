@@ -4,10 +4,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.ConsoleMessage;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 
 public class WebApp extends AppCompatActivity {
 
@@ -27,7 +29,13 @@ public class WebApp extends AppCompatActivity {
 
         Intent i = this.getIntent();
 
-        System.out.println(i);
+        Button goBack = findViewById(R.id.button2);
+        goBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
 
         if (i != null) {
             urlIndex = i.getIntExtra("ftm-type", 8);
