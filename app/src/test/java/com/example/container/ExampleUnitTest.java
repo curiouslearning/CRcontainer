@@ -1,4 +1,4 @@
-package com.example.ftm;
+package com.example.container;
 
 import org.junit.Test;
 
