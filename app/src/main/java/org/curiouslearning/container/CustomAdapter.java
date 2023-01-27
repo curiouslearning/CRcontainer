@@ -1,4 +1,5 @@
-package com.example.ftm;
+package org.curiouslearning.container;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.view.LayoutInflater;
@@ -37,7 +38,7 @@ public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder
             public void onClick(View v) {
                 Intent intent = new Intent(ctx, WebApp.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.putExtra("ftm-type", position);
+                intent.putExtra("org.curiouslearning.container-type", position);
                 ctx.startActivity(intent);
             }
         });
@@ -58,7 +59,7 @@ public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder
 //                @Override
 //                public void onClick(View v) {
 //                    Intent intent = new Intent(getApplicationContext(), OpenWebView.class);
-//                    intent.putExtra("ftm-type", i);
+//                    intent.putExtra("org.curiouslearning.container-type", i);
 //                    startActivity(intent);
 //                }
 //            });

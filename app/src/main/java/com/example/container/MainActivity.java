@@ -1,12 +1,17 @@
-package com.example.ftm;
+package org.curiouslearning.container;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.res.AssetManager;
 import android.os.Bundle;
 
-import com.example.ftm.databinding.ActivityMainBinding;
+import com.example.container.databinding.ActivityMainBinding;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,5 +35,27 @@ public class MainActivity extends AppCompatActivity {
         CustomAdapter customList = new CustomAdapter(getApplicationContext(), appIcons);
         recyclerView.setAdapter(customList);
 
+
+        AssetManager assetManager = getAssets();
+        JSONFetcher jsonFetcher = new JSONFetcher(assetManager, "dummy.json");
+        JSONArray jsonArray = jsonFetcher.getJSONArray();
+
+        System.out.println(jsonArray.length());
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+            JSONObject rec = null;
+            try {
+                rec = jsonArray.getJSONObject(i);
+                String id = rec.getString("name");
+                String loc = rec.getString("link");
+                System.out.println(id);
+                System.out.println(loc);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        }
+
     }
+
 }
