@@ -1,4 +1,4 @@
-package com.example.ftm;
+package org.curiouslearning.container;
 
 import androidx.appcompat.app.AppCompatActivity;
 

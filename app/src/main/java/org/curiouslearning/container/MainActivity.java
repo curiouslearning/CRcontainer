@@ -1,4 +1,4 @@
-package com.example.ftm;
+package org.curiouslearning.container;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -6,7 +6,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
 
-import com.example.ftm.databinding.ActivityMainBinding;
+
+import org.curiouslearning.container.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
 

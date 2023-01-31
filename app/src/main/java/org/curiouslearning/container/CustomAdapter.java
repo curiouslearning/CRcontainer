@@ -1,4 +1,4 @@
-package com.example.ftm;
+package org.curiouslearning.container;
 import android.content.Context;
 import android.content.Intent;
 import android.view.LayoutInflater;

@@ -1,4 +1,4 @@
-package com.example.ftm;
+package org.curiouslearning.container;
 
 import org.junit.Test;
 
