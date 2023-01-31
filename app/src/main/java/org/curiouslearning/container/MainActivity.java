@@ -7,6 +7,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.os.Bundle;
 
 
+import com.facebook.FacebookSdk;
+import com.google.firebase.FirebaseApp;
+
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
@@ -17,6 +20,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        FirebaseApp.initializeApp(this);
+        FacebookSdk.fullyInitialize();
 
         try {
             this.getSupportActionBar().hide();
