@@ -41,7 +41,7 @@ public class WebApp extends AppCompatActivity {
         if (i != null) {
             urlIndex = i.getIntExtra("ftm-type", 8);
             webView = (WebView) findViewById(R.id.web_app);
-            webView.setWebViewClient(new MyWebViewClient());
+            webView.setWebViewClient(new WebViewClient());
             webView.getSettings().setDomStorageEnabled(true);
             webView.getSettings().getDomStorageEnabled();
             webView.getSettings().setAppCacheEnabled(true);
