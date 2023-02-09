@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -40,7 +41,7 @@ public class WebApp extends AppCompatActivity {
         if (i != null) {
             urlIndex = i.getIntExtra("ftm-type", 8);
             webView = (WebView) findViewById(R.id.web_app);
-            webView.setWebViewClient(new WebViewClient());
+            webView.setWebViewClient(new MyWebViewClient());
             webView.getSettings().setDomStorageEnabled(true);
             webView.getSettings().getDomStorageEnabled();
             webView.getSettings().setAppCacheEnabled(true);
