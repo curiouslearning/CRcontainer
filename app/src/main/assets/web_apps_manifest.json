@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "appId": 1,
+      "appIconUrl": "images/ftm_english.png",
+      "title": "Feed The Monster US English",
+      "appUrl": "https://devcuriousreader.wpcomstaging.com/FeedTheMonsterJS2.3/"
+    },
+
+    {
+      "appId": 2,
+      "appIconUrl": "images/ftm_french.png",
+      "title": "Feed The Monster French",
+      "appUrl": "https://devcuriousreader.wpcomstaging.com/FTMFrench2.0/"
+    }
+  ]
+}

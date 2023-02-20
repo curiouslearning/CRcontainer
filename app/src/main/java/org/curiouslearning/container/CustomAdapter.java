@@ -1,6 +1,7 @@
 package org.curiouslearning.container;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,15 +10,17 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
+
 public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder>{
 
     public Context ctx;
-    public  int[] icons;
     LayoutInflater inflater;
+    public ArrayList<Bitmap> bitmaps;
 
-    public CustomAdapter(Context context, int[] icons) {
+    public CustomAdapter(Context context, ArrayList<Bitmap> bitmaps) {
         this.ctx = context;
-        this.icons = icons;
+        this.bitmaps = bitmaps;
         this.inflater = LayoutInflater.from(ctx);
     }
 
@@ -31,7 +34,7 @@ public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.imageView.setImageResource(icons[position]);
+        holder.imageView.setImageBitmap(bitmaps.get(position));
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -46,7 +49,7 @@ public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder
 
     @Override
     public int getItemCount() {
-        return icons.length;
+        return bitmaps.size();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder{
@@ -54,15 +57,6 @@ public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             imageView = (ImageView) itemView.findViewById(R.id.app_image);
-//            itemView.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    Intent intent = new Intent(getApplicationContext(), OpenWebView.class);
-//                    intent.putExtra("ftm-type", i);
-//                    startActivity(intent);
-//                }
-//            });
-
         }
     }
 }
