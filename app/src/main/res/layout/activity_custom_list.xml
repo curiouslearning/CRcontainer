@@ -13,6 +13,7 @@
         android:layout_height="120dp"
         android:layout_gravity="center"
         android:layout_weight="1"
+        android:colorFilter="@color/internet_not_available"
         android:contentDescription="@string/app_name" />
 
 </LinearLayout>

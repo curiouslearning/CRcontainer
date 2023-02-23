@@ -1,4 +1,4 @@
-package org.curiouslearning.container;
+package org.curiouslearning.container.presentation.adapters;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -10,15 +10,18 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.curiouslearning.container.R;
+import org.curiouslearning.container.WebApp;
+
 import java.util.ArrayList;
 
-public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder>{
+public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHolder>{
 
     public Context ctx;
     LayoutInflater inflater;
     public ArrayList<Bitmap> bitmaps;
 
-    public CustomAdapter(Context context, ArrayList<Bitmap> bitmaps) {
+    public WebAppsAdapter(Context context, ArrayList<Bitmap> bitmaps) {
         this.ctx = context;
         this.bitmaps = bitmaps;
         this.inflater = LayoutInflater.from(ctx);
