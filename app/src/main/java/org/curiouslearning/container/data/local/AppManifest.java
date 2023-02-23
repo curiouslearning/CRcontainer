@@ -4,18 +4,33 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import org.curiouslearning.container.data.model.WebApp;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 
 public class AppManifest {
 
     public final String jsonFileName = "web_apps_manifest.json";
+
+    public static AppManifest instance;
+
+    public static AppManifest getAppManifest() {
+        if (instance == null) {
+            instance = new AppManifest();
+        }
+        return instance;
+    }
 
     public ArrayList<Bitmap> getWebAppsMetaData(AssetManager assetManager) {
 
@@ -47,7 +62,7 @@ public class AppManifest {
         return null;
     }
 
-    public String getLocalJson(AssetManager assetManager) {
+    public String getAppManifest(AssetManager assetManager) {
         try {
             InputStream inputStream = assetManager.open(jsonFileName);
             byte[] buffer = new byte[inputStream.available()];
@@ -58,5 +73,23 @@ public class AppManifest {
             e.printStackTrace();
             return null;
         }
+    }
+
+
+    public List<WebApp> getAllWebApps(AssetManager assetManager) {
+        String jsonData = getAppManifest(assetManager);
+        Type listType = new TypeToken<List<WebApp>>(){}.getType();
+        List<WebApp> webApps =  new Gson().fromJson(convertToJsonArray(jsonData).toString(), listType);
+        return webApps;
+    }
+
+    public JSONArray convertToJsonArray(String jsonData) {
+        try {
+            JSONArray jsonArray = new JSONObject(jsonData).getJSONArray("data");
+            return jsonArray;
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

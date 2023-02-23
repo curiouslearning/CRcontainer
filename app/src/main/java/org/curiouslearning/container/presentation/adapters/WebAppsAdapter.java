@@ -1,7 +1,11 @@
-package org.curiouslearning.container;
+package org.curiouslearning.container.presentation.adapters;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,18 +14,23 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.curiouslearning.container.R;
+import org.curiouslearning.container.WebApp;
+
 import java.util.ArrayList;
 
-public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder>{
+public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHolder>{
 
     public Context ctx;
     LayoutInflater inflater;
     public ArrayList<Bitmap> bitmaps;
+    SharedPreferences sharedPref;
 
-    public CustomAdapter(Context context, ArrayList<Bitmap> bitmaps) {
+    public WebAppsAdapter(Context context, ArrayList<Bitmap> bitmaps) {
         this.ctx = context;
         this.bitmaps = bitmaps;
         this.inflater = LayoutInflater.from(ctx);
+        this.sharedPref = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
     }
 
 
@@ -33,8 +42,15 @@ public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
         holder.imageView.setImageBitmap(bitmaps.get(position));
+        holder.imageView.clearColorFilter();
+        if (!isAppCached()) {
+            ColorMatrix matrix = new ColorMatrix();
+            matrix.setSaturation(0);
+            ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+            holder.imageView.setColorFilter(filter);
+        }
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -50,6 +66,11 @@ public class CustomAdapter extends RecyclerView.Adapter<CustomAdapter.ViewHolder
     @Override
     public int getItemCount() {
         return bitmaps.size();
+    }
+
+    public boolean isAppCached() {
+        System.out.println(sharedPref.getBoolean("EnglishDataCachedStatus", false));
+        return sharedPref.getBoolean("EnglishDataCachedStatus", false);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder{

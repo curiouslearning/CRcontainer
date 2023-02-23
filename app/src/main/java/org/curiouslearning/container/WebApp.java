@@ -21,7 +21,7 @@ import android.widget.Button;
 public class WebApp extends AppCompatActivity {
 
     private WebView webView;
-    private String[] urls = {"https://devcuriousreader.wpcomstaging.com/FeedTheMonsterJS2.3/", "\n" +
+    private String[] urls = {"https://devcuriousreader.wpcomstaging.com/Testingftm_2.9/", "\n" +
             "https://devcuriousreader.wpcomstaging.com/FTMFrench2.0/"};
     private int urlIndex = 0;
     private String[] versionDataStatus={"EnglishDataCachedStatus","FrenchDataCachedStatus"};
