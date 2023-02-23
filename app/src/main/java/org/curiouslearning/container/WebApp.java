@@ -24,16 +24,19 @@ public class WebApp extends AppCompatActivity {
     private String[] urls = {"https://devcuriousreader.wpcomstaging.com/Testingftm_2.9/", "\n" +
             "https://devcuriousreader.wpcomstaging.com/FTMFrench2.0/"};
     private int urlIndex = 0;
+    private String[] versionDataStatus={"EnglishDataCachedStatus","FrenchDataCachedStatus"};
     private boolean dataCached = false;
     SharedPreferences sharedPref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        Intent i = this.getIntent();
+            if(i!=null){
+                urlIndex = i.getIntExtra("ftm-type", 8);
             sharedPref = getApplicationContext().getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
 
-            dataCached = sharedPref.getBoolean("isDataCached", false);
+            dataCached = sharedPref.getBoolean(versionDataStatus[urlIndex], false);
             try {
                 this.getSupportActionBar().hide();
             } catch (NullPointerException e) {
@@ -49,12 +52,12 @@ public class WebApp extends AppCompatActivity {
                     finish();
                 }
             });
-        Intent i = this.getIntent();
+
             if (!isInternetConnected(getApplicationContext()) && !dataCached) {
                 showPrompt("Please Connect to the Network");
             } else {
-                if (i != null) {
-                urlIndex = i.getIntExtra("ftm-type", 8);
+
+
                 webView = (WebView) findViewById(R.id.web_app);
                 webView.setWebViewClient(new WebViewClient());
                 webView.getSettings().setDomStorageEnabled(true);
@@ -87,7 +90,7 @@ public class WebApp extends AppCompatActivity {
             public void receiveData(boolean isDataCached) {
 
                 SharedPreferences.Editor editor = sharedPref.edit();
-                editor.putBoolean("isDataCached", true);
+                editor.putBoolean(versionDataStatus[urlIndex], true);
                 editor.commit();
                 if (!isInternetConnected(getApplicationContext()) && isDataCached) {
 
