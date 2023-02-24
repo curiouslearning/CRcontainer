@@ -16,7 +16,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 
 public class WebApp extends AppCompatActivity {
 
@@ -24,7 +25,7 @@ public class WebApp extends AppCompatActivity {
     private String[] urls = {"https://devcuriousreader.wpcomstaging.com/Testingftm_2.9/", "\n" +
             "https://devcuriousreader.wpcomstaging.com/FTMFrench2.0/"};
     private int urlIndex = 0;
-    private String[] versionDataStatus={"EnglishDataCachedStatus","FrenchDataCachedStatus"};
+    private String[] versionDataStatus = {"EnglishDataCachedStatus","FrenchDataCachedStatus"};
     private boolean dataCached = false;
     SharedPreferences sharedPref;
 
@@ -34,7 +35,7 @@ public class WebApp extends AppCompatActivity {
         Intent i = this.getIntent();
             if(i!=null){
                 urlIndex = i.getIntExtra("ftm-type", 8);
-            sharedPref = getApplicationContext().getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+            sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
 
             dataCached = sharedPref.getBoolean(versionDataStatus[urlIndex], false);
             try {
@@ -43,9 +44,7 @@ public class WebApp extends AppCompatActivity {
             }
             setContentView(R.layout.activity_web_app);
 
-
-
-            Button goBack = findViewById(R.id.button2);
+            ImageView goBack = findViewById(R.id.button2);
             goBack.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -56,7 +55,6 @@ public class WebApp extends AppCompatActivity {
             if (!isInternetConnected(getApplicationContext()) && !dataCached) {
                 showPrompt("Please Connect to the Network");
             } else {
-
 
                 webView = (WebView) findViewById(R.id.web_app);
                 webView.setWebViewClient(new WebViewClient());
