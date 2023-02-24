@@ -2,7 +2,6 @@ package org.curiouslearning.container.presentation.adapters;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
@@ -13,13 +12,10 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.WebApp;
-import org.curiouslearning.container.common.SharedPreferencesLiveData;
 
 import java.util.ArrayList;
 
@@ -28,8 +24,6 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public Context ctx;
     LayoutInflater inflater;
     public ArrayList<Bitmap> bitmaps;
-    SharedPreferences sharedPref;
-    SharedPreferencesLiveData sharedPreferencesLiveData;
 
     public WebAppsAdapter(Context context, ArrayList<Bitmap> bitmaps) {
         this.ctx = context;
