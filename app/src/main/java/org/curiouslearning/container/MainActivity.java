@@ -1,19 +1,17 @@
 package org.curiouslearning.container;
 
+import android.app.Application;
+import android.graphics.Bitmap;
+import android.os.Bundle;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.app.Application;
-import android.graphics.Bitmap;
-import android.os.Bundle;
-
-
 import com.facebook.FacebookSdk;
 import com.google.firebase.FirebaseApp;
 
-import org.curiouslearning.container.common.SharedPreferencesLiveData;
 import org.curiouslearning.container.data.local.AppManifest;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
@@ -54,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println(webApps);
             }
         });
-        
+
         recyclerView = findViewById(R.id.recycleView);
         recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(), 2, GridLayoutManager.HORIZONTAL, false));
         apps = new WebAppsAdapter(getApplicationContext(), appIcons);
