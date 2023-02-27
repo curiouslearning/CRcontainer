@@ -7,8 +7,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 
-import org.curiouslearning.container.data.database.DatabaseHelper;
-import org.curiouslearning.container.data.database.WebAppDao;
 import org.curiouslearning.container.data.model.WebApp;
 
 import java.util.List;

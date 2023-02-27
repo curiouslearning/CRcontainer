@@ -6,9 +6,7 @@ import android.content.res.AssetManager;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
-import androidx.recyclerview.widget.RecyclerView;
 
-import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.respository.WebAppRepository;
 
