@@ -2,9 +2,15 @@
   "data": [
     {
       "appId": 1,
-      "appIconUrl": "images/ftm_english.png",
+      "appIconUrl": "images/ftm_english_prod.png",
       "title": "Feed The Monster US English",
-      "appUrl": "https://devcuriousreader.wpcomstaging.com/FeedTheMonsterJS2.3/"
+      "appUrl": "https://feedthemonster.curiouscontent.org/?ftm_language=english"
+    },
+    {
+      "appId": 2,
+      "appIconUrl": "images/ftm_english_dev.png",
+      "title": "Feed The Monster US English",
+      "appUrl": "https://feedthemonsterdev.curiouscontent.org/?ftm_language=english"
     }
   ]
 }
