@@ -56,6 +56,8 @@ public class WebApp extends AppCompatActivity {
             } else {
 
                 webView = (WebView) findViewById(R.id.web_app);
+                webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                webView.setHorizontalScrollBarEnabled(false);
                 webView.setWebViewClient(new WebViewClient());
                 webView.getSettings().setDomStorageEnabled(true);
                 webView.getSettings().getDomStorageEnabled();
