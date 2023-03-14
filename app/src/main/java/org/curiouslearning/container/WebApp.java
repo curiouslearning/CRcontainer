@@ -21,10 +21,10 @@ import androidx.appcompat.app.AppCompatActivity;
 public class WebApp extends AppCompatActivity {
 
     private WebView webView;
-    private String[] urls = {"https://devcuriousreader.wpcomstaging.com/Testingftm_2.9/", "\n" +
-            "https://devcuriousreader.wpcomstaging.com/FTMFrench2.0/"};
+    private String[] urls = {"https://feedthemonster.curiouscontent.org/?ftm_language=english", "\n" +
+            "https://feedthemonsterdev.curiouscontent.org/?ftm_language=english"};
     private int urlIndex = 0;
-    private String[] versionDataStatus = {"EnglishDataCachedStatus","FrenchDataCachedStatus"};
+    private String[] versionDataStatus = {"EnglishDataCachedStatusProd","EnglishDataCachedStatusDev"};
     private boolean dataCached = false;
     SharedPreferences sharedPref;
 

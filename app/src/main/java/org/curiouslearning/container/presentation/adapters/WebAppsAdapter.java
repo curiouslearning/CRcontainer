@@ -24,6 +24,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public Context ctx;
     LayoutInflater inflater;
     public ArrayList<Bitmap> bitmaps;
+    private String[] versionDataStatus = {"EnglishDataCachedStatusProd","EnglishDataCachedStatusDev"};
 
     public WebAppsAdapter(Context context, ArrayList<Bitmap> bitmaps) {
         this.ctx = context;
@@ -42,7 +43,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
         holder.appIconImage.setImageBitmap(bitmaps.get(position));
         holder.appIconImage.clearColorFilter();
-        if (!isAppCached()) {
+        if (!isAppCached(position)) {
             ColorMatrix matrix = new ColorMatrix();
             matrix.setSaturation(0);
             ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
@@ -67,8 +68,8 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         return bitmaps.size();
     }
 
-    public boolean isAppCached() {
-        return ctx.getSharedPreferences("appCached", Context.MODE_PRIVATE).getBoolean("EnglishDataCachedStatus", false);
+    public boolean isAppCached(int position) {
+        return ctx.getSharedPreferences("appCached", Context.MODE_PRIVATE).getBoolean(versionDataStatus[position], false);
 
     }
 
