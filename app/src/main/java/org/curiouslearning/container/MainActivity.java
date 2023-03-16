@@ -42,9 +42,10 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        ArrayList<Bitmap> appIcons = new AppManifest().getWebAppsMetaData(getAssets());
-
         HomeViewModal homeViewModal = new HomeViewModal((Application) getApplicationContext(), getAssets());
+        homeViewModal.logAppLaunchEvent();
+
+        ArrayList<Bitmap> appIcons = new AppManifest().getWebAppsMetaData(getAssets());
 
         homeViewModal.getWebApps().observe(this, new Observer<List<WebApp>>() {
             @Override
