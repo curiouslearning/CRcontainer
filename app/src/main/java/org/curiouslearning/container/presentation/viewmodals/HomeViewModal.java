@@ -39,6 +39,6 @@ public class HomeViewModal extends AndroidViewModel {
     }
 
     public void logAppLaunchEvent() {
-        AnalyticsUtils.logEvent(application, "App Launch", new Bundle());
+        AnalyticsUtils.logEvent(application, "app_launch", new Bundle());
     }
 }
