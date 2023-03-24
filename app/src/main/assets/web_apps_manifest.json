@@ -2,15 +2,15 @@
   "data": [
     {
       "appId": 1,
-      "appIconUrl": "images/ftm_english_prod.png",
+      "appIconUrl": "images/ftm_english_dev.png",
       "title": "Feed The Monster US English",
-      "appUrl": "https://feedthemonster.curiouscontent.org/?ftm_language=english"
+      "appUrl": "https://feedthemonsterdev.curiouscontent.org/"
     },
     {
       "appId": 2,
-      "appIconUrl": "images/ftm_english_dev.png",
-      "title": "Feed The Monster US English",
-      "appUrl": "https://feedthemonsterdev.curiouscontent.org/?ftm_language=english"
+      "appIconUrl": "images/lets_fly_dev.png",
+      "title": "Lets fly",
+      "appUrl": "https://curiousreader.curiouscontent.org/"
     }
   ]
 }

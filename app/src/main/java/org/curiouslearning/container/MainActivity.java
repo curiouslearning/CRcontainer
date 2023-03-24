@@ -4,7 +4,6 @@ import android.app.Application;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -16,12 +15,13 @@ import org.curiouslearning.container.data.local.AppManifest;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
+import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
 
 import java.util.ArrayList;
-import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+
+public class MainActivity extends BaseActivity {
 
     public ActivityMainBinding binding;
     public RecyclerView recyclerView;
@@ -34,30 +34,24 @@ public class MainActivity extends AppCompatActivity {
         FirebaseApp.initializeApp(this);
         FacebookSdk.fullyInitialize();
 
-        try {
-            this.getSupportActionBar().hide();
-        }
-        catch (NullPointerException e) {}
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         HomeViewModal homeViewModal = new HomeViewModal((Application) getApplicationContext(), getAssets());
-        homeViewModal.logAppLaunchEvent();
 
         ArrayList<Bitmap> appIcons = new AppManifest().getWebAppsMetaData(getAssets());
 
-        homeViewModal.getWebApps().observe(this, new Observer<List<WebApp>>() {
-            @Override
-            public void onChanged(List<WebApp> webApps) {
-                System.out.println(webApps);
-            }
-        });
 
         recyclerView = findViewById(R.id.recycleView);
         recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(), 2, GridLayoutManager.HORIZONTAL, false));
-        apps = new WebAppsAdapter(getApplicationContext(), appIcons);
+        apps = new WebAppsAdapter(getApplicationContext(), appIcons, new ArrayList<>());
         recyclerView.setAdapter(apps);
+
+        homeViewModal.getWebApps().observe(this, webApps -> {
+            apps.webApps = webApps;
+            apps.notifyDataSetChanged();
+        });
     }
 
     @Override
