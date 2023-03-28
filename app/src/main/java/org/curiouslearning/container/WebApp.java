@@ -16,104 +16,116 @@ import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class WebApp extends AppCompatActivity {
+import org.curiouslearning.container.firebase.AnalyticsUtils;
+import org.curiouslearning.container.presentation.base.BaseActivity;
+
+public class WebApp extends BaseActivity {
+
+    private String title;
+    private String appUrl;
 
     private WebView webView;
-    private String[] urls = {"https://feedthemonster.curiouscontent.org/?ftm_language=english", "\n" +
-            "https://feedthemonsterdev.curiouscontent.org/?ftm_language=english"};
-    private int urlIndex = 0;
-    private String[] versionDataStatus = {"EnglishDataCachedStatusProd","EnglishDataCachedStatusDev"};
-    private boolean dataCached = false;
-    SharedPreferences sharedPref;
+    private SharedPreferences sharedPref;
+    private int urlIndex;
+    private boolean dataCached;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Intent i = this.getIntent();
-            if(i!=null){
-                urlIndex = i.getIntExtra("ftm-type", 8);
-            sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
+        setContentView(R.layout.activity_web_app);
+        getIntentData();
+        initViews();
+        logAppLaunchEvent();
+        loadWebView();
+    }
 
-            dataCached = sharedPref.getBoolean(versionDataStatus[urlIndex], false);
-            try {
-                this.getSupportActionBar().hide();
-            } catch (NullPointerException e) {
+    private void getIntentData() {
+        Intent intent = getIntent();
+        if (intent != null) {
+            urlIndex = intent.getIntExtra("ftm-type", 0);
+            title = intent.getStringExtra("title");
+            appUrl = intent.getStringExtra("appUrl");
+        }
+    }
+
+    private void initViews() {
+        sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
+        dataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
+        ImageView goBack = findViewById(R.id.button2);
+        goBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
             }
-            setContentView(R.layout.activity_web_app);
+        });
+    }
 
-            ImageView goBack = findViewById(R.id.button2);
-            goBack.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    finish();
-                }
-            });
+    private void loadWebView() {
+        if (!isInternetConnected(getApplicationContext()) && !dataCached) {
+            showPrompt("Please Connect to the Network");
+            return;
+        }
 
-            if (!isInternetConnected(getApplicationContext()) && !dataCached) {
-                showPrompt("Please Connect to the Network");
-            } else {
+        webView = findViewById(R.id.web_app);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setHorizontalScrollBarEnabled(false);
+        webView.setWebViewClient(new WebViewClient());
+        webView.getSettings().setDomStorageEnabled(true);
+        webView.getSettings().getDomStorageEnabled();
+        webView.getSettings().setAppCacheEnabled(true);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.addJavascriptInterface(new WebAppInterface(this), "Android");
+        webView.loadUrl(appUrl);
+        webView.setWebChromeClient(new WebChromeClient() {
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                return false;
+            }
+        });
+    }
 
-                webView = (WebView) findViewById(R.id.web_app);
-                webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-                webView.setHorizontalScrollBarEnabled(false);
-                webView.setWebViewClient(new WebViewClient());
-                webView.getSettings().setDomStorageEnabled(true);
-                webView.getSettings().getDomStorageEnabled();
-                webView.getSettings().setAppCacheEnabled(true);
-//            webView.getSettings().setLoadsImagesAutomatically(true);
-                webView.getSettings().setJavaScriptEnabled(true);
-                webView.addJavascriptInterface(new WebAppInterface(this), "Android");
-//            webView.getSettings().setAllowFileAccess(true);
-                webView.loadUrl(urls[urlIndex]);
-                webView.setWebChromeClient(new WebChromeClient() {
-                    public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-                        return false;
+    private boolean isInternetConnected(Context context){
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    private void showPrompt(String message){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        finish();
                     }
-
                 });
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
+    public class WebAppInterface {
+        private Context mContext;
+
+        WebAppInterface(Context context) {
+            mContext = context;
+        }
+
+        @JavascriptInterface
+        public void receiveData(boolean isDataCached) {
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putBoolean(String.valueOf(urlIndex), true);
+            editor.commit();
+
+            if (!isInternetConnected(getApplicationContext()) && isDataCached) {
+                showPrompt("Please Connect to the Network");
             }
+
+            // Do something with the data
         }
     }
-        public class WebAppInterface {
-            Context mContext;
 
-            /** Instantiate the interface and set the context */
-            WebAppInterface(Context c) {
-                mContext = c;
-            }
-
-            /** Receive data from the PWA */
-            @JavascriptInterface
-            public void receiveData(boolean isDataCached) {
-
-                SharedPreferences.Editor editor = sharedPref.edit();
-                editor.putBoolean(versionDataStatus[urlIndex], true);
-                editor.commit();
-                if (!isInternetConnected(getApplicationContext()) && isDataCached) {
-
-                    showPrompt("Please Connect to the Network");
-                }
-                // Do something with the data
-            }
-        }
-        public boolean isInternetConnected(Context context){
-            ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-        }
-        private void showPrompt (String message){
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setMessage(message)
-                    .setCancelable(false)
-                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            // do nothing
-                            finish();
-                        }
-                    });
-            AlertDialog alert = builder.create();
-            alert.show();
-        }
+    //log firebase Event
+    public void logAppLaunchEvent() {
+        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl);
     }
+}
