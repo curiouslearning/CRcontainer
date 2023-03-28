@@ -4,15 +4,14 @@ import android.app.Application;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 
-import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.facebook.FacebookSdk;
+import com.facebook.appevents.AppEventsLogger;
 import com.google.firebase.FirebaseApp;
 
 import org.curiouslearning.container.data.local.AppManifest;
-import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
@@ -33,7 +32,7 @@ public class MainActivity extends BaseActivity {
 
         FirebaseApp.initializeApp(this);
         FacebookSdk.fullyInitialize();
-
+        AppEventsLogger.activateApp(getApplication());
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
