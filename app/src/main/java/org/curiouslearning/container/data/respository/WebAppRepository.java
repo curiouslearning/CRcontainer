@@ -14,20 +14,24 @@ import java.util.List;
 
 public class WebAppRepository {
 
-    private LiveData<List<WebApp>> webApps;
     private WebAppDatabase webAppDatabase;
-    private RetrofitInstance retrofit;
     private AppManifest appManifest;
+    private LiveData<List<WebApp>> webApps;
 
 
     public WebAppRepository(Application application) {
         webAppDatabase = new WebAppDatabase(application);
-        webApps = webAppDatabase.getAllWebApps();
         appManifest = AppManifest.getAppManifest();
     }
 
-    public LiveData<List<WebApp>> getWebApps() {
-        return webApps;
+    public LiveData<List<WebApp>> getWebApps(AssetManager assetManager) {
+        webApps = webAppDatabase.getAllWebApps();
+        if (webApps.getValue() != null && !webApps.getValue().isEmpty()) {
+            return webApps;
+        } else {
+            insertAll(assetManager);
+            return webApps;
+        }
     }
 
     public void insertAll(AssetManager assetManager) {

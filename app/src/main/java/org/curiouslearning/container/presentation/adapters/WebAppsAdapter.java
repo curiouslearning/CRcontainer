@@ -70,7 +70,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
     @Override
     public int getItemCount() {
-        return appIcons.size();
+        return webApps.size();
     }
 
     public boolean isAppCached(int position) {
