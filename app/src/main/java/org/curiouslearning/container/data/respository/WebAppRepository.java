@@ -1,37 +1,39 @@
 package org.curiouslearning.container.data.respository;
 
 import android.app.Application;
-import android.content.res.AssetManager;
 
 import androidx.lifecycle.LiveData;
 
 import org.curiouslearning.container.data.database.WebAppDatabase;
-import org.curiouslearning.container.data.local.AppManifest;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.remote.RetrofitInstance;
+import org.curiouslearning.container.utilities.ConnectionUtils;
 
 import java.util.List;
 
 public class WebAppRepository {
 
-    private LiveData<List<WebApp>> webApps;
     private WebAppDatabase webAppDatabase;
-    private RetrofitInstance retrofit;
-    private AppManifest appManifest;
-
+    private RetrofitInstance retrofitInstance;
+    private LiveData<List<WebApp>> webApp;
+    private Application application;
 
     public WebAppRepository(Application application) {
+        this.application = application;
+        retrofitInstance = RetrofitInstance.getInstance();
         webAppDatabase = new WebAppDatabase(application);
-        webApps = webAppDatabase.getAllWebApps();
-        appManifest = AppManifest.getAppManifest();
+
     }
 
     public LiveData<List<WebApp>> getWebApps() {
-        return webApps;
+        webApp = webAppDatabase.getAllWebApps();
+        if (webApp.getValue() != null && !webApp.getValue().isEmpty()) {
+            return webApp;
+        } else {
+            if (ConnectionUtils.getInstance().isInternetConnected(application)) {
+                retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
+            }
+            return  webApp;
+        }
     }
-
-    public void insertAll(AssetManager assetManager) {
-        webAppDatabase.insertAll(appManifest.getAllWebApps(assetManager));
-    }
-
 }
