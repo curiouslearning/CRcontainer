@@ -2,7 +2,6 @@ package org.curiouslearning.container;
 
 import android.app.Application;
 import android.content.DialogInterface;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AlertDialog;
@@ -14,15 +13,11 @@ import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
 import com.google.firebase.FirebaseApp;
 
-import org.curiouslearning.container.data.database.WebAppDatabase;
-import org.curiouslearning.container.data.local.AppManifest;
 import org.curiouslearning.container.data.model.WebApp;
-import org.curiouslearning.container.data.remote.RetrofitInstance;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
-import org.curiouslearning.container.utilities.ConnectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +29,6 @@ public class MainActivity extends BaseActivity {
     public RecyclerView recyclerView;
     public WebAppsAdapter apps;
     public HomeViewModal homeViewModal;
-    private boolean isDataExits;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
