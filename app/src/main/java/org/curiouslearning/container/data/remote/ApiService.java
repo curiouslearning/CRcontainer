@@ -7,7 +7,7 @@ import retrofit2.http.GET;
 
 public interface ApiService {
 
-    @GET("")
+    @GET("web_app_manifest.json")
     Call<List<WebApp>> getWebApps();
 
 }

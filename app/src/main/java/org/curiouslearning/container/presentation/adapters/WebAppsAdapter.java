@@ -2,7 +2,6 @@ package org.curiouslearning.container.presentation.adapters;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.view.LayoutInflater;
@@ -15,24 +14,21 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
+import org.curiouslearning.container.utilities.CacheUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHolder>{
 
     public Context ctx;
     LayoutInflater inflater;
-    public ArrayList<Bitmap> appIcons;
     public List<WebApp> webApps;
-    private String[] versionDataStatus = {"EnglishDataCachedStatusDev", "CRDataCachedStatusDev"};
 
-    public WebAppsAdapter(Context context, ArrayList<Bitmap> appIcons, List<WebApp> webApps) {
+
+    public WebAppsAdapter(Context context, List<WebApp> webApps) {
         this.ctx = context;
-        this.appIcons = appIcons;
         this.webApps = webApps;
         this.inflater = LayoutInflater.from(ctx);
-
     }
 
     @NonNull
@@ -44,7 +40,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
-        holder.appIconImage.setImageBitmap(appIcons.get(position));
+        CacheUtils.loadWithPicasso(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
         if (!isAppCached(position)) {
             ColorMatrix matrix = new ColorMatrix();
@@ -70,7 +66,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
     @Override
     public int getItemCount() {
-        return appIcons.size();
+        return webApps.size();
     }
 
     public boolean isAppCached(int position) {

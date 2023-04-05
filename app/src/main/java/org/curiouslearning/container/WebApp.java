@@ -19,6 +19,7 @@ import androidx.appcompat.app.AlertDialog;
 
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
+import org.curiouslearning.container.utilities.ConnectionUtils;
 
 public class WebApp extends BaseActivity {
 
@@ -85,9 +86,7 @@ public class WebApp extends BaseActivity {
     }
 
     private boolean isInternetConnected(Context context){
-        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        return ConnectionUtils.getInstance().isInternetConnected(context);
     }
 
     private void showPrompt(String message){
