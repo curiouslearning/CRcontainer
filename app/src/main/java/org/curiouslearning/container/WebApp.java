@@ -29,7 +29,7 @@ public class WebApp extends BaseActivity {
     private WebView webView;
     private SharedPreferences sharedPref;
     private int urlIndex;
-    private boolean isdataCached;
+    private boolean isDataCached;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +52,7 @@ public class WebApp extends BaseActivity {
 
     private void initViews() {
         sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
-        isdataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
+        isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -63,7 +63,7 @@ public class WebApp extends BaseActivity {
     }
 
     private void loadWebView() {
-        if (!isInternetConnected(getApplicationContext()) && !isdataCached) {
+        if (!isInternetConnected(getApplicationContext()) && !isDataCached) {
             showPrompt("Please Connect to the Network");
             return;
         }
