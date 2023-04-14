@@ -24,6 +24,7 @@ public abstract class DatabaseHelper extends RoomDatabase {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
                             DatabaseHelper.class,"web_apps_database")
+                    .fallbackToDestructiveMigration()
                     .addCallback(roomCallback)
                     .build();
         }
@@ -48,7 +49,7 @@ public abstract class DatabaseHelper extends RoomDatabase {
 
         @Override
         protected Void doInBackground(Void... voids) {
-            webAppDao.deleteAllWebApp();
+//            webAppDao.deleteAllWebApp();
             return null;
         }
     }
