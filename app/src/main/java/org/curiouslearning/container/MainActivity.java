@@ -1,7 +1,9 @@
 package org.curiouslearning.container;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AlertDialog;
@@ -19,9 +21,12 @@ import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
 
+import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
-
 
 public class MainActivity extends BaseActivity {
 
@@ -29,6 +34,7 @@ public class MainActivity extends BaseActivity {
     public RecyclerView recyclerView;
     public WebAppsAdapter apps;
     public HomeViewModal homeViewModal;
+    private SharedPreferences cachedPseudo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +43,7 @@ public class MainActivity extends BaseActivity {
         FirebaseApp.initializeApp(this);
         FacebookSdk.fullyInitialize();
         AppEventsLogger.activateApp(getApplication());
-
+        cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -61,13 +67,33 @@ public class MainActivity extends BaseActivity {
         recyclerView.setAdapter(apps);
     }
 
+    private void cachePseudoId() {
+        Date now = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(now);
+        cachedPseudo = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = cachedPseudo.edit();
+        if(!cachedPseudo.contains("pseudoId")){
+            editor.putString("pseudoId", generatePseudoId()+ calendar.get(Calendar.YEAR) + (calendar.get(Calendar.MONTH) + 1) +
+                    calendar.get(Calendar.DAY_OF_MONTH) + calendar.get(Calendar.HOUR_OF_DAY) + calendar.get(Calendar.MINUTE) + calendar.get(Calendar.SECOND));
+            editor.commit();
+        }
+    }
+
     @Override
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
     }
 
-    private void showPrompt(String message){
+    private String generatePseudoId() {
+        SecureRandom random = new SecureRandom();
+        String pseudoId = new BigInteger(130, random).toString(32);
+        System.out.println(pseudoId);
+        return pseudoId;
+    }
+
+    private void showPrompt(String message) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(message)
                 .setCancelable(false)
