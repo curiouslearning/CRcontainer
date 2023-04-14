@@ -3,11 +3,9 @@ package org.curiouslearning.container.data.database;
 
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
-import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
-import androidx.room.Update;
 import org.curiouslearning.container.data.model.WebApp;
 import java.util.List;
 
@@ -20,11 +18,6 @@ public interface WebAppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertAll(List<WebApp> webApp);
 
-    @Update
-    void update(WebApp webApp);
-
-    @Delete
-    void delete(WebApp webApp);
 
     @Query("DELETE FROM web_app_table")
     void deleteAllWebApp();

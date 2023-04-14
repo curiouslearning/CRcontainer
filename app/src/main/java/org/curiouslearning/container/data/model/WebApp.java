@@ -1,16 +1,8 @@
 package org.curiouslearning.container.data.model;
 
 
-import android.content.Context;
-import android.content.res.AssetManager;
-import android.graphics.Bitmap;
-
-import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
-
-import java.io.IOException;
-import java.io.InputStream;
 
 @Entity(tableName = "web_app_table")
 public class WebApp {
