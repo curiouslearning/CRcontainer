@@ -113,7 +113,7 @@ public class WebApp extends BaseActivity {
         }
 
         @JavascriptInterface
-        public void receiveData(boolean dataCachedStatus) {
+        public void cachedStatus(boolean dataCachedStatus) {
             SharedPreferences.Editor editor = sharedPref.edit();
             editor.putBoolean(String.valueOf(urlIndex), true);
             editor.commit();
