@@ -20,7 +20,8 @@ import androidx.appcompat.app.AlertDialog;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
-
+import java.security.SecureRandom;
+import java.math.BigInteger;
 public class WebApp extends BaseActivity {
 
     private String title;
@@ -29,6 +30,8 @@ public class WebApp extends BaseActivity {
     private WebView webView;
     private SharedPreferences sharedPref;
     private int urlIndex;
+    private boolean dataCached;
+    private String pseudoId;
     private boolean isDataCached;
 
     @Override
@@ -52,7 +55,8 @@ public class WebApp extends BaseActivity {
 
     private void initViews() {
         sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
-        isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
+        dataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
+        pseudoId= sharedPref.getString("pseudoId", "");
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,14 +81,13 @@ public class WebApp extends BaseActivity {
         webView.getSettings().setAppCacheEnabled(true);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
-        webView.loadUrl(appUrl);
+        webView.loadUrl(appUrl+"?ftm_pseudoId="+pseudoId);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 return false;
             }
         });
     }
-
     private boolean isInternetConnected(Context context){
         return ConnectionUtils.getInstance().isInternetConnected(context);
     }
@@ -125,6 +128,7 @@ public class WebApp extends BaseActivity {
 
     //log firebase Event
     public void logAppLaunchEvent() {
-        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl);
+        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl,pseudoId);
+
     }
 }
