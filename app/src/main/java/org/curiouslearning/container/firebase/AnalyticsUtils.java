@@ -10,7 +10,7 @@ public class AnalyticsUtils {
 
     private static FirebaseAnalytics mFirebaseAnalytics;
 
-    public static void logEvent(Context context, String eventName, String appName, String appUrl) {
+    public static void logEvent(Context context, String eventName, String appName, String appUrl ,String pseudoId) {
         // Initialize Firebase Analytics if not already initialized
         if (mFirebaseAnalytics == null) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -18,9 +18,10 @@ public class AnalyticsUtils {
 
         // Log a custom event
         Bundle bundle = new Bundle();
-        bundle.putString(FirebaseAnalytics.Param.START_DATE, new Date().toString());
+
         bundle.putString("web_app_title", appName);
         bundle.putString("web_app_url", appUrl);
+        bundle.putString("user_id", pseudoId);
         mFirebaseAnalytics.logEvent(eventName, bundle);
     }
 }
