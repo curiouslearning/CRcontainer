@@ -30,7 +30,6 @@ public class WebApp extends BaseActivity {
     private WebView webView;
     private SharedPreferences sharedPref;
     private int urlIndex;
-    private boolean dataCached;
     private String pseudoId;
     private boolean isDataCached;
 
@@ -55,7 +54,7 @@ public class WebApp extends BaseActivity {
 
     private void initViews() {
         sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
-        dataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
+        isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         pseudoId= sharedPref.getString("pseudoId", "");
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
