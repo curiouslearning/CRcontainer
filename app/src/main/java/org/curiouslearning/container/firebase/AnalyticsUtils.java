@@ -18,10 +18,9 @@ public class AnalyticsUtils {
 
         // Log a custom event
         Bundle bundle = new Bundle();
-
         bundle.putString("web_app_title", appName);
         bundle.putString("web_app_url", appUrl);
-        bundle.putString("user_id", pseudoId);
+        bundle.putString("cr_user_id", pseudoId);
         mFirebaseAnalytics.logEvent(eventName, bundle);
     }
 }
