@@ -16,7 +16,7 @@ public class RetrofitInstance {
 
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_meta_data/";
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/dev/";
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {

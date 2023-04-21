@@ -55,7 +55,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
             public void onClick(View v) {
                 Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.putExtra("appId", position);
+                intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
                 intent.putExtra("appUrl", webApps.get(position).getAppUrl());
                 intent.putExtra("title", webApps.get(position).getTitle());
                 ctx.startActivity(intent);
