@@ -29,7 +29,7 @@ public class WebApp extends BaseActivity {
 
     private WebView webView;
     private SharedPreferences sharedPref;
-    private int urlIndex;
+    private String urlIndex;
     private String pseudoId;
     private boolean isDataCached;
 
@@ -46,7 +46,7 @@ public class WebApp extends BaseActivity {
     private void getIntentData() {
         Intent intent = getIntent();
         if (intent != null) {
-            urlIndex = intent.getIntExtra("ftm-type", 0);
+            urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
             appUrl = intent.getStringExtra("appUrl");
         }
