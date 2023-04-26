@@ -1,10 +1,21 @@
 package org.curiouslearning.container;
 
 import android.app.Application;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.PopupWindow;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.Observer;
@@ -35,6 +46,9 @@ public class MainActivity extends BaseActivity {
     public WebAppsAdapter apps;
     public HomeViewModal homeViewModal;
     private SharedPreferences cachedPseudo;
+    private Button settingsButton;
+
+    private String selectedLanguage = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,17 +61,21 @@ public class MainActivity extends BaseActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+//        if (selectedLanguage.equals("")) {
+//            showLanguagePopup();
+//        }
+
+        settingsButton = findViewById(R.id.settings);
+        settingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLanguagePopup();
+            }
+        });
 
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
         initRecyclerView();
 
-        homeViewModal.getWebApps().observe(this,  new Observer<List<WebApp>>() {
-            @Override
-            public void onChanged(List<WebApp> webApps) {
-                apps.webApps = webApps;
-                apps.notifyDataSetChanged();
-            }
-        });
     }
 
     protected void initRecyclerView() {
@@ -104,5 +122,51 @@ public class MainActivity extends BaseActivity {
                 });
         AlertDialog alert = builder.create();
         alert.show();
+    }
+
+    private void showLanguagePopup() {
+        String[] languages = {"English", "Hindi"};
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.language_popup);
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.getWindow().setBackgroundDrawable(null);
+        ImageView closeButton = dialog.findViewById(R.id.setting_close);
+        AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
+        autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(), android.R.layout.simple_dropdown_item_1line, languages);
+        autoCompleteTextView.setAdapter(adapter);
+
+        if (!selectedLanguage.equals("")) {
+            int position = adapter.getPosition(selectedLanguage);
+            System.out.println(position);
+            autoCompleteTextView.setSelection(position);
+        }
+
+        autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                selectedLanguage = (String) parent.getItemAtPosition(position);
+                dialog.dismiss();
+                loadApps(selectedLanguage);
+            }
+        });
+
+        closeButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+        dialog.show();
+    }
+
+    public void loadApps(String selectedlanguage) {
+        homeViewModal.getWebApps().observe(this,  new Observer<List<WebApp>>() {
+            @Override
+            public void onChanged(List<WebApp> webApps) {
+                apps.webApps = webApps;
+                apps.notifyDataSetChanged();
+            }
+        });
     }
 }
