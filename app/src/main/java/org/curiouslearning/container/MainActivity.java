@@ -48,7 +48,9 @@ public class MainActivity extends BaseActivity {
     private SharedPreferences cachedPseudo;
     private Button settingsButton;
 
-    private String selectedLanguage = "";
+    private static final String SHARED_PREFS_NAME = "appCached";
+    private SharedPreferences prefs;
+    private String selectedLanguage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,9 +63,17 @@ public class MainActivity extends BaseActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-//        if (selectedLanguage.equals("")) {
-//            showLanguagePopup();
-//        }
+        prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
+        selectedLanguage = prefs.getString("selectedLanguage", "");
+
+        homeViewModal = new HomeViewModal((Application) getApplicationContext());
+        initRecyclerView();
+
+        if (selectedLanguage.equals("")) {
+            showLanguagePopup();
+        } else {
+            loadApps(selectedLanguage);
+        }
 
         settingsButton = findViewById(R.id.settings);
         settingsButton.setOnClickListener(new View.OnClickListener() {
@@ -72,10 +82,6 @@ public class MainActivity extends BaseActivity {
                 showLanguagePopup();
             }
         });
-
-        homeViewModal = new HomeViewModal((Application) getApplicationContext());
-        initRecyclerView();
-
     }
 
     protected void initRecyclerView() {
@@ -89,7 +95,7 @@ public class MainActivity extends BaseActivity {
         Date now = new Date();
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(now);
-        cachedPseudo = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
+        cachedPseudo = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = cachedPseudo.edit();
         if(!cachedPseudo.contains("pseudoId")){
             editor.putString("pseudoId", generatePseudoId()+ calendar.get(Calendar.YEAR) + (calendar.get(Calendar.MONTH) + 1) +
@@ -137,16 +143,20 @@ public class MainActivity extends BaseActivity {
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(), android.R.layout.simple_dropdown_item_1line, languages);
         autoCompleteTextView.setAdapter(adapter);
 
+        selectedLanguage = prefs.getString("selectedLanguage", "");
+
         if (!selectedLanguage.equals("")) {
             int position = adapter.getPosition(selectedLanguage);
             System.out.println(position);
-            autoCompleteTextView.setSelection(position);
         }
 
         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 selectedLanguage = (String) parent.getItemAtPosition(position);
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("selectedLanguage", selectedLanguage);
+                editor.apply();
                 dialog.dismiss();
                 loadApps(selectedLanguage);
             }

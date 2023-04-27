@@ -33,6 +33,8 @@ public class WebApp extends BaseActivity {
     private String pseudoId;
     private boolean isDataCached;
 
+    private static final String SHARED_PREFS_NAME = "appCached";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,7 +55,7 @@ public class WebApp extends BaseActivity {
     }
 
     private void initViews() {
-        sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
+        sharedPref = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
         isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         pseudoId= sharedPref.getString("pseudoId", "");
         ImageView goBack = findViewById(R.id.button2);
