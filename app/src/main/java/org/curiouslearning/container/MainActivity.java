@@ -4,7 +4,9 @@ import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -31,6 +33,7 @@ import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.utilities.DeepLinkHelper;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -68,6 +71,12 @@ public class MainActivity extends BaseActivity {
 
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
         initRecyclerView();
+
+        Intent intent = getIntent();
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            DeepLinkHelper.handleDeepLink(this, intent);
+
+        }
 
         if (selectedLanguage.equals("")) {
             showLanguagePopup();
