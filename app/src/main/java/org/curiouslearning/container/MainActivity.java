@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 
 import org.curiouslearning.container.data.model.WebApp;
@@ -134,9 +135,11 @@ public class MainActivity extends BaseActivity {
         String[] languages = {"English", "Hindi"};
         Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.language_popup);
+
         dialog.setCanceledOnTouchOutside(false);
         dialog.getWindow().setBackgroundDrawable(null);
         ImageView closeButton = dialog.findViewById(R.id.setting_close);
+       TextInputLayout textBox= dialog.findViewById(R.id.dropdown_menu);
         AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
         autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
 
@@ -144,6 +147,9 @@ public class MainActivity extends BaseActivity {
         autoCompleteTextView.setAdapter(adapter);
 
         selectedLanguage = prefs.getString("selectedLanguage", "");
+        if(!selectedLanguage.isEmpty()){
+            textBox.setHint(selectedLanguage);
+        }
 
         if (!selectedLanguage.equals("")) {
             int position = adapter.getPosition(selectedLanguage);
