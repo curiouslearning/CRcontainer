@@ -13,10 +13,9 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitInstance {
 
-
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/";
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing/";
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {

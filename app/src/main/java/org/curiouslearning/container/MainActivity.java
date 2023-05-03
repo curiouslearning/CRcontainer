@@ -96,7 +96,8 @@ public class MainActivity extends BaseActivity {
 
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
-        recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(), 2, GridLayoutManager.HORIZONTAL, false));
+        recyclerView.setLayoutManager(
+                new GridLayoutManager(getApplicationContext(), 2, GridLayoutManager.HORIZONTAL, false));
         apps = new WebAppsAdapter(getApplicationContext(), new ArrayList<>());
         recyclerView.setAdapter(apps);
     }
@@ -107,9 +108,11 @@ public class MainActivity extends BaseActivity {
         calendar.setTime(now);
         cachedPseudo = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = cachedPseudo.edit();
-        if(!cachedPseudo.contains("pseudoId")){
-            editor.putString("pseudoId", generatePseudoId()+ calendar.get(Calendar.YEAR) + (calendar.get(Calendar.MONTH) + 1) +
-                    calendar.get(Calendar.DAY_OF_MONTH) + calendar.get(Calendar.HOUR_OF_DAY) + calendar.get(Calendar.MINUTE) + calendar.get(Calendar.SECOND));
+        if (!cachedPseudo.contains("pseudoId")) {
+            editor.putString("pseudoId",
+                    generatePseudoId() + calendar.get(Calendar.YEAR) + (calendar.get(Calendar.MONTH) + 1) +
+                            calendar.get(Calendar.DAY_OF_MONTH) + calendar.get(Calendar.HOUR_OF_DAY)
+                            + calendar.get(Calendar.MINUTE) + calendar.get(Calendar.SECOND));
             editor.commit();
         }
     }
@@ -141,22 +144,23 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
-        String[] languages = {"English", "Hindi"};
+        String[] languages = { "English", "Hindi" };
         Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.language_popup);
 
         dialog.setCanceledOnTouchOutside(false);
         dialog.getWindow().setBackgroundDrawable(null);
         ImageView closeButton = dialog.findViewById(R.id.setting_close);
-       TextInputLayout textBox= dialog.findViewById(R.id.dropdown_menu);
+        TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
         AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
         autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(), android.R.layout.simple_dropdown_item_1line, languages);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
+                android.R.layout.simple_dropdown_item_1line, languages);
         autoCompleteTextView.setAdapter(adapter);
 
         selectedLanguage = prefs.getString("selectedLanguage", "");
-        if(!selectedLanguage.isEmpty()){
+        if (!selectedLanguage.isEmpty()) {
             textBox.setHint(selectedLanguage);
         }
 
@@ -186,7 +190,7 @@ public class MainActivity extends BaseActivity {
     }
 
     public void loadApps(String selectedlanguage) {
-        homeViewModal.getWebApps().observe(this,  new Observer<List<WebApp>>() {
+        homeViewModal.getWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
                 apps.webApps = webApps;
