@@ -22,8 +22,8 @@ public class HomeViewModal extends AndroidViewModel {
         webAppRepository = new WebAppRepository(application);
     }
 
-    public LiveData<List<WebApp>> getWebApps() {
-        return webAppRepository.getWebApps();
+    public LiveData<List<WebApp>> getWebApps(String selectedLanguage) {
+        return webAppRepository.getWebApps(selectedLanguage);
     }
 
 }

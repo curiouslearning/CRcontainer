@@ -25,15 +25,15 @@ public class WebAppRepository {
 
     }
 
-    public LiveData<List<WebApp>> getWebApps() {
-        webApp = webAppDatabase.getAllWebApps();
+    public LiveData<List<WebApp>> getWebApps(String selectedLanguage) {
+        webApp = webAppDatabase.getAllWebApps(selectedLanguage);
         if (webApp.getValue() != null && !webApp.getValue().isEmpty()) {
             return webApp;
         } else {
             if (ConnectionUtils.getInstance().isInternetConnected(application)) {
                 retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
             }
-            return  webApp;
+            return webApp;
         }
     }
 }
