@@ -1,6 +1,5 @@
 package org.curiouslearning.container.data.model;
 
-
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -12,8 +11,10 @@ public class WebApp {
 
     private String title;
 
+    private String language;
+
     private String appUrl;
-    
+
     private String appIconUrl;
 
     public int getAppId() {
@@ -39,8 +40,17 @@ public class WebApp {
     public void setAppIconUrl(String appIconUrl) {
         this.appIconUrl = appIconUrl;
     }
+
     public String getTitle() {
         return title;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public String getLanguage() {
+        return language;
     }
 
     public void setTitle(String title) {

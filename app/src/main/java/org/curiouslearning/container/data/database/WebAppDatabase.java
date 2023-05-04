@@ -11,7 +11,6 @@ import org.curiouslearning.container.data.model.WebApp;
 
 import java.util.List;
 
-
 public class WebAppDatabase {
 
     private WebAppDao webAppDao;
@@ -25,11 +24,9 @@ public class WebAppDatabase {
         new InsertAllWebAppAsyncTask(webAppDao).execute(webApps);
     }
 
-
-    public LiveData<List<WebApp>> getAllWebApps() {
-        return webAppDao.getAllWebApp();
+    public LiveData<List<WebApp>> getAllWebApps(String selectedLanguage) {
+        return webAppDao.getAllWebApp(selectedLanguage);
     }
-
 
     private static class InsertAllWebAppAsyncTask extends AsyncTask<List<WebApp>, Void, Void> {
         private WebAppDao WebAppDao;

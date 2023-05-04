@@ -29,9 +29,11 @@ public class WebApp extends BaseActivity {
 
     private WebView webView;
     private SharedPreferences sharedPref;
-    private int urlIndex;
+    private String urlIndex;
     private String pseudoId;
     private boolean isDataCached;
+
+    private static final String SHARED_PREFS_NAME = "appCached";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,14 +48,14 @@ public class WebApp extends BaseActivity {
     private void getIntentData() {
         Intent intent = getIntent();
         if (intent != null) {
-            urlIndex = intent.getIntExtra("ftm-type", 0);
+            urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
             appUrl = intent.getStringExtra("appUrl");
         }
     }
 
     private void initViews() {
-        sharedPref = getApplicationContext().getSharedPreferences("appCached", Context.MODE_PRIVATE);
+        sharedPref = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
         isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         pseudoId= sharedPref.getString("pseudoId", "");
         ImageView goBack = findViewById(R.id.button2);
@@ -80,7 +82,11 @@ public class WebApp extends BaseActivity {
         webView.getSettings().setAppCacheEnabled(true);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
-        webView.loadUrl(appUrl+"?cr_user_id="+pseudoId);
+        if (appUrl.contains("cr_lang")) {
+            webView.loadUrl(appUrl + "&cr_user_id=" + pseudoId);
+        } else {
+            webView.loadUrl(appUrl + "?cr_user_id=" + pseudoId);
+        }
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 return false;
@@ -114,7 +120,7 @@ public class WebApp extends BaseActivity {
         @JavascriptInterface
         public void cachedStatus(boolean dataCachedStatus) {
             SharedPreferences.Editor editor = sharedPref.edit();
-            editor.putBoolean(String.valueOf(urlIndex), true);
+            editor.putBoolean(String.valueOf(urlIndex), dataCachedStatus);
             editor.commit();
 
             if (!isInternetConnected(getApplicationContext()) && dataCachedStatus) {
