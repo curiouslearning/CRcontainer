@@ -3,6 +3,7 @@ package org.curiouslearning.container.data.respository;
 import android.app.Application;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
@@ -27,13 +28,20 @@ public class WebAppRepository {
 
     public LiveData<List<WebApp>> getWebApps(String selectedLanguage) {
         webApp = webAppDatabase.getAllWebApps(selectedLanguage);
-        if (webApp.getValue() != null && !webApp.getValue().isEmpty()) {
-            return webApp;
-        } else {
-            if (ConnectionUtils.getInstance().isInternetConnected(application)) {
-                retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
+        webApp.observeForever(new Observer<List<WebApp>>() {
+            @Override
+            public void onChanged(List<WebApp> webApps) {
+                if (webApps != null && !webApps.isEmpty()) {
+                    // New data is available for the selected language, update the UI
+                    // with the new data here.
+                } else {
+                    // No data available for the selected language, fetch it from the server
+                    if (ConnectionUtils.getInstance().isInternetConnected(application)) {
+                        retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
+                    }
+                }
             }
-            return webApp;
-        }
+        });
+        return webApp;
     }
 }

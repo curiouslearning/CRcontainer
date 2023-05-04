@@ -15,11 +15,13 @@ import okhttp3.OkHttpClient;
 
 public class CacheUtils {
 
+    private static File cacheDirectory;
+
     public static void loadWithPicasso(Context context, String imageUrl, ImageView imageView) {
         Picasso picasso = Picasso.get();
 
         // Set the cache directory and size
-        File cacheDirectory = new File(context.getCacheDir(), "app_icons");
+        cacheDirectory = new File(context.getCacheDir(), "app_icons");
         Cache cache = new Cache(cacheDirectory, 1024 * 1024 * 50); // 50MB max cache size
         OkHttpClient okHttpClient = new OkHttpClient.Builder()
                 .cache(cache)
