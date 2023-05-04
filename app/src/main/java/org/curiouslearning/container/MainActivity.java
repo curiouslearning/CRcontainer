@@ -6,18 +6,13 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
-import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.PopupWindow;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.Observer;
@@ -74,9 +69,9 @@ public class MainActivity extends BaseActivity {
         initRecyclerView();
 
         Intent intent = getIntent();
-        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-            DeepLinkHelper.handleDeepLink(this, intent);
-
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+            selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
+            storeSelectLanguage(selectedLanguage);
         }
 
         if (selectedLanguage.equals("")) {
@@ -173,9 +168,7 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 selectedLanguage = (String) parent.getItemAtPosition(position);
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putString("selectedLanguage", selectedLanguage);
-                editor.apply();
+                storeSelectLanguage(selectedLanguage);
                 dialog.dismiss();
                 loadApps(selectedLanguage);
             }
@@ -197,5 +190,11 @@ public class MainActivity extends BaseActivity {
                 apps.notifyDataSetChanged();
             }
         });
+    }
+
+    private void storeSelectLanguage(String language) {
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("selectedLanguage", language);
+        editor.apply();
     }
 }

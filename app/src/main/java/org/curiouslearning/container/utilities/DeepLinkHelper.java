@@ -7,26 +7,25 @@ import android.net.Uri;
 import org.curiouslearning.container.MainActivity;
 
 public class DeepLinkHelper {
-    public static void handleDeepLink(Activity activity, Intent intent) {
+    public static String handleDeepLink(Activity activity, Intent intent) {
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
             Uri uri = intent.getData();
             if (uri != null) {
+                String scheme = uri.getScheme();
                 String host = uri.getHost();
-                if ("www.curiouslearning.org".equals(host)) {
-                    String path = uri.getPath();
-                    if ("/app".equals(path)) {
-                        String code = uri.getQueryParameter("code");
-                        if (code != null) {
-                            Intent mainIntent = new Intent(activity, MainActivity.class);
-                            mainIntent.putExtra("code", code);
-                            activity.startActivity(mainIntent);
-                            return;
-                        }
-                    }
+                String path = uri.getPath();
+                String code = uri.getQueryParameter("code");
+                if ("https".equals(scheme) && "www.curiouslearning.org".equals(host)
+                        && "/app".equals(path) && code != null) {
+                    Intent mainIntent = new Intent(activity, MainActivity.class);
+                    mainIntent.putExtra("code", code);
+                    activity.startActivity(mainIntent);
+                    return code;
                 }
             }
         }
         redirectToPlayStore(activity);
+        return "";
     }
 
     private static void redirectToPlayStore(Activity activity) {
