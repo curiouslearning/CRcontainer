@@ -1,4 +1,5 @@
 package org.curiouslearning.container.presentation.adapters;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -18,12 +19,11 @@ import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.util.List;
 
-public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHolder>{
+public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHolder> {
 
     public Context ctx;
     LayoutInflater inflater;
     public List<WebApp> webApps;
-
 
     public WebAppsAdapter(Context context, List<WebApp> webApps) {
         this.ctx = context;
@@ -42,7 +42,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
         CacheUtils.loadWithPicasso(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
-        if (!isAppCached(position)) {
+        if (!isAppCached(webApps.get(position).getAppId())) {
             ColorMatrix matrix = new ColorMatrix();
             matrix.setSaturation(0);
             ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
@@ -63,19 +63,19 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         });
     }
 
-
     @Override
     public int getItemCount() {
         return webApps.size();
     }
 
-    public boolean isAppCached(int position) {
-        return ctx.getSharedPreferences("appCached", Context.MODE_PRIVATE).getBoolean(String.valueOf(position), false);
+    public boolean isAppCached(int appId) {
+        return ctx.getSharedPreferences("appCached", Context.MODE_PRIVATE).getBoolean(String.valueOf(appId), false);
 
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder{
+    public class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIconImage, downloadIconImage;
+
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             appIconImage = (ImageView) itemView.findViewById(R.id.app_image);
