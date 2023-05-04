@@ -82,7 +82,11 @@ public class WebApp extends BaseActivity {
         webView.getSettings().setAppCacheEnabled(true);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
-        webView.loadUrl(appUrl+"?cr_user_id="+pseudoId);
+        if (appUrl.contains("cr_lang")) {
+            webView.loadUrl(appUrl + "&cr_user_id=" + pseudoId);
+        } else {
+            webView.loadUrl(appUrl + "?cr_user_id=" + pseudoId);
+        }
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 return false;
