@@ -44,9 +44,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="https"
-                    android:host="www.curiouslearning.org"
-                    android:pathPrefix="/app" />
+                    android:scheme="curiousreader"
+                    android:host="language" />
             </intent-filter>
 
             <meta-data

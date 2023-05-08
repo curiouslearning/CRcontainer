@@ -13,14 +13,12 @@ public class DeepLinkHelper {
             if (uri != null) {
                 String scheme = uri.getScheme();
                 String host = uri.getHost();
-                String path = uri.getPath();
-                String code = uri.getQueryParameter("code");
-                if ("https".equals(scheme) && "www.curiouslearning.org".equals(host)
-                        && "/app".equals(path) && code != null) {
+                String language = uri.getQueryParameter("language");
+                if ("curiousreader".equals(scheme) && "language".equals(host) && language != null) {
                     Intent mainIntent = new Intent(activity, MainActivity.class);
-                    mainIntent.putExtra("code", code);
+                    mainIntent.putExtra("language", language);
                     activity.startActivity(mainIntent);
-                    return code;
+                    return language;
                 }
             }
         }
