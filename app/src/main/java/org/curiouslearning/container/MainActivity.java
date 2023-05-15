@@ -4,9 +4,10 @@ import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -21,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
+import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 
@@ -29,7 +31,6 @@ import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
-import org.curiouslearning.container.utilities.DeepLinkHelper;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -68,11 +69,34 @@ public class MainActivity extends BaseActivity {
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
         initRecyclerView();
 
-        Intent intent = getIntent();
-        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-            selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
-            storeSelectLanguage(selectedLanguage);
-        }
+//        Intent intent = getIntent();
+//        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+//            selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
+//            storeSelectLanguage(selectedLanguage);
+//        }
+
+        AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
+            @Override
+            public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                if (appLinkData != null) {
+                    // Process the deferred deep link
+                    Uri deepLinkUri = appLinkData.getTargetUri();
+
+                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
+                    if (language != null) {
+                        // Store the selected language
+                        selectedLanguage = language;
+                        storeSelectLanguage(language);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                loadApps(selectedLanguage);
+                            }
+                        });
+                    }
+                }
+            }
+        });
 
         if (selectedLanguage.equals("")) {
             showLanguagePopup();
@@ -187,7 +211,6 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onChanged(List<WebApp> webApps) {
                 apps.webApps = webApps;
-                apps.notifyDataSetChanged();
             }
         });
     }
