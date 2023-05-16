@@ -211,6 +211,7 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onChanged(List<WebApp> webApps) {
                 apps.webApps = webApps;
+                apps.notifyDataSetChanged();
             }
         });
     }
