@@ -1,52 +1,112 @@
 package org.curiouslearning.container.data.remote;
 
+import static com.facebook.FacebookSdk.getApplicationContext;
+
+import android.content.Context;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+import java.util.Map;
+import java.util.Set;
 
 public class RetrofitInstance {
 
-    private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing/";
+    private static final String OFFLINE_MANIFEST_FILE = "web_apps_manifest.json";
+
     private List<WebApp> webApps;
 
+    private RetrofitInstance() {
+        // Private constructor to enforce singleton pattern
+    }
+
     public static RetrofitInstance getInstance() {
-        if (retrofit == null) {
+        if (retrofitInstance == null) {
             retrofitInstance = new RetrofitInstance();
-            retrofit = new Retrofit.Builder()
-                    .baseUrl(URL)
-                    .addConverterFactory(GsonConverterFactory.create())
-                    .build();
         }
         return retrofitInstance;
     }
 
-    public List<WebApp> getAppManifest(WebAppDatabase webAppDatabase) {
-        ApiService api = retrofit.create(ApiService.class);
-        Call<List<WebApp>> call = api.getWebApps();
+    public List<WebApp> getAppManifest( WebAppDatabase webAppDatabase) {
+        Context context = getApplicationContext();
+        if (webApps != null) {
+            return webApps;
+        }
 
-        call.enqueue(new Callback<List<WebApp>>() {
-            @Override
-            public void onResponse(Call<List<WebApp>> call, Response<List<WebApp>> response) {
-                if (response.isSuccessful()) {
-                    webApps = response.body();
-                    webAppDatabase.insertAll(webApps);
-                }
+        try {
+            // Read the offline manifest file from the assets folder
+            InputStream is = context.getAssets().open(OFFLINE_MANIFEST_FILE);
+
+            // Parse the JSON data into a JsonObject
+            JsonObject jsonObject = new Gson().fromJson(new InputStreamReader(is), JsonObject.class);
+
+            // Parse the web apps from the JsonObject
+            webApps = parseWebApps(jsonObject);
+
+            // Insert the List<WebApp> object into the database
+            webAppDatabase.insertAll(webApps);
+
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return webApps;
+    }
+
+    public String[] getAvailableLanguages() {
+        Context context = getApplicationContext();
+        try {
+            // Read the offline manifest file from the assets folder
+            InputStream is = context.getAssets().open(OFFLINE_MANIFEST_FILE);
+
+            // Parse the JSON data into a JsonObject
+            JsonObject jsonObject = new Gson().fromJson(new InputStreamReader(is), JsonObject.class);
+
+            // Extract the language keys from the JsonObject
+            Set<String> languageSet = jsonObject.keySet();
+
+            is.close();
+
+            // Convert the Set<String> to a String[] array
+            return languageSet.toArray(new String[0]);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return new String[0];
+    }
+
+    private List<WebApp> parseWebApps(JsonObject jsonObject) {
+        List<WebApp> webApps = new ArrayList<>();
+
+        for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+            String language = entry.getKey();
+            JsonArray webAppsArray = entry.getValue().getAsJsonArray();
+            List<WebApp> languageWebApps = new Gson().fromJson(webAppsArray, new TypeToken<List<WebApp>>() {
+            }.getType());
+
+            // Set the language for each web app in the list
+            for (WebApp webApp : languageWebApps) {
+                webApp.setLanguage(language);
             }
 
-            @Override
-            public void onFailure(Call<List<WebApp>> call, Throwable t) {
-                System.out.println(t.getMessage() + "Something went wromng");
-            }
-        });
+            webApps.addAll(languageWebApps);
+        }
 
         return webApps;
     }

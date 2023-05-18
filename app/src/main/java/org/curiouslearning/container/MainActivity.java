@@ -51,6 +51,7 @@ public class MainActivity extends BaseActivity {
     private static final String SHARED_PREFS_NAME = "appCached";
     private SharedPreferences prefs;
     private String selectedLanguage;
+    String[] languages = {};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,12 +69,12 @@ public class MainActivity extends BaseActivity {
 
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
         initRecyclerView();
-
-//        Intent intent = getIntent();
-//        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-//            selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
-//            storeSelectLanguage(selectedLanguage);
-//        }
+        languages = homeViewModal.getAvailableLanguages();
+        // Intent intent = getIntent();
+        // if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+        // selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
+        // storeSelectLanguage(selectedLanguage);
+        // }
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
@@ -163,7 +164,8 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
-        String[] languages = { "English", "Hindi" };
+        // String[] languages = { "English", "Hindi" };
+        // String[] languages = homeViewModal.getAvailableLanguages();
         Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.language_popup);
 

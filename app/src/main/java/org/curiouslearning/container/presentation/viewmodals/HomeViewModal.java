@@ -14,16 +14,24 @@ import java.util.List;
 public class HomeViewModal extends AndroidViewModel {
 
     private WebAppRepository webAppRepository;
-    private Application application;
+    private LiveData<List<WebApp>> webAppsLiveData;
 
     public HomeViewModal(@NonNull Application application) {
         super(application);
-        this.application = application;
         webAppRepository = new WebAppRepository(application);
     }
 
     public LiveData<List<WebApp>> getWebApps(String selectedLanguage) {
-        return webAppRepository.getWebApps(selectedLanguage);
+
+        // if (webAppsLiveData == null) {
+        webAppsLiveData = webAppRepository.getWebApps(selectedLanguage);
+        // } else {
+        // }
+        return webAppsLiveData;
     }
 
+    public String[] getAvailableLanguages() {
+
+        return webAppRepository.getAvailableLanguages();
+    }
 }
