@@ -38,6 +38,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+
 
 public class MainActivity extends BaseActivity {
 
@@ -163,7 +166,6 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
-        String[] languages = { "English", "Hindi" };
         Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.language_popup);
 
@@ -173,28 +175,45 @@ public class MainActivity extends BaseActivity {
         TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
         AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
         autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
-
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
-                android.R.layout.simple_dropdown_item_1line, languages);
+                android.R.layout.simple_dropdown_item_1line,  new ArrayList<String>());
         autoCompleteTextView.setAdapter(adapter);
 
-        selectedLanguage = prefs.getString("selectedLanguage", "");
-        if (!selectedLanguage.isEmpty()) {
-            textBox.setHint(selectedLanguage);
-        }
-
-        if (!selectedLanguage.equals("")) {
-            int position = adapter.getPosition(selectedLanguage);
-            System.out.println(position);
-        }
-
-        autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                selectedLanguage = (String) parent.getItemAtPosition(position);
-                storeSelectLanguage(selectedLanguage);
-                dialog.dismiss();
-                loadApps(selectedLanguage);
+            public void onChanged(List<WebApp> webApps) {
+                Set<String> distinctLanguages = new HashSet<>();
+                for (WebApp webApp : webApps) {
+                    String language = webApp.getLanguage();
+                    distinctLanguages.add(language);
+                }
+
+                List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
+
+                if (!distinctLanguageList.isEmpty()) {
+                    System.out.println(distinctLanguageList);
+                    adapter.addAll(distinctLanguageList);
+                    adapter.notifyDataSetChanged();
+                    selectedLanguage = prefs.getString("selectedLanguage", "");
+                    if (!selectedLanguage.isEmpty()) {
+                        textBox.setHint(selectedLanguage);
+                    }
+
+                    if (!selectedLanguage.equals("")) {
+                        int position = adapter.getPosition(selectedLanguage);
+                        System.out.println(position);
+                    }
+
+                    autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                            selectedLanguage = (String) parent.getItemAtPosition(position);
+                            storeSelectLanguage(selectedLanguage);
+                            dialog.dismiss();
+                            loadApps(selectedLanguage);
+                        }
+                    });
+                }
             }
         });
 
@@ -207,7 +226,7 @@ public class MainActivity extends BaseActivity {
     }
 
     public void loadApps(String selectedlanguage) {
-        homeViewModal.getWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
+        homeViewModal.getSelectedlanguageWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
                 apps.webApps = webApps;
