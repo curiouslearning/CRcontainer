@@ -50,6 +50,7 @@ public class MainActivity extends BaseActivity {
     public HomeViewModal homeViewModal;
     private SharedPreferences cachedPseudo;
     private Button settingsButton;
+    private Dialog dialog;
 
     private static final String SHARED_PREFS_NAME = "appCached";
     private SharedPreferences prefs;
@@ -70,6 +71,7 @@ public class MainActivity extends BaseActivity {
         selectedLanguage = prefs.getString("selectedLanguage", "");
 
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
+        dialog = new Dialog(this);
         initRecyclerView();
 
 //        Intent intent = getIntent();
@@ -166,7 +168,6 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
-        Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.language_popup);
 
         dialog.setCanceledOnTouchOutside(false);
