@@ -24,8 +24,12 @@ public class WebAppDatabase {
         new InsertAllWebAppAsyncTask(webAppDao).execute(webApps);
     }
 
-    public LiveData<List<WebApp>> getAllWebApps(String selectedLanguage) {
-        return webAppDao.getAllWebApp(selectedLanguage);
+    public LiveData<List<WebApp>> getAllWebApps() {
+        return webAppDao.getAllWebApp();
+    }
+
+    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
+        return webAppDao.getSelectedlanguageWebApps(selectedLanguage);
     }
 
     private static class InsertAllWebAppAsyncTask extends AsyncTask<List<WebApp>, Void, Void> {
