@@ -14,6 +14,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.Observer;
@@ -50,6 +51,8 @@ public class MainActivity extends BaseActivity {
     public HomeViewModal homeViewModal;
     private SharedPreferences cachedPseudo;
     private Button settingsButton;
+    private Dialog dialog;
+    private ProgressBar loadingIndicator;
 
     private static final String SHARED_PREFS_NAME = "appCached";
     private SharedPreferences prefs;
@@ -70,7 +73,9 @@ public class MainActivity extends BaseActivity {
         selectedLanguage = prefs.getString("selectedLanguage", "");
 
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
+        dialog = new Dialog(this);
         initRecyclerView();
+        loadingIndicator = findViewById(R.id.loadingIndicator);
 
 //        Intent intent = getIntent();
 //        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -97,15 +102,21 @@ public class MainActivity extends BaseActivity {
                             }
                         });
                     }
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (selectedLanguage.equals("")) {
+                                showLanguagePopup();
+                            } else {
+                                loadApps(selectedLanguage);
+                            }
+                        }
+                    });
                 }
             }
         });
 
-        if (selectedLanguage.equals("")) {
-            showLanguagePopup();
-        } else {
-            loadApps(selectedLanguage);
-        }
 
         settingsButton = findViewById(R.id.settings);
         settingsButton.setOnClickListener(new View.OnClickListener() {
@@ -166,7 +177,6 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
-        Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.language_popup);
 
         dialog.setCanceledOnTouchOutside(false);
@@ -226,11 +236,16 @@ public class MainActivity extends BaseActivity {
     }
 
     public void loadApps(String selectedlanguage) {
+        loadingIndicator.setVisibility(View.VISIBLE);
         homeViewModal.getSelectedlanguageWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
-                apps.webApps = webApps;
-                apps.notifyDataSetChanged();
+                if (!webApps.isEmpty()) {
+                    loadingIndicator.setVisibility(View.GONE);
+                    apps.webApps = webApps;
+                    apps.notifyDataSetChanged();
+
+                }
             }
         });
     }
