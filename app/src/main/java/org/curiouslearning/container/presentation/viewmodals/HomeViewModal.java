@@ -29,5 +29,4 @@ public class HomeViewModal extends AndroidViewModel {
     public LiveData<List<WebApp>> getAllWebApps() {
         return webAppRepository.getAllWebApps();
     }
-
 }

@@ -23,44 +23,27 @@ public class WebAppRepository {
         this.application = application;
         retrofitInstance = RetrofitInstance.getInstance();
         webAppDatabase = new WebAppDatabase(application);
+    }
 
+    public void fetchWebApps() {
+        if (ConnectionUtils.getInstance().isInternetConnected(application)) {
+            retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
+        }
     }
 
     public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
         webApp = webAppDatabase.getSelectedlanguageWebApps(selectedLanguage);
-        webApp.observeForever(new Observer<List<WebApp>>() {
-            @Override
-            public void onChanged(List<WebApp> webApps) {
-                if (webApps != null && !webApps.isEmpty()) {
-                    // New data is available for the selected language, update the UI
-                    // with the new data here.
-                } else {
-                    // No data available for the selected language, fetch it from the server
-                    if (ConnectionUtils.getInstance().isInternetConnected(application)) {
-                        retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
-                    }
-                }
-            }
-        });
+        if (webApp.getValue() == null || webApp.getValue().isEmpty()) {
+            fetchWebApps();
+        }
         return webApp;
     }
 
     public LiveData<List<WebApp>> getAllWebApps() {
         webApp = webAppDatabase.getAllWebApps();
-        webApp.observeForever(new Observer<List<WebApp>>() {
-            @Override
-            public void onChanged(List<WebApp> webApps) {
-                if (webApps != null && !webApps.isEmpty()) {
-                    // New data is available for the selected language, update the UI
-                    // with the new data here.
-                } else {
-                    // No data available for the selected language, fetch it from the server
-                    if (ConnectionUtils.getInstance().isInternetConnected(application)) {
-                        retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
-                    }
-                }
-            }
-        });
+        if (webApp.getValue() == null || webApp.getValue().isEmpty()) {
+            fetchWebApps();
+        }
         return webApp;
     }
 }

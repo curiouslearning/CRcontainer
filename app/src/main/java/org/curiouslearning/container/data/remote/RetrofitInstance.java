@@ -15,8 +15,7 @@ public class RetrofitInstance {
 
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_1/";
-    private List<WebApp> webApps;
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/dev/";
 
     public static RetrofitInstance getInstance() {
         if (retrofit == null) {
@@ -29,7 +28,7 @@ public class RetrofitInstance {
         return retrofitInstance;
     }
 
-    public List<WebApp> getAppManifest(WebAppDatabase webAppDatabase) {
+    public void getAppManifest(WebAppDatabase webAppDatabase) {
         ApiService api = retrofit.create(ApiService.class);
         Call<List<WebApp>> call = api.getWebApps();
 
@@ -37,22 +36,19 @@ public class RetrofitInstance {
             @Override
             public void onResponse(Call<List<WebApp>> call, Response<List<WebApp>> response) {
                 if (response.isSuccessful()) {
-                    webApps = response.body();
+                    List<WebApp> webApps = response.body();
                     webAppDatabase.insertAll(webApps);
                 }
             }
 
             @Override
             public void onFailure(Call<List<WebApp>> call, Throwable t) {
-                System.out.println(t.getMessage() + "Something went wromng");
+                System.out.println(t.getMessage() + "Something went wrong");
             }
         });
-
-        return webApps;
     }
 
     public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase) {
         getAppManifest(webAppDatabase);
     }
-
 }
