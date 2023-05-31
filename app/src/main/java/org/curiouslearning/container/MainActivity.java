@@ -189,6 +189,7 @@ public class MainActivity extends BaseActivity {
                 android.R.layout.simple_dropdown_item_1line,  new ArrayList<String>());
         autoCompleteTextView.setAdapter(adapter);
 
+        homeViewModal.getUpdatedAppManifest(selectedLanguage);
         homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {

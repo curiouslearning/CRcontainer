@@ -15,7 +15,9 @@ public class RetrofitInstance {
 
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/dev/";
+
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing/";
+    private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
         if (retrofit == null) {
@@ -51,4 +53,30 @@ public class RetrofitInstance {
     public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase) {
         getAppManifest(webAppDatabase);
     }
+
+    public void getUpdatedAppManifest(WebAppDatabase webAppDatabase, String selectedLanguage) {
+        ApiService api = retrofit.create(ApiService.class);
+        Call<List<WebApp>> call = api.getWebApps();
+
+        call.enqueue(new Callback<List<WebApp>>() {
+            @Override
+            public void onResponse(Call<List<WebApp>> call, Response<List<WebApp>> response) {
+                if (response.isSuccessful()) {
+
+                    List<WebApp> latestWebApps = response.body();
+                    if (selectedLanguage != null && selectedLanguage != "" && latestWebApps != null && !latestWebApps.isEmpty()) {
+                        if (webApps.size() != latestWebApps.size()) {
+
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<WebApp>> call, Throwable t) {
+                System.out.println(t.getMessage() + "Something went wromng");
+            }
+        });
+    }
+
 }

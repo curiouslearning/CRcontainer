@@ -31,19 +31,47 @@ public class WebAppRepository {
         }
     }
 
+    public void fetchWebApp() {
+        if (ConnectionUtils.getInstance().isInternetConnected(application)) {
+            retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
+        }
+    }
+
     public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
         webApp = webAppDatabase.getSelectedlanguageWebApps(selectedLanguage);
-        if (webApp.getValue() == null || webApp.getValue().isEmpty()) {
-            fetchWebApps();
-        }
+        webApp.observeForever(new Observer<List<WebApp>>() {
+            @Override
+            public void onChanged(List<WebApp> webApps) {
+                if (webApps != null && !webApps.isEmpty()) {
+                    // New data is available for the selected language, update the UI
+                    // with the new data here.
+                } else {
+                   fetchWebApp();
+                }
+            }
+        });
         return webApp;
     }
 
     public LiveData<List<WebApp>> getAllWebApps() {
         webApp = webAppDatabase.getAllWebApps();
-        if (webApp.getValue() == null || webApp.getValue().isEmpty()) {
-            fetchWebApps();
-        }
+        webApp.observeForever(new Observer<List<WebApp>>() {
+            @Override
+            public void onChanged(List<WebApp> webApps) {
+                if (webApps != null && !webApps.isEmpty()) {
+                    // New data is available for the selected language, update the UI
+                    // with the new data here.
+                } else {
+                    fetchWebApp();
+                }
+            }
+        });
         return webApp;
+    }
+
+    public void getUpdatedAppManifest(String selectedLanguage) {
+        if (ConnectionUtils.getInstance().isInternetConnected(application)) {
+            retrofitInstance.getUpdatedAppManifest(webAppDatabase, selectedLanguage);
+        }
     }
 }

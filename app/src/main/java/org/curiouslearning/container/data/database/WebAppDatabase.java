@@ -24,6 +24,10 @@ public class WebAppDatabase {
         new InsertAllWebAppAsyncTask(webAppDao).execute(webApps);
     }
 
+    public void deleteWebApps() {
+        new DeleteAllWebAppAsyncTask(webAppDao).execute();
+    }
+
     public LiveData<List<WebApp>> getAllWebApps() {
         return webAppDao.getAllWebApp();
     }
@@ -47,4 +51,17 @@ public class WebAppDatabase {
         }
     }
 
+    private static class DeleteAllWebAppAsyncTask extends AsyncTask<Void, Void, Void> {
+        private WebAppDao WebAppDao;
+
+        private DeleteAllWebAppAsyncTask(WebAppDao WebAppDao) {
+            this.WebAppDao = WebAppDao;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            WebAppDao.deleteAllWebApp();
+            return null;
+        }
+    }
 }
