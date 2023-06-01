@@ -30,7 +30,7 @@ public class HomeViewModal extends AndroidViewModel {
         return webAppRepository.getAllWebApps();
     }
 
-    public void getUpdatedAppManifest(String selectedLanguage) {
-        webAppRepository.getUpdatedAppManifest(selectedLanguage);
+    public void getUpdatedAppManifest(String manifestVersion) {
+        webAppRepository.getUpdatedAppManifest(manifestVersion);
     }
 }

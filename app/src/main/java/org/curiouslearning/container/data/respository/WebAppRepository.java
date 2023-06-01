@@ -25,12 +25,6 @@ public class WebAppRepository {
         webAppDatabase = new WebAppDatabase(application);
     }
 
-    public void fetchWebApps() {
-        if (ConnectionUtils.getInstance().isInternetConnected(application)) {
-            retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
-        }
-    }
-
     public void fetchWebApp() {
         if (ConnectionUtils.getInstance().isInternetConnected(application)) {
             retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
@@ -69,9 +63,9 @@ public class WebAppRepository {
         return webApp;
     }
 
-    public void getUpdatedAppManifest(String selectedLanguage) {
+    public void getUpdatedAppManifest(String manifestVersion) {
         if (ConnectionUtils.getInstance().isInternetConnected(application)) {
-            retrofitInstance.getUpdatedAppManifest(webAppDatabase, selectedLanguage);
+            retrofitInstance.getUpdatedAppManifest(webAppDatabase, manifestVersion);
         }
     }
 }

@@ -5,6 +5,8 @@ import android.text.TextUtils;
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.remote.ManifestResponse;
 import org.curiouslearning.container.data.model.WebApp;
+import org.curiouslearning.container.data.model.WebAppResponse;
+import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.util.List;
 
@@ -37,72 +39,50 @@ public class RetrofitInstance {
 
     public void getAppManifest(WebAppDatabase webAppDatabase) {
         ApiService api = retrofit.create(ApiService.class);
-        Call<ManifestResponse> call = api.getManifestResponse();
+        Call<WebAppResponse> call = api.getWebApps();
 
-        call.enqueue(new Callback<ManifestResponse>() {
-
+        call.enqueue(new Callback<WebAppResponse>() {
             @Override
-
-            public void onResponse(Call<ManifestResponse> call, Response<ManifestResponse> response) {
+            public void onResponse(Call<WebAppResponse> call, Response<WebAppResponse> response) {
                 if (response.isSuccessful()) {
-                    ManifestResponse manifestResponse = response.body();
-                    if (manifestResponse != null) {
-                        List<WebApp> webApps = manifestResponse.getWebApps();
-                        webAppDatabase.insertAll(webApps);
-                    }
+                    WebAppResponse webAppResponse = response.body();
+                    CacheUtils.setManifestVersionNumber(webAppResponse.getVersion());
+                    List<WebApp> webApps = webAppResponse.getWebApps();
+                    webAppDatabase.insertAll(webApps);
                 }
             }
 
             @Override
-            public void onFailure(Call<ManifestResponse> call, Throwable t) {
-                System.out.println(t.getMessage() + " Something went wrong");
-            }
-        });
-    }
-
-    public void getUpdatedAppManifest(WebAppDatabase webAppDatabase, String selectedLanguage) {
-        ApiService api = retrofit.create(ApiService.class);
-        Call<ManifestResponse> call = api.getManifestResponse();
-
-        call.enqueue(new Callback<ManifestResponse>() {
-            @Override
-            public void onResponse(Call<ManifestResponse> call, Response<ManifestResponse> response) {
-                if (response.isSuccessful()) {
-                    ManifestResponse manifestResponse = response.body();
-                    if (manifestResponse != null) {
-                        List<WebApp> latestWebApps = manifestResponse.getWebApps();
-                        if (!TextUtils.isEmpty(selectedLanguage) && latestWebApps != null && !latestWebApps.isEmpty()) {
-                            if (webApps != null && !webApps.isEmpty() && webApps.size() != latestWebApps.size()) {
-                                if (latestWebApps.size() > 1) {
-                                    // webAppDatabase.deleteWebApps();
-                                    webAppDatabase.insertAll(latestWebApps);
-                                    System.out.println("size is different");
-                                }
-                            } else {
-                                System.out.println("size is same");
-                                webAppDatabase.deleteWebApps();
-                            }
-                        } else {
-                            // System.out.println(">>>>>>>>>>>>>>>>>>");
-                            // webAppDatabase.deleteWebApps();
-                            webAppDatabase.insertAll(latestWebApps);
-                        }
-                    }
-                }
-            }
-
-            public void deleteWebApps() {
-                webAppDatabase.deleteWebApps();
-            }
-
-            @Override
-            public void onFailure(Call<ManifestResponse> call, Throwable t) {
-                System.out.println(t.getMessage() + " Something went wrong");
+            public void onFailure(Call<WebAppResponse> call, Throwable t) {
+                System.out.println(t.getMessage() + "Something went wrong");
             }
         });
     }
 
     public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase) {
         getAppManifest(webAppDatabase);
+    }
+
+    public void getUpdatedAppManifest(WebAppDatabase webAppDatabase, String manifestVersion) {
+        ApiService api = retrofit.create(ApiService.class);
+        Call<WebAppResponse> call = api.getWebApps();
+
+        call.enqueue(new Callback<WebAppResponse>() {
+            @Override
+            public void onResponse(Call<WebAppResponse> call, Response<WebAppResponse> response) {
+                if (response.isSuccessful()) {
+                    WebAppResponse webAppResponse = response.body();
+                    if (manifestVersion != webAppResponse.getVersion()) {
+                        webAppDatabase.deleteWebApps();
+                        webAppDatabase.insertAll(webAppResponse.getWebApps());
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<WebAppResponse> call, Throwable t) {
+                System.out.println(t.getMessage() + "Something went wromng");
+            }
+        });
     }
 }

@@ -16,6 +16,7 @@ import okhttp3.OkHttpClient;
 public class CacheUtils {
 
     private static File cacheDirectory;
+    public static String manifestVersionNumber;
 
     public static void loadWithPicasso(Context context, String imageUrl, ImageView imageView) {
         Picasso picasso = Picasso.get();
@@ -46,5 +47,9 @@ public class CacheUtils {
                                 .into(imageView);
                     }
                 });
+    }
+
+    public static void setManifestVersionNumber(String version) {
+        manifestVersionNumber = version;
     }
 }
