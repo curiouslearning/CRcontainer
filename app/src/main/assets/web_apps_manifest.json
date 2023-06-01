@@ -1,14 +1,26 @@
-[
-  {
-    "appId": 1,
-    "appIconUrl": "images/ftm_english.png",
-    "title": "Feed The Monster US English",
-    "appUrl": "https://feedthemonsterdev.curiouscontent.org/"
-  },
-  {
-    "appId": 2,
-    "appIconUrl": "images/lets_fly_dev.png",
-    "title": "Lets fly",
-    "appUrl": "https://curiousreader.curiouscontent.org/"
-  }
-]
+{
+  "version": 1.0,
+  "web_apps": [
+    {
+      "appId": 0,
+      "appIconUrl": "https://devcuriousreader.wpcomstaging.com/container_app_manifest/icons/ftm_english_dev.png",
+      "title": "Feed The Monster US English",
+      "appUrl": "https://feedthemonsterdev.curiouscontent.org/?cr_lang=english",
+      "language": "English"
+    },
+    {
+      "appId": 1,
+      "appIconUrl": "https://devcuriousreader.wpcomstaging.com/container_app_manifest/icons/lets_fly_dev.png",
+      "title": "Lets fly",
+      "appUrl": "https://curiousreaderdev.curiouscontent.org/",
+      "language": "English"
+    },
+    {
+      "appId": 2,
+      "appIconUrl": "https://devcuriousreader.wpcomstaging.com/container_app_manifest/icons/ftm_hindi_dev.png",
+      "title": "Feed The Monster Hindi",
+      "appUrl": "https://feedthemonsterdev.curiouscontent.org/?cr_lang=hindi",
+      "language": "Hindi"
+    }
+  ]
+}

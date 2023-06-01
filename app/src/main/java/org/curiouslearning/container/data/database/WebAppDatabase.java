@@ -10,6 +10,8 @@ import androidx.lifecycle.LiveData;
 import org.curiouslearning.container.data.model.WebApp;
 
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class WebAppDatabase {
 
@@ -24,8 +26,14 @@ public class WebAppDatabase {
         new InsertAllWebAppAsyncTask(webAppDao).execute(webApps);
     }
 
+    // public void deleteWebApps() {
+    // new DeleteAllWebAppAsyncTask(webAppDao).execute();
+    // }
     public void deleteWebApps() {
-        new DeleteAllWebAppAsyncTask(webAppDao).execute();
+        Executor executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            webAppDao.deleteAllWebApp();
+        });
     }
 
     public LiveData<List<WebApp>> getAllWebApps() {
