@@ -1,16 +1,12 @@
 package org.curiouslearning.container.data.remote;
 
-import android.text.TextUtils;
-
 import org.curiouslearning.container.data.database.WebAppDatabase;
-import org.curiouslearning.container.data.remote.ManifestResponse;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.model.WebAppResponse;
 import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.util.List;
 
-import javax.swing.plaf.synth.SynthScrollBarUI;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -73,8 +69,7 @@ public class RetrofitInstance {
                 if (response.isSuccessful()) {
                     WebAppResponse webAppResponse = response.body();
                     if (manifestVersion != webAppResponse.getVersion()) {
-                        webAppDatabase.deleteWebApps();
-                        webAppDatabase.insertAll(webAppResponse.getWebApps());
+                        webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
                     }
                 }
             }

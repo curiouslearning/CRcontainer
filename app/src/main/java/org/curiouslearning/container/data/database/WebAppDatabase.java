@@ -26,15 +26,10 @@ public class WebAppDatabase {
         new InsertAllWebAppAsyncTask(webAppDao).execute(webApps);
     }
 
-    // public void deleteWebApps() {
-    // new DeleteAllWebAppAsyncTask(webAppDao).execute();
-    // }
-    public void deleteWebApps() {
-        Executor executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> {
-            webAppDao.deleteAllWebApp();
-        });
-    }
+     public void deleteWebApps(List<WebApp> webApps) {
+        new DeleteAllWebAppAsyncTask(webAppDao, webApps).execute();
+     }
+
 
     public LiveData<List<WebApp>> getAllWebApps() {
         return webAppDao.getAllWebApp();
@@ -60,15 +55,19 @@ public class WebAppDatabase {
     }
 
     private static class DeleteAllWebAppAsyncTask extends AsyncTask<Void, Void, Void> {
-        private WebAppDao WebAppDao;
+        private WebAppDao webAppDao;
+        private List<WebApp> webApps;
 
-        private DeleteAllWebAppAsyncTask(WebAppDao WebAppDao) {
-            this.WebAppDao = WebAppDao;
+        private DeleteAllWebAppAsyncTask(WebAppDao WebAppDao, List<WebApp> webApps)  {
+            this.webAppDao = WebAppDao;
+            this.webApps = webApps;
         }
 
         @Override
         protected Void doInBackground(Void... voids) {
-            WebAppDao.deleteAllWebApp();
+            webAppDao.deleteAllWebApp();
+            webAppDao.insertAll( webApps);
+
             return null;
         }
     }

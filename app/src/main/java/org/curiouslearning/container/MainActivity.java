@@ -75,10 +75,17 @@ public class MainActivity extends BaseActivity {
         selectedLanguage = prefs.getString("selectedLanguage", "");
         manifestVersion = prefs.getString("manifestVersion", "");
 
+
+
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
         dialog = new Dialog(this);
         initRecyclerView();
         loadingIndicator = findViewById(R.id.loadingIndicator);
+        loadingIndicator.setVisibility(View.GONE);
+
+        if (manifestVersion != null && manifestVersion != "") {
+            homeViewModal.getUpdatedAppManifest(manifestVersion);
+        }
 
 //        Intent intent = getIntent();
 //        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -191,10 +198,6 @@ public class MainActivity extends BaseActivity {
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
                 android.R.layout.simple_dropdown_item_1line,  new ArrayList<String>());
         autoCompleteTextView.setAdapter(adapter);
-
-        if (manifestVersion != null && manifestVersion != "") {
-            homeViewModal.getUpdatedAppManifest(manifestVersion);
-        }
 
         homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
             @Override
