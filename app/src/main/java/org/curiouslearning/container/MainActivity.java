@@ -216,6 +216,7 @@ public class MainActivity extends BaseActivity {
 
                 if (!distinctLanguageList.isEmpty()) {
                     System.out.println(distinctLanguageList);
+                    adapter.clear();
                     adapter.addAll(distinctLanguageList);
                     adapter.notifyDataSetChanged();
                     selectedLanguage = prefs.getString("selectedLanguage", "");
