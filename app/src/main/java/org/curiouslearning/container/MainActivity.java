@@ -39,9 +39,10 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
+
 
 public class MainActivity extends BaseActivity {
 
@@ -59,8 +60,6 @@ public class MainActivity extends BaseActivity {
     private String selectedLanguage;
     private String manifestVersion;
 
-    private ArrayAdapter<String> adapter; // Add this line
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,25 +75,36 @@ public class MainActivity extends BaseActivity {
         selectedLanguage = prefs.getString("selectedLanguage", "");
         manifestVersion = prefs.getString("manifestVersion", "");
 
+
+
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
         dialog = new Dialog(this);
         initRecyclerView();
         loadingIndicator = findViewById(R.id.loadingIndicator);
         loadingIndicator.setVisibility(View.GONE);
 
-        if (manifestVersion != null && !manifestVersion.isEmpty()) { // Modify this condition
+        if (manifestVersion != null && manifestVersion != "") {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
+
+//        Intent intent = getIntent();
+//        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+//            selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
+//            storeSelectLanguage(selectedLanguage);
+//        }
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
                 if (appLinkData != null) {
+                    // Process the deferred deep link
                     Uri deepLinkUri = appLinkData.getTargetUri();
-                    String language = deepLinkUri.getQueryParameter("language"); // Modify this line
+
+                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     if (language != null) {
+                        // Store the selected language
                         selectedLanguage = language;
-                        storeSelectedLanguage(selectedLanguage);
+                        storeSelectLanguage(language);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -106,7 +116,7 @@ public class MainActivity extends BaseActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (selectedLanguage.isEmpty()) {
+                            if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
                             } else {
                                 loadApps(selectedLanguage);
@@ -116,6 +126,7 @@ public class MainActivity extends BaseActivity {
                 }
             }
         });
+
 
         settingsButton = findViewById(R.id.settings);
         settingsButton.setOnClickListener(new View.OnClickListener() {
@@ -142,10 +153,10 @@ public class MainActivity extends BaseActivity {
         SharedPreferences.Editor editor = cachedPseudo.edit();
         if (!cachedPseudo.contains("pseudoId")) {
             editor.putString("pseudoId",
-                    generatePseudoId() + calendar.get(Calendar.YEAR) + (calendar.get(Calendar.MONTH) + 1)
-                            + calendar.get(Calendar.DAY_OF_MONTH) + calendar.get(Calendar.HOUR_OF_DAY)
+                    generatePseudoId() + calendar.get(Calendar.YEAR) + (calendar.get(Calendar.MONTH) + 1) +
+                            calendar.get(Calendar.DAY_OF_MONTH) + calendar.get(Calendar.HOUR_OF_DAY)
                             + calendar.get(Calendar.MINUTE) + calendar.get(Calendar.SECOND));
-            editor.apply(); // Modify this line
+            editor.commit();
         }
     }
 
@@ -177,14 +188,15 @@ public class MainActivity extends BaseActivity {
 
     private void showLanguagePopup() {
         dialog.setContentView(R.layout.language_popup);
+
         dialog.setCanceledOnTouchOutside(false);
         dialog.getWindow().setBackgroundDrawable(null);
         ImageView closeButton = dialog.findViewById(R.id.setting_close);
         TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
         AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
         autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
-        adapter = new ArrayAdapter<>(dialog.getContext(), android.R.layout.simple_dropdown_item_1line,
-                new ArrayList<>());
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
+                android.R.layout.simple_dropdown_item_1line,  new ArrayList<String>());
         autoCompleteTextView.setAdapter(adapter);
 
         homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
@@ -204,7 +216,6 @@ public class MainActivity extends BaseActivity {
 
                 if (!distinctLanguageList.isEmpty()) {
                     System.out.println(distinctLanguageList);
-                    adapter.clear(); // Clear the adapter before adding new items
                     adapter.addAll(distinctLanguageList);
                     adapter.notifyDataSetChanged();
                     selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -212,7 +223,7 @@ public class MainActivity extends BaseActivity {
                         textBox.setHint(selectedLanguage);
                     }
 
-                    if (!selectedLanguage.isEmpty()) {
+                    if (!selectedLanguage.equals("")) {
                         int position = adapter.getPosition(selectedLanguage);
                         System.out.println(position);
                     }
@@ -221,7 +232,7 @@ public class MainActivity extends BaseActivity {
                         @Override
                         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                             selectedLanguage = (String) parent.getItemAtPosition(position);
-                            storeSelectedLanguage(selectedLanguage);
+                            storeSelectLanguage(selectedLanguage);
                             dialog.dismiss();
                             loadApps(selectedLanguage);
                         }
@@ -238,28 +249,29 @@ public class MainActivity extends BaseActivity {
         dialog.show();
     }
 
-    public void loadApps(String selectedLanguage) {
+    public void loadApps(String selectedlanguage) {
         loadingIndicator.setVisibility(View.VISIBLE);
-        homeViewModal.getSelectedlanguageWebApps(selectedLanguage).observe(this, new Observer<List<WebApp>>() {
+        homeViewModal.getSelectedlanguageWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
                 if (!webApps.isEmpty()) {
                     loadingIndicator.setVisibility(View.GONE);
-                    apps.setWebApps(webApps);
+                    apps.webApps = webApps;
                     apps.notifyDataSetChanged();
+
                 }
             }
         });
     }
 
-    private void storeSelectedLanguage(String language) {
+    private void storeSelectLanguage(String language) {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
     }
 
     private void cacheManifestVersion(String versionNumber) {
-        if (versionNumber != null && !versionNumber.isEmpty()) { // Change the condition
+        if (versionNumber != null && versionNumber != "") {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString("manifestVersion", versionNumber);
             editor.apply();
