@@ -2,8 +2,11 @@ package org.curiouslearning.container.data.remote;
 
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
+import org.curiouslearning.container.data.model.WebAppResponse;
+import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.util.List;
+
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -15,7 +18,8 @@ public class RetrofitInstance {
 
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_1/";
+
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing/";
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
@@ -29,30 +33,51 @@ public class RetrofitInstance {
         return retrofitInstance;
     }
 
-    public List<WebApp> getAppManifest(WebAppDatabase webAppDatabase) {
+    public void getAppManifest(WebAppDatabase webAppDatabase) {
         ApiService api = retrofit.create(ApiService.class);
-        Call<List<WebApp>> call = api.getWebApps();
+        Call<WebAppResponse> call = api.getWebApps();
 
-        call.enqueue(new Callback<List<WebApp>>() {
+        call.enqueue(new Callback<WebAppResponse>() {
             @Override
-            public void onResponse(Call<List<WebApp>> call, Response<List<WebApp>> response) {
+            public void onResponse(Call<WebAppResponse> call, Response<WebAppResponse> response) {
                 if (response.isSuccessful()) {
-                    webApps = response.body();
+                    WebAppResponse webAppResponse = response.body();
+                    CacheUtils.setManifestVersionNumber(webAppResponse.getVersion());
+                    List<WebApp> webApps = webAppResponse.getWebApps();
                     webAppDatabase.insertAll(webApps);
                 }
             }
 
             @Override
-            public void onFailure(Call<List<WebApp>> call, Throwable t) {
-                System.out.println(t.getMessage() + "Something went wromng");
+            public void onFailure(Call<WebAppResponse> call, Throwable t) {
+                System.out.println(t.getMessage() + "Something went wrong");
             }
         });
-
-        return webApps;
     }
 
     public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase) {
         getAppManifest(webAppDatabase);
     }
 
+    public void getUpdatedAppManifest(WebAppDatabase webAppDatabase, String manifestVersion) {
+        ApiService api = retrofit.create(ApiService.class);
+        Call<WebAppResponse> call = api.getWebApps();
+
+        call.enqueue(new Callback<WebAppResponse>() {
+            @Override
+            public void onResponse(Call<WebAppResponse> call, Response<WebAppResponse> response) {
+                if (response.isSuccessful()) {
+                    WebAppResponse webAppResponse = response.body();
+                    if (manifestVersion != webAppResponse.getVersion()) {
+                        webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<WebAppResponse> call, Throwable t) {
+                System.out.println(t.getMessage() + "Something went wromng");
+            }
+        });
+    }
 }

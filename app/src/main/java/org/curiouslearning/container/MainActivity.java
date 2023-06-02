@@ -32,6 +32,7 @@ import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -57,6 +58,7 @@ public class MainActivity extends BaseActivity {
     private static final String SHARED_PREFS_NAME = "appCached";
     private SharedPreferences prefs;
     private String selectedLanguage;
+    private String manifestVersion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,11 +73,19 @@ public class MainActivity extends BaseActivity {
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         selectedLanguage = prefs.getString("selectedLanguage", "");
+        manifestVersion = prefs.getString("manifestVersion", "");
+
+
 
         homeViewModal = new HomeViewModal((Application) getApplicationContext());
         dialog = new Dialog(this);
         initRecyclerView();
         loadingIndicator = findViewById(R.id.loadingIndicator);
+        loadingIndicator.setVisibility(View.GONE);
+
+        if (manifestVersion != null && manifestVersion != "") {
+            homeViewModal.getUpdatedAppManifest(manifestVersion);
+        }
 
 //        Intent intent = getIntent();
 //        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -200,8 +210,13 @@ public class MainActivity extends BaseActivity {
 
                 List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
 
+                if (!webApps.isEmpty()) {
+                    cacheManifestVersion(CacheUtils.manifestVersionNumber);
+                }
+
                 if (!distinctLanguageList.isEmpty()) {
                     System.out.println(distinctLanguageList);
+                    adapter.clear();
                     adapter.addAll(distinctLanguageList);
                     adapter.notifyDataSetChanged();
                     selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -254,5 +269,13 @@ public class MainActivity extends BaseActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
+    }
+
+    private void cacheManifestVersion(String versionNumber) {
+        if (versionNumber != null && versionNumber != "") {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString("manifestVersion", versionNumber);
+            editor.apply();
+        }
     }
 }
