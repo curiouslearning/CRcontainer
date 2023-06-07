@@ -3,11 +3,9 @@ package org.curiouslearning.container;
 import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.Bundle;
-import android.util.Log;
+import android.os.Bundle;;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -16,7 +14,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 
-import androidx.appcompat.app.AlertDialog;
+
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -77,7 +75,7 @@ public class MainActivity extends BaseActivity {
 
 
 
-        homeViewModal = new HomeViewModal((Application) getApplicationContext());
+        homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         dialog = new Dialog(this);
         initRecyclerView();
         loadingIndicator = findViewById(R.id.loadingIndicator);
@@ -96,19 +94,22 @@ public class MainActivity extends BaseActivity {
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                if (dialog != null && dialog.isShowing()) {
+                    dialog.dismiss();
+                }
                 if (appLinkData != null) {
                     // Process the deferred deep link
                     Uri deepLinkUri = appLinkData.getTargetUri();
 
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     if (language != null) {
+                        String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         // Store the selected language
-                        selectedLanguage = language;
-                        storeSelectLanguage(language);
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                loadApps(selectedLanguage);
+                                loadApps(lang);
                             }
                         });
                     }
@@ -173,93 +174,86 @@ public class MainActivity extends BaseActivity {
         return pseudoId;
     }
 
-    private void showPrompt(String message) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(message)
-                .setCancelable(false)
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        finish();
-                    }
-                });
-        AlertDialog alert = builder.create();
-        alert.show();
-    }
-
     private void showLanguagePopup() {
-        dialog.setContentView(R.layout.language_popup);
+        if (!dialog.isShowing()) {
+            dialog.setContentView(R.layout.language_popup);
 
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.getWindow().setBackgroundDrawable(null);
-        ImageView closeButton = dialog.findViewById(R.id.setting_close);
-        TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
-        AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
-        autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
-                android.R.layout.simple_dropdown_item_1line,  new ArrayList<String>());
-        autoCompleteTextView.setAdapter(adapter);
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.getWindow().setBackgroundDrawable(null);
+            ImageView closeButton = dialog.findViewById(R.id.setting_close);
+            TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
+            AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
+            autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
+                    android.R.layout.simple_dropdown_item_1line,  new ArrayList<String>());
+            autoCompleteTextView.setAdapter(adapter);
 
-        homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
-            @Override
-            public void onChanged(List<WebApp> webApps) {
-                Set<String> distinctLanguages = new HashSet<>();
-                for (WebApp webApp : webApps) {
-                    String language = webApp.getLanguage();
-                    distinctLanguages.add(language);
-                }
-
-                List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
-
-                if (!webApps.isEmpty()) {
-                    cacheManifestVersion(CacheUtils.manifestVersionNumber);
-                }
-
-                if (!distinctLanguageList.isEmpty()) {
-                    System.out.println(distinctLanguageList);
-                    adapter.clear();
-                    adapter.addAll(distinctLanguageList);
-                    adapter.notifyDataSetChanged();
-                    selectedLanguage = prefs.getString("selectedLanguage", "");
-                    if (!selectedLanguage.isEmpty()) {
-                        textBox.setHint(selectedLanguage);
+            homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
+                @Override
+                public void onChanged(List<WebApp> webApps) {
+                    Set<String> distinctLanguages = new HashSet<>();
+                    for (WebApp webApp : webApps) {
+                        String language = webApp.getLanguage();
+                        distinctLanguages.add(language);
                     }
 
-                    if (!selectedLanguage.equals("")) {
-                        int position = adapter.getPosition(selectedLanguage);
-                        System.out.println(position);
+                    List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
+
+                    if (!webApps.isEmpty()) {
+                        cacheManifestVersion(CacheUtils.manifestVersionNumber);
                     }
 
-                    autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                        @Override
-                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                            selectedLanguage = (String) parent.getItemAtPosition(position);
-                            storeSelectLanguage(selectedLanguage);
-                            dialog.dismiss();
-                            loadApps(selectedLanguage);
+                    if (!distinctLanguageList.isEmpty()) {
+                        System.out.println(distinctLanguageList);
+                        adapter.clear();
+                        adapter.addAll(distinctLanguageList);
+                        adapter.notifyDataSetChanged();
+
+                        selectedLanguage = prefs.getString("selectedLanguage", "");
+                        if (!selectedLanguage.isEmpty() && distinctLanguages.contains(selectedLanguage)) {
+                            textBox.setHint(selectedLanguage);
                         }
-                    });
-                }
-            }
-        });
 
-        closeButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                dialog.dismiss();
-            }
-        });
-        dialog.show();
+                        autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                            @Override
+                            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                selectedLanguage = (String) parent.getItemAtPosition(position);
+                                dialog.dismiss();
+                                loadApps(selectedLanguage);
+                            }
+                        });
+                    }
+                }
+            });
+
+            closeButton.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    dialog.dismiss();
+                }
+            });
+            dialog.show();
+        }
     }
 
     public void loadApps(String selectedlanguage) {
         loadingIndicator.setVisibility(View.VISIBLE);
+        final String language = selectedlanguage;
         homeViewModal.getSelectedlanguageWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
+                loadingIndicator.setVisibility(View.GONE);
                 if (!webApps.isEmpty()) {
-                    loadingIndicator.setVisibility(View.GONE);
                     apps.webApps = webApps;
                     apps.notifyDataSetChanged();
-
+                    storeSelectLanguage(language);
+                } else {
+                    if (!prefs.getString("selectedLanguage", "").equals("") && !language.equals("")) {
+                        showLanguagePopup();
+                    }
+                    if (manifestVersion.equals("")) {
+                        loadingIndicator.setVisibility(View.VISIBLE);
+                        homeViewModal.getAllWebApps();
+                    }
                 }
             }
         });
@@ -278,4 +272,39 @@ public class MainActivity extends BaseActivity {
             editor.apply();
         }
     }
+
+//    private void loadFallbackWebApps() {
+//        homeViewModal.getSelectedlanguageWebApps("English").observe(this, new Observer<List<WebApp>>() {
+//            @Override
+//            public void onChanged(List<WebApp> fallbackWebApps) {
+//                loadingIndicator.setVisibility(View.GONE);
+//                apps.webApps = fallbackWebApps;
+//                apps.notifyDataSetChanged();
+//                storeSelectLanguage("English");
+//                // Remove the observer after receiving the initial fallback web apps
+//                homeViewModal.getSelectedlanguageWebApps("English").removeObserver(this);
+//            }
+//        });
+//    }
+
+//    private void showPrompt(String message) {
+//        if (!isFinishing()) {
+//            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+//            builder.setMessage(message)
+//                    .setCancelable(false)
+//                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//                        public void onClick(DialogInterface dialog, int id) {
+//                            finish();
+//                            if (prefs.getString("selectedLanguage", "").equals("")) {
+//                                showLanguagePopup();
+//                            } else {
+//                                loadApps("English");
+//                            }
+//                        }
+//                    });
+//            AlertDialog alert = builder.create();
+//            alert.show();
+//        }
+//    }
+
 }
