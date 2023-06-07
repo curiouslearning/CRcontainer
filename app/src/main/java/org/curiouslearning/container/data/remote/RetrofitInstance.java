@@ -44,7 +44,7 @@ public class RetrofitInstance {
                     WebAppResponse webAppResponse = response.body();
                     CacheUtils.setManifestVersionNumber(webAppResponse.getVersion());
                     List<WebApp> webApps = webAppResponse.getWebApps();
-                    webAppDatabase.insertAll(webApps);
+                    webAppDatabase.deleteWebApps(webApps);
                 }
             }
 

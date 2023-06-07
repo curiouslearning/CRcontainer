@@ -2,7 +2,9 @@ package org.curiouslearning.container.data.respository;
 
 import android.app.Application;
 
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import org.curiouslearning.container.data.database.WebAppDatabase;
@@ -10,6 +12,7 @@ import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.remote.RetrofitInstance;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 
+import java.util.Collections;
 import java.util.List;
 
 public class WebAppRepository {
@@ -31,36 +34,38 @@ public class WebAppRepository {
         }
     }
 
-    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
+    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage, LifecycleOwner lifecycleOwner) {
+        MutableLiveData<List<WebApp>> selectedLanguageWebApps = new MutableLiveData<>();
         webApp = webAppDatabase.getSelectedlanguageWebApps(selectedLanguage);
-        webApp.observeForever(new Observer<List<WebApp>>() {
+        webApp.observe(lifecycleOwner, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
                 if (webApps != null && !webApps.isEmpty()) {
-                    // New data is available for the selected language, update the UI
-                    // with the new data here.
+                    selectedLanguageWebApps.setValue(webApps);
                 } else {
-                   fetchWebApp();
+                    selectedLanguageWebApps.setValue(Collections.emptyList());
+//                   fetchWebApp();
                 }
             }
         });
-        return webApp;
+        return selectedLanguageWebApps;
     }
 
-    public LiveData<List<WebApp>> getAllWebApps() {
+    public LiveData<List<WebApp>> getAllWebApps(LifecycleOwner lifecycleOwner) {
+        MutableLiveData<List<WebApp>> newWebApps = new MutableLiveData<>();
         webApp = webAppDatabase.getAllWebApps();
-        webApp.observeForever(new Observer<List<WebApp>>() {
+        webApp.observe(lifecycleOwner, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
                 if (webApps != null && !webApps.isEmpty()) {
-                    // New data is available for the selected language, update the UI
-                    // with the new data here.
+                    newWebApps.setValue(webApps);
                 } else {
+                    newWebApps.setValue(Collections.emptyList());
                     fetchWebApp();
                 }
             }
         });
-        return webApp;
+        return newWebApps;
     }
 
     public void getUpdatedAppManifest(String manifestVersion) {
