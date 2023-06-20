@@ -4,9 +4,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
@@ -20,8 +19,6 @@ import androidx.appcompat.app.AlertDialog;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
-import java.security.SecureRandom;
-import java.math.BigInteger;
 public class WebApp extends BaseActivity {
 
     private String title;
@@ -89,7 +86,8 @@ public class WebApp extends BaseActivity {
         }
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-                return false;
+                Log.d("WebView", consoleMessage.message());
+                return true;
             }
         });
     }
