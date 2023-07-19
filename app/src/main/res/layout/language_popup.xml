@@ -27,6 +27,7 @@
         android:background="@color/white"
         android:hint="@string/select"
         app:hintTextColor="@color/black"
+        android:textColorHint="@color/black"
         app:layout_constraintBottom_toBottomOf="@+id/settings_box"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/settings_box"
@@ -37,10 +38,7 @@
             android:id="@+id/autoComplete"
             android:layout_width="match_parent"
             android:layout_height="72dp"
-            android:inputType="none"
-            android:background="@color/sky_blue"
-            android:textColor="@color/black"
-            android:textColorHint="@color/black">
+            android:inputType="none">
         </AutoCompleteTextView>
 
     </com.google.android.material.textfield.TextInputLayout>
