@@ -208,6 +208,12 @@ public class MainActivity extends BaseActivity {
                         adapter.clear();
                         adapter.addAll(distinctLanguageList);
                         adapter.notifyDataSetChanged();
+                        int standardizedItemHeight = 50;
+                        int itemCount = adapter.getCount();
+                        int dropdownHeight = standardizedItemHeight * itemCount;
+                        int maxHeight = getResources().getDisplayMetrics().heightPixels / 2;
+                        int adjustedDropdownHeight = Math.min(dropdownHeight, maxHeight);
+                        autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
 
                         selectedLanguage = prefs.getString("selectedLanguage", "");
                         if (!selectedLanguage.isEmpty() && distinctLanguages.contains(selectedLanguage)) {
