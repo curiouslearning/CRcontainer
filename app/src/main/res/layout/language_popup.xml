@@ -9,52 +9,56 @@
 
     <ImageView
         android:id="@+id/settings_box"
-        android:layout_width="413dp"
-        android:layout_height="347dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:contentDescription="@string/setting_box"
+        android:scaleType="centerInside"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/setting_box" />
+        app:layout_constraintVertical_bias="0.0"
+        app:srcCompat="@drawable/language_selection" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/dropdown_menu"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-        android:layout_width="247dp"
-        android:layout_height="72dp"
+        android:layout_width="180dp"
+        android:layout_height="45dp"
         android:background="@color/white"
         android:hint="@string/select"
-        app:hintTextColor="@color/black"
         android:textColorHint="@color/black"
+        app:hintTextColor="@color/black"
         app:layout_constraintBottom_toBottomOf="@+id/settings_box"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.65"
         app:layout_constraintStart_toStartOf="@+id/settings_box"
         app:layout_constraintTop_toTopOf="@+id/settings_box"
+        app:layout_constraintVertical_bias="0.45"
         tools:ignore="MissingConstraints">
 
         <AutoCompleteTextView
             android:id="@+id/autoComplete"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="48dp"
             android:background="@color/white"
-            android:inputType="none">
-        </AutoCompleteTextView>
-
+            android:inputType="none"></AutoCompleteTextView>
     </com.google.android.material.textfield.TextInputLayout>
 
     <ImageView
         android:id="@+id/setting_close"
-        android:layout_width="123dp"
-        android:layout_height="102dp"
+        android:layout_width="67dp"
+        android:layout_height="63dp"
+        android:layout_marginBottom="376dp"
         android:contentDescription="@string/setting_box_close"
+        android:scaleType="fitEnd"
         app:layout_constraintBottom_toBottomOf="@+id/settings_box"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.944"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/settings_box"
-        app:layout_constraintVertical_bias="0.0"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="@+id/dropdown_menu"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0"
         app:srcCompat="@drawable/close_button"
         tools:ignore="MissingConstraints" />
 
