@@ -27,6 +27,7 @@ public class WebApp extends BaseActivity {
     private WebView webView;
     private SharedPreferences sharedPref;
     private String urlIndex;
+    private String language;
     private String pseudoId;
     private boolean isDataCached;
 
@@ -48,6 +49,7 @@ public class WebApp extends BaseActivity {
             urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
             appUrl = intent.getStringExtra("appUrl");
+            language = intent.getStringExtra("language");
         }
     }
 
@@ -131,7 +133,7 @@ public class WebApp extends BaseActivity {
 
     //log firebase Event
     public void logAppLaunchEvent() {
-        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl,pseudoId);
+        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl,pseudoId,language);
 
     }
 }
