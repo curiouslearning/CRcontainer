@@ -36,6 +36,7 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.HashSet;
@@ -198,7 +199,7 @@ public class MainActivity extends BaseActivity {
                     }
 
                     List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
-
+                    Collections.sort(distinctLanguageList);
                     if (!webApps.isEmpty()) {
                         cacheManifestVersion(CacheUtils.manifestVersionNumber);
                     }

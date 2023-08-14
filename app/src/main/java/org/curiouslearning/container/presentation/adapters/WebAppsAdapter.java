@@ -59,6 +59,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
                 intent.putExtra("appUrl", webApps.get(position).getAppUrl());
                 intent.putExtra("title", webApps.get(position).getTitle());
+                intent.putExtra("language", webApps.get(position).getLanguage());
                 ctx.startActivity(intent);
             }
         });
