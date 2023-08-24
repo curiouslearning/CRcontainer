@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
 
     <application
         android:allowBackup="true"
@@ -16,12 +16,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FTM"
         tools:targetApi="31">
-        <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
-        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
+        <meta-data android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+        <meta-data android:name="com.facebook.sdk.ClientToken"
+            android:value="@string/facebook_client_token" />
         <meta-data android:name="com.facebook.sdk.AutoLogAppEventsEnabled"
-            android:value="true"/>
+            android:value="true" />
         <meta-data android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
-            android:value="false"/>
+            android:value="false" />
         <activity
             android:name=".WebApp"
             android:screenOrientation="portrait"
@@ -48,7 +50,7 @@
                     android:scheme="curiousreader"
                     android:host="app"
                     android:pathPrefix="/language"
-                    />
+                />
             </intent-filter>
 
             <meta-data
