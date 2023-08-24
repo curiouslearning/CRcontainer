@@ -7,6 +7,7 @@ import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.util.List;
 
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -18,7 +19,7 @@ public class RetrofitInstance {
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
 
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/";
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing/";
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
