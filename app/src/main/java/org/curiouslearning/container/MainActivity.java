@@ -36,12 +36,9 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -240,23 +237,21 @@ public class MainActivity extends BaseActivity {
         }
     }
     private Set sortLanguages(List<WebApp> webApps){
-        List<String> valueList = new ArrayList<>();
-        Map<String, String> languages = new HashMap<>();
+        List<String> langList = new ArrayList<>();
+        Map<String, String> languages = new TreeMap<>();
         for (WebApp webApp : webApps) {
             String language = webApp.getLanguage();
             String parameterName = "cr_lang=";
             int index = webApp.getAppUrl().indexOf(parameterName);
-
             if (index != -1) {
                 String quaryParam = webApp.getAppUrl().substring(index + parameterName.length());
                 languages.put(quaryParam,language);
             }
         }
-        Map<String, String> sortedLanguages = new TreeMap<>(languages);
-        for (Map.Entry<String, String> entry : sortedLanguages.entrySet()) {
-            valueList.add(entry.getValue());
+        for (Map.Entry<String, String> entry : languages.entrySet()) {
+            langList.add(entry.getValue());
         }
-        return  new LinkedHashSet<>(valueList);
+        return  new LinkedHashSet<>(langList);
     }
     public void loadApps(String selectedlanguage) {
         loadingIndicator.setVisibility(View.VISIBLE);
