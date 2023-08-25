@@ -38,9 +38,13 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 
 public class MainActivity extends BaseActivity {
@@ -192,14 +196,8 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
                 @Override
                 public void onChanged(List<WebApp> webApps) {
-                    Set<String> distinctLanguages = new HashSet<>();
-                    for (WebApp webApp : webApps) {
-                        String language = webApp.getLanguage();
-                        distinctLanguages.add(language);
-                    }
-
+                    Set<String> distinctLanguages = sortLanguages(webApps);
                     List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
-                    Collections.sort(distinctLanguageList);
                     if (!webApps.isEmpty()) {
                         cacheManifestVersion(CacheUtils.manifestVersionNumber);
                     }
@@ -241,7 +239,25 @@ public class MainActivity extends BaseActivity {
             dialog.show();
         }
     }
+    private Set sortLanguages(List<WebApp> webApps){
+        List<String> valueList = new ArrayList<>();
+        Map<String, String> languages = new HashMap<>();
+        for (WebApp webApp : webApps) {
+            String language = webApp.getLanguage();
+            String parameterName = "cr_lang=";
+            int index = webApp.getAppUrl().indexOf(parameterName);
 
+            if (index != -1) {
+                String quaryParam = webApp.getAppUrl().substring(index + parameterName.length());
+                languages.put(quaryParam,language);
+            }
+        }
+        Map<String, String> sortedLanguages = new TreeMap<>(languages);
+        for (Map.Entry<String, String> entry : sortedLanguages.entrySet()) {
+            valueList.add(entry.getValue());
+        }
+        return  new LinkedHashSet<>(valueList);
+    }
     public void loadApps(String selectedlanguage) {
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedlanguage;
