@@ -36,11 +36,12 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 
 public class MainActivity extends BaseActivity {
@@ -192,14 +193,8 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
                 @Override
                 public void onChanged(List<WebApp> webApps) {
-                    Set<String> distinctLanguages = new HashSet<>();
-                    for (WebApp webApp : webApps) {
-                        String language = webApp.getLanguage();
-                        distinctLanguages.add(language);
-                    }
-
+                    Set<String> distinctLanguages = sortLanguages(webApps);
                     List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
-                    Collections.sort(distinctLanguageList);
                     if (!webApps.isEmpty()) {
                         cacheManifestVersion(CacheUtils.manifestVersionNumber);
                     }
@@ -241,7 +236,23 @@ public class MainActivity extends BaseActivity {
             dialog.show();
         }
     }
-
+    private Set sortLanguages(List<WebApp> webApps){
+        List<String> langList = new ArrayList<>();
+        Map<String, String> languages = new TreeMap<>();
+        for (WebApp webApp : webApps) {
+            String language = webApp.getLanguage();
+            String parameterName = "cr_lang=";
+            int index = webApp.getAppUrl().indexOf(parameterName);
+            if (index != -1) {
+                String quaryParam = webApp.getAppUrl().substring(index + parameterName.length());
+                languages.put(quaryParam,language);
+            }
+        }
+        for (Map.Entry<String, String> entry : languages.entrySet()) {
+            langList.add(entry.getValue());
+        }
+        return  new LinkedHashSet<>(langList);
+    }
     public void loadApps(String selectedlanguage) {
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedlanguage;
