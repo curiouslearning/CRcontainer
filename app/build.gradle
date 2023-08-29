@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'org.curiouslearning.container'
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "org.curiouslearning.container"
         minSdk 21
-        targetSdk 32
+        targetSdk 33
         versionCode 3
         versionName "3.0"
 
