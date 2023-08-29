@@ -10,6 +10,7 @@ import android.view.View;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
@@ -78,7 +79,7 @@ public class WebApp extends BaseActivity {
         webView.setWebViewClient(new WebViewClient());
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().getDomStorageEnabled();
-        webView.getSettings().setAppCacheEnabled(true);
+        webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
         if (appUrl.contains("cr_lang")) {
