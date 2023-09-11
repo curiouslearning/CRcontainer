@@ -133,7 +133,13 @@ public class WebApp extends BaseActivity {
         @JavascriptInterface
         public void setContainerAppOrientation(String orientationType) {
             Log.d("WebView", "Orientation value received from webapp " + appUrl + "--->" + orientationType);
-            setAppOrientation(orientationType);
+
+            if (orientationType != null && !orientationType.isEmpty()) {
+                setAppOrientation(orientationType);
+            } else {
+                Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
+                // You can add error handling here, such as showing a toast message or a dialog.
+            }
         }
     }
 
