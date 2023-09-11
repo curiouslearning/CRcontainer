@@ -138,7 +138,6 @@ public class WebApp extends BaseActivity {
                 setAppOrientation(orientationType);
             } else {
                 Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
-                // You can add error handling here, such as showing a toast message or a dialog.
             }
         }
     }
