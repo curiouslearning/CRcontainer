@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -127,10 +128,27 @@ public class WebApp extends BaseActivity {
             if (!isInternetConnected(getApplicationContext()) && dataCachedStatus) {
                 showPrompt("Please Connect to the Network");
             }
+        }
 
-            // Do something with the data
+        @JavascriptInterface
+        public void setContainerAppOrientation(String orientationType) {
+            Log.d("WebView", "Orientation value received from webapp " + appUrl + "--->" + orientationType);
+            setAppOrientation(orientationType);
         }
     }
+
+
+    public void setAppOrientation(String orientationType) {
+        int currentOrientation = getRequestedOrientation();
+        if (orientationType.equalsIgnoreCase("portrait") && (currentOrientation != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            Log.d("WebView", "Orientation Changed to Portarit for webApp ---> " + title);
+        } else if (orientationType.equalsIgnoreCase("landscape") && (currentOrientation != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            Log.d("WebView", "Orientation Changed to Landscape for webApp ---> " + title);
+        }
+    }
+
 
     //log firebase Event
     public void logAppLaunchEvent() {
