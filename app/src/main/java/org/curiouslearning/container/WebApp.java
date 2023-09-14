@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
+
 public class WebApp extends BaseActivity {
 
     private String title;
@@ -58,7 +59,7 @@ public class WebApp extends BaseActivity {
     private void initViews() {
         sharedPref = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
         isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
-        pseudoId= sharedPref.getString("pseudoId", "");
+        pseudoId = sharedPref.getString("pseudoId", "");
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -85,6 +86,8 @@ public class WebApp extends BaseActivity {
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
         if (appUrl.contains("cr_lang")) {
             webView.loadUrl(appUrl + "&cr_user_id=" + pseudoId);
+        } else if (appUrl.contains("book")) {
+            webView.loadUrl(appUrl + "&cr_user_id=" + pseudoId);
         } else {
             webView.loadUrl(appUrl + "?cr_user_id=" + pseudoId);
         }
@@ -95,11 +98,12 @@ public class WebApp extends BaseActivity {
             }
         });
     }
-    private boolean isInternetConnected(Context context){
+
+    private boolean isInternetConnected(Context context) {
         return ConnectionUtils.getInstance().isInternetConnected(context);
     }
 
-    private void showPrompt(String message){
+    private void showPrompt(String message) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(message)
                 .setCancelable(false)
@@ -142,22 +146,22 @@ public class WebApp extends BaseActivity {
         }
     }
 
-
     public void setAppOrientation(String orientationType) {
         int currentOrientation = getRequestedOrientation();
-        if (orientationType.equalsIgnoreCase("portrait") && (currentOrientation != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)) {
+        if (orientationType.equalsIgnoreCase("portrait")
+                && (currentOrientation != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
             Log.d("WebView", "Orientation Changed to Portarit for webApp ---> " + title);
-        } else if (orientationType.equalsIgnoreCase("landscape") && (currentOrientation != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
+        } else if (orientationType.equalsIgnoreCase("landscape")
+                && (currentOrientation != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
             Log.d("WebView", "Orientation Changed to Landscape for webApp ---> " + title);
         }
     }
 
-
-    //log firebase Event
+    // log firebase Event
     public void logAppLaunchEvent() {
-        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl,pseudoId,language);
+        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, language);
 
     }
 }
