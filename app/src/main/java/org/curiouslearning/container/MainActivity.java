@@ -5,7 +5,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.Bundle;;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -13,7 +13,6 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-
 
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -42,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 
 public class MainActivity extends BaseActivity {
 
@@ -75,8 +73,6 @@ public class MainActivity extends BaseActivity {
         selectedLanguage = prefs.getString("selectedLanguage", "");
         manifestVersion = prefs.getString("manifestVersion", "");
 
-
-
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         dialog = new Dialog(this);
         initRecyclerView();
@@ -87,11 +83,11 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
 
-//        Intent intent = getIntent();
-//        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-//            selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
-//            storeSelectLanguage(selectedLanguage);
-//        }
+        // Intent intent = getIntent();
+        // if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+        // selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
+        // storeSelectLanguage(selectedLanguage);
+        // }
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
@@ -129,7 +125,6 @@ public class MainActivity extends BaseActivity {
                 }
             }
         });
-
 
         settingsButton = findViewById(R.id.settings);
         settingsButton.setOnClickListener(new View.OnClickListener() {
@@ -187,7 +182,7 @@ public class MainActivity extends BaseActivity {
             AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
             autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
             ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
-                    android.R.layout.simple_dropdown_item_1line,  new ArrayList<String>());
+                    android.R.layout.simple_dropdown_item_1line, new ArrayList<String>());
             autoCompleteTextView.setAdapter(adapter);
 
             homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
@@ -236,7 +231,8 @@ public class MainActivity extends BaseActivity {
             dialog.show();
         }
     }
-    private Set sortLanguages(List<WebApp> webApps){
+
+    private Set sortLanguages(List<WebApp> webApps) {
         List<String> langList = new ArrayList<>();
         Map<String, String> languages = new TreeMap<>();
         for (WebApp webApp : webApps) {
@@ -245,14 +241,15 @@ public class MainActivity extends BaseActivity {
             int index = webApp.getAppUrl().indexOf(parameterName);
             if (index != -1) {
                 String quaryParam = webApp.getAppUrl().substring(index + parameterName.length());
-                languages.put(quaryParam,language);
+                languages.put(quaryParam, language);
             }
         }
         for (Map.Entry<String, String> entry : languages.entrySet()) {
             langList.add(entry.getValue());
         }
-        return  new LinkedHashSet<>(langList);
+        return new LinkedHashSet<>(langList);
     }
+
     public void loadApps(String selectedlanguage) {
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedlanguage;
@@ -291,38 +288,39 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-//    private void loadFallbackWebApps() {
-//        homeViewModal.getSelectedlanguageWebApps("English").observe(this, new Observer<List<WebApp>>() {
-//            @Override
-//            public void onChanged(List<WebApp> fallbackWebApps) {
-//                loadingIndicator.setVisibility(View.GONE);
-//                apps.webApps = fallbackWebApps;
-//                apps.notifyDataSetChanged();
-//                storeSelectLanguage("English");
-//                // Remove the observer after receiving the initial fallback web apps
-//                homeViewModal.getSelectedlanguageWebApps("English").removeObserver(this);
-//            }
-//        });
-//    }
+    // private void loadFallbackWebApps() {
+    // homeViewModal.getSelectedlanguageWebApps("English").observe(this, new
+    // Observer<List<WebApp>>() {
+    // @Override
+    // public void onChanged(List<WebApp> fallbackWebApps) {
+    // loadingIndicator.setVisibility(View.GONE);
+    // apps.webApps = fallbackWebApps;
+    // apps.notifyDataSetChanged();
+    // storeSelectLanguage("English");
+    // // Remove the observer after receiving the initial fallback web apps
+    // homeViewModal.getSelectedlanguageWebApps("English").removeObserver(this);
+    // }
+    // });
+    // }
 
-//    private void showPrompt(String message) {
-//        if (!isFinishing()) {
-//            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//            builder.setMessage(message)
-//                    .setCancelable(false)
-//                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                        public void onClick(DialogInterface dialog, int id) {
-//                            finish();
-//                            if (prefs.getString("selectedLanguage", "").equals("")) {
-//                                showLanguagePopup();
-//                            } else {
-//                                loadApps("English");
-//                            }
-//                        }
-//                    });
-//            AlertDialog alert = builder.create();
-//            alert.show();
-//        }
-//    }
+    // private void showPrompt(String message) {
+    // if (!isFinishing()) {
+    // AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    // builder.setMessage(message)
+    // .setCancelable(false)
+    // .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+    // public void onClick(DialogInterface dialog, int id) {
+    // finish();
+    // if (prefs.getString("selectedLanguage", "").equals("")) {
+    // showLanguagePopup();
+    // } else {
+    // loadApps("English");
+    // }
+    // }
+    // });
+    // AlertDialog alert = builder.create();
+    // alert.show();
+    // }
+    // }
 
 }
