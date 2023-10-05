@@ -118,7 +118,7 @@ public class RetrofitInstance {
                 if (response.isSuccessful()) {
                     WebAppResponse webAppResponse = response.body();
                     if (manifestVersion != webAppResponse.getVersion()) {
-                        webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
+                        processWebAppResponse(webAppResponse, webAppDatabase);
                     }
                 }
             }
