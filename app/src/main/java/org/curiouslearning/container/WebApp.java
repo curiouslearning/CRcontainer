@@ -86,8 +86,6 @@ public class WebApp extends BaseActivity {
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
         if (appUrl.contains("cr_lang")) {
             webView.loadUrl(appUrl + "&cr_user_id=" + pseudoId);
-        } else if (appUrl.contains("book")) {
-            webView.loadUrl(appUrl + "&cr_user_id=" + pseudoId);
         } else {
             webView.loadUrl(appUrl + "?cr_user_id=" + pseudoId);
         }
