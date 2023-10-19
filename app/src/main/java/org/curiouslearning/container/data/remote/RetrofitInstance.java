@@ -1,8 +1,6 @@
 package org.curiouslearning.container.data.remote;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -10,8 +8,6 @@ import com.google.gson.reflect.TypeToken;
 
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
-import org.curiouslearning.container.data.model.WebAppV1.WebAppV1;
-import org.curiouslearning.container.data.model.WebAppV2.WebAppV2;
 import org.curiouslearning.container.data.model.WebAppResponse;
 import org.curiouslearning.container.utilities.CacheUtils;
 
@@ -33,8 +29,6 @@ public class RetrofitInstance {
 
     private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/universal/";
     private List<WebApp> webApps;
-    private List<WebAppV1> webappsv1;
-    private List<WebAppV2> webappsv2;
 
     public static RetrofitInstance getInstance() {
         if (retrofit == null) {
