@@ -8,7 +8,7 @@ import java.util.List;
 
 public class WebAppResponse {
     private String version;
-    private Integer majorVersion = Integer.parseInt(version.split("\\.")[0]);
+    private Integer majorVersion;
 
     private List<WebApp> web_apps;
     private List<WebAppV1> web_apps_v1;
@@ -19,6 +19,7 @@ public class WebAppResponse {
     }
 
     public List<WebApp> getWebApps() {
+        majorVersion = Integer.parseInt(version.split("\\.")[0]);
         List<WebApp> convertedWebApps = new ArrayList<>();
         if (majorVersion == 2) {
             for (WebAppV1 webAppV1 : web_apps_v1) {
