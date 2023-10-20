@@ -1,14 +1,19 @@
 package org.curiouslearning.container.data.remote;
 
+
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
-import org.curiouslearning.container.data.model.WebAppV1.WebAppV1;
-import org.curiouslearning.container.data.model.WebAppV2.WebAppV2;
 import org.curiouslearning.container.data.model.WebAppResponse;
 import org.curiouslearning.container.utilities.CacheUtils;
 
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -20,11 +25,10 @@ public class RetrofitInstance {
 
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
+    private Map<String, Object> data;
 
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_1/";
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/universal/";
     private List<WebApp> webApps;
-    private List<WebAppV1> webappsv1;
-    private List<WebAppV2> webappsv2;
 
     public static RetrofitInstance getInstance() {
         if (retrofit == null) {
@@ -39,26 +43,35 @@ public class RetrofitInstance {
 
     public void getAppManifest(WebAppDatabase webAppDatabase) {
         ApiService api = retrofit.create(ApiService.class);
-        Call<WebAppResponse> call = api.getWebApps();
+        Call<JsonElement> call = api.getWebApps(); // Assume your API call returns a raw JsonElement
 
-        call.enqueue(new Callback<WebAppResponse>() {
+        call.enqueue(new Callback<JsonElement>() {
             @Override
-            public void onResponse(Call<WebAppResponse> call, Response<WebAppResponse> response) {
+            public void onResponse(Call<JsonElement> call, Response<JsonElement> response) {
                 if (response.isSuccessful()) {
-                    WebAppResponse webAppResponse = response.body();
-                    CacheUtils.setManifestVersionNumber(webAppResponse.getVersion());
-                    List<WebApp> webApps = webAppResponse.getWebApps();
-                    webAppDatabase.deleteWebApps(webApps);
+                    JsonElement jsonElement = response.body();
 
+                    if (jsonElement != null) {
+                        JsonObject jsonObject = jsonElement.getAsJsonObject();
+                        JsonElement versionElement = jsonObject.get("version");
+                        WebAppResponse webAppResponse = findWebApps(jsonElement);
+                        webAppResponse.setVersion(versionElement.getAsString());
+                        if (webAppResponse != null) {
+                            CacheUtils.setManifestVersionNumber(webAppResponse.getVersion());
+                            List<WebApp> webApps = webAppResponse.getWebApps();
+                            webAppDatabase.deleteWebApps(webApps);
+                        }
+                    }
                 }
             }
 
             @Override
-            public void onFailure(Call<WebAppResponse> call, Throwable t) {
+            public void onFailure(Call<JsonElement> call, Throwable t) {
                 System.out.println(t.getMessage() + "Something went wrong");
             }
         });
     }
+
 
     public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase) {
         getAppManifest(webAppDatabase);
@@ -66,23 +79,57 @@ public class RetrofitInstance {
 
     public void getUpdatedAppManifest(WebAppDatabase webAppDatabase, String manifestVersion) {
         ApiService api = retrofit.create(ApiService.class);
-        Call<WebAppResponse> call = api.getWebApps();
+        Call<JsonElement> call = api.getWebApps(); // Assume your API call returns a raw JsonElement
 
-        call.enqueue(new Callback<WebAppResponse>() {
+        call.enqueue(new Callback<JsonElement>() {
             @Override
-            public void onResponse(Call<WebAppResponse> call, Response<WebAppResponse> response) {
+            public void onResponse(Call<JsonElement> call, Response<JsonElement> response) {
                 if (response.isSuccessful()) {
-                    WebAppResponse webAppResponse = response.body();
-                    if (manifestVersion != webAppResponse.getVersion()) {
-                        webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
+                    JsonElement jsonElement = response.body();
+
+                    if (jsonElement != null) {
+                        JsonObject jsonObject = jsonElement.getAsJsonObject();
+                        JsonElement versionElement = jsonObject.get("version");
+                        WebAppResponse webAppResponse = findWebApps(jsonElement);
+                        webAppResponse.setVersion(versionElement.getAsString());
+                        if (manifestVersion != webAppResponse.getVersion()) {
+                            webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
+                        }
                     }
                 }
             }
 
             @Override
-            public void onFailure(Call<WebAppResponse> call, Throwable t) {
-                System.out.println(t.getMessage() + "Something went wromng");
+            public void onFailure(Call<JsonElement> call, Throwable t) {
+                System.out.println(t.getMessage() + "Something went wrong");
             }
         });
+
+    }
+
+    private WebAppResponse findWebApps(JsonElement element) {
+        if (element.isJsonObject()) {
+            JsonObject jsonObject = element.getAsJsonObject();
+
+            for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+                String key = entry.getKey();
+                JsonElement value = entry.getValue();
+
+                if (key.equals("web_apps") && value.isJsonArray()) {
+                    WebAppResponse webAppResponse = new WebAppResponse();
+                    List<WebApp> webApps = new Gson().fromJson(value, new TypeToken<List<WebApp>>() {}.getType());
+                    webAppResponse.setWebApp(webApps);
+
+                    return webAppResponse;
+                } else if (value.isJsonObject()) {
+                    WebAppResponse nestedResponse = findWebApps(value);
+                    if (nestedResponse != null) {
+                        return nestedResponse;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }
