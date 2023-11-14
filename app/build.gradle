@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace 'org.curiouslearning.container'
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "org.curiouslearning.container"
         minSdk 21
-        targetSdk 32
-        versionCode 1
-        versionName "1.0"
+        targetSdk 33
+        versionCode 4
+        versionName "2.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -69,5 +69,8 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
 
-    implementation 'com.facebook.android:facebook-android-sdk:8.1.0'
+    implementation 'com.facebook.android:facebook-android-sdk:latest.release'
+    implementation 'com.facebook.android:facebook-core:[12.2.0]'
+    implementation 'com.facebook.android:facebook-applinks:[12.2.0]'
+
 }

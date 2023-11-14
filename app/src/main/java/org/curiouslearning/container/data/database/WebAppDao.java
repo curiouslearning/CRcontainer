@@ -1,6 +1,5 @@
 package org.curiouslearning.container.data.database;
 
-
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Insert;
@@ -18,10 +17,12 @@ public interface WebAppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertAll(List<WebApp> webApp);
 
-
     @Query("DELETE FROM web_app_table")
     void deleteAllWebApp();
 
-    @Query("SELECT * FROM web_app_table ORDER BY appId ASC")
+    @Query("SELECT * FROM web_app_table where language = :selectedLanguage ORDER BY appId ASC")
+    LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage);
+
+    @Query("SELECT * FROM web_app_table  ORDER BY appId ASC")
     LiveData<List<WebApp>> getAllWebApp();
 }
