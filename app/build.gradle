@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'org.curiouslearning.container'
+    namespace 'org.curiouslearning.containerdev'
     compileSdk 33
 
     defaultConfig {
-        applicationId "org.curiouslearning.container"
+        applicationId "org.curiouslearning.containerdev"
         minSdk 21
         targetSdk 33
         versionCode 4
