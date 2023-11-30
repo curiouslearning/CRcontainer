@@ -27,7 +27,7 @@ public class RetrofitInstance {
     private static RetrofitInstance retrofitInstance;
     private Map<String, Object> data;
 
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/universal/";
+    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/";
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
