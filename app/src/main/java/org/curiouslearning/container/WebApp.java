@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -84,17 +85,20 @@ public class WebApp extends BaseActivity {
         webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
-        if (appUrl.contains("cr_lang") || appUrl.contains("book") || appUrl.contains("data")) {
-            webView.loadUrl(appUrl + "&cr_user_id=" + pseudoId);
-        } else {
-            webView.loadUrl(appUrl + "?cr_user_id=" + pseudoId);
-        }
+        webView.loadUrl(addCrUserIdToUrl(appUrl));
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 Log.d("WebView", consoleMessage.message());
                 return true;
             }
         });
+    }
+
+    private String addCrUserIdToUrl(String appUrl) {
+        Uri originalUri = Uri.parse(appUrl);
+        String separator = (originalUri.getQuery() == null) ? "?" : "&";
+        String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" + pseudoId;
+        return modifiedUrl;
     }
 
     private boolean isInternetConnected(Context context) {
