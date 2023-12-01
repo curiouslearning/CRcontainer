@@ -236,13 +236,9 @@ public class MainActivity extends BaseActivity {
         List<String> langList = new ArrayList<>();
         Map<String, String> languages = new TreeMap<>();
         for (WebApp webApp : webApps) {
-            String language = webApp.getLanguage();
-            String parameterName = "cr_lang=";
-            int index = webApp.getAppUrl().indexOf(parameterName);
-            if (index != -1) {
-                String quaryParam = webApp.getAppUrl().substring(index + parameterName.length());
-                languages.put(quaryParam, language);
-            }
+            String languageInEnglishName = webApp.getLanguageInEnglishName();
+            String languageInLocaName = webApp.getLanguage();
+            languages.put(languageInEnglishName, languageInLocaName);
         }
         for (Map.Entry<String, String> entry : languages.entrySet()) {
             langList.add(entry.getValue());

@@ -17,6 +17,10 @@ public class WebApp {
 
     private String appIconUrl;
 
+    private String languageInEnglishName;
+
+
+
     public int getAppId() {
         return appId;
     }
@@ -55,6 +59,14 @@ public class WebApp {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getLanguageInEnglishName() {
+        return languageInEnglishName;
+    }
+
+    public void setLanguageInEnglishName(String languageInEnglishName) {
+        this.languageInEnglishName = languageInEnglishName;
     }
 
 }
