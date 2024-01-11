@@ -147,7 +147,7 @@ public class MainActivity extends BaseActivity {
         recyclerView = findViewById(R.id.recycleView);
         recyclerView.setLayoutManager(
                 new GridLayoutManager(getApplicationContext(), 2, GridLayoutManager.HORIZONTAL, false));
-        apps = new WebAppsAdapter(getApplicationContext(), new ArrayList<>());
+        apps = new WebAppsAdapter(this, new ArrayList<>());
         recyclerView.setAdapter(apps);
     }
 
