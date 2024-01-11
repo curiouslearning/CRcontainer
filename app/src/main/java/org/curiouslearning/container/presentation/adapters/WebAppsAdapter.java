@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.utilities.CacheUtils;
+import org.curiouslearning.container.utilities.ImageLoader;
 
 import java.util.List;
 
@@ -40,7 +41,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
-        CacheUtils.loadWithPicasso(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
+        ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
         if (!isAppCached(webApps.get(position).getAppId())) {
             ColorMatrix matrix = new ColorMatrix();

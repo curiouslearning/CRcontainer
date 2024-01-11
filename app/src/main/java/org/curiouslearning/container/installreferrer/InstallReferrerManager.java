@@ -22,7 +22,7 @@ public class InstallReferrerManager {
     }
 
     public void checkPlayStoreAvailability() {
-        if (installReferrerClient.isReady()) {
+        if (installReferrerClient != null) {
             startConnection();
         } else {
             Log.d("referrer", "install connection not established");
