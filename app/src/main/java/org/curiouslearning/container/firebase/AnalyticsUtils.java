@@ -3,11 +3,14 @@ package org.curiouslearning.container.firebase;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.android.installreferrer.api.ReferrerDetails;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AnalyticsUtils {
 
@@ -41,17 +44,29 @@ public class AnalyticsUtils {
             bundle.putLong("app_install_time", response.getInstallBeginTimestampSeconds());
             bundle.putBoolean("instant_experience_launched", response.getGooglePlayInstantParam());
 
-            String campaignId = extractCampaignId(response.getInstallReferrer());
-            if (campaignId != null) {
-                bundle.putString("campaign_id", campaignId);
+            Map<String, String> extractedParams = extractReferrerParameters(response.getInstallReferrer());
+            if (extractedParams != null) {
+                bundle.putString("source", extractedParams.get("source"));
+                bundle.putString("campaign_id", extractedParams.get("source"));
             }
 
             firebaseAnalytics.logEvent(eventName, bundle);
         }
     }
 
-    private static String extractCampaignId(String referrerUrl) {
+    private  static Map<String, String> extractReferrerParameters(String referrerUrl) {
+        Map<String, String> params = new HashMap<>();
+
         Uri uri = Uri.parse(referrerUrl);
-        return uri.getQueryParameter("campaign_id");
+
+        String source = uri.getQueryParameter("utm_source");
+        String campaign = uri.getQueryParameter("utm_campaign");
+
+        Log.d("campaign_id from souce ", campaign + " " + source);
+
+        params.put("source", source);
+        params.put("campaign_id", campaign);
+
+        return params;
     }
 }
