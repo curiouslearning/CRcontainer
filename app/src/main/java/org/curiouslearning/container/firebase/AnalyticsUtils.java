@@ -57,8 +57,8 @@ public class AnalyticsUtils {
     private  static Map<String, String> extractReferrerParameters(String referrerUrl) {
         Map<String, String> params = new HashMap<>();
 
-        Uri uri = Uri.parse(referrerUrl);
-
+        Uri uri = Uri.parse("?" + referrerUrl);
+        
         String source = uri.getQueryParameter("utm_source");
         String campaign = uri.getQueryParameter("utm_campaign");
 
