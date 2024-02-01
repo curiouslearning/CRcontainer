@@ -8,6 +8,9 @@ import android.util.Log;
 import com.android.installreferrer.api.ReferrerDetails;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,12 +45,15 @@ public class AnalyticsUtils {
             bundle.putString("referrer_url", response.getInstallReferrer());
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
             bundle.putLong("app_install_time", response.getInstallBeginTimestampSeconds());
-            bundle.putBoolean("instant_experience_launched", response.getGooglePlayInstantParam());
 
             Map<String, String> extractedParams = extractReferrerParameters(response.getInstallReferrer());
             if (extractedParams != null) {
-                bundle.putString("source", extractedParams.get("source"));
-                bundle.putString("campaign_id", extractedParams.get("source"));
+                String source = extractedParams.get("source");
+                String campaign = extractedParams.get("campaign");
+                String content = extractedParams.get("content");
+                bundle.putString("source", source);
+                bundle.putString("campaign", campaign);
+                bundle.putString("content", content);
             }
 
             firebaseAnalytics.logEvent(eventName, bundle);
@@ -56,17 +62,31 @@ public class AnalyticsUtils {
 
     private  static Map<String, String> extractReferrerParameters(String referrerUrl) {
         Map<String, String> params = new HashMap<>();
+        Uri uri = Uri.parse(referrerUrl);
 
-        Uri uri = Uri.parse("?" + referrerUrl);
-        
         String source = uri.getQueryParameter("utm_source");
         String campaign = uri.getQueryParameter("utm_campaign");
+        String content = uri.getQueryParameter("utm_content");
+        Log.d("data without decode", campaign + " " + source + " " + content);
+        content = urlDecode(content);
 
-        Log.d("campaign_id from souce ", campaign + " " + source);
+        Log.d("referral data", campaign + " " + source + " " + content);
 
         params.put("source", source);
-        params.put("campaign_id", campaign);
+        params.put("campaign", campaign);
+        params.put("content", content);
 
         return params;
+    }
+
+    public static String urlDecode(String encodedString) {
+        try {
+            String decodedString = URLDecoder.decode(encodedString, StandardCharsets.UTF_8.toString());
+            Log.d("decoded utm_content", decodedString);
+            return  decodedString;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
