@@ -81,10 +81,15 @@ public class AnalyticsUtils {
 
     public static String urlDecode(String encodedString) {
         try {
-            String decodedString = URLDecoder.decode(encodedString, StandardCharsets.UTF_8.toString());
-            Log.d("decoded utm_content", decodedString);
-            return  decodedString;
-        } catch (UnsupportedEncodingException e) {
+            if (encodedString != null) {
+                String decodedString = URLDecoder.decode(encodedString, StandardCharsets.UTF_8.toString());
+                System.out.println("Decoded utm_content: " + decodedString);
+                return decodedString;
+            } else {
+                System.out.println("Encoded string is null.");
+                return null;
+            }
+        } catch (UnsupportedEncodingException | IllegalArgumentException e) {
             e.printStackTrace();
             return null;
         }
