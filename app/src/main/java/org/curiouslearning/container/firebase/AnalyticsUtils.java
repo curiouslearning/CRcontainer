@@ -26,14 +26,21 @@ public class AnalyticsUtils {
         return mFirebaseAnalytics;
     }
 
-    public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId, String language) {
+    public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId, String language,String manifest_version_number,String app_info_version) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-
+        firebaseAnalytics.setUserProperty("cr_language", language);
+        firebaseAnalytics.setUserProperty("app_info_version", app_info_version);
+        firebaseAnalytics.setUserProperty("manifest_version_number", manifest_version_number);
+        firebaseAnalytics.setUserProperty("profile_number", "0");
+        firebaseAnalytics.setUserProperty("cr_user_id", pseudoId);
         Bundle bundle = new Bundle();
         bundle.putString("web_app_title", appName);
         bundle.putString("web_app_url", appUrl);
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
+        bundle.putString("manifest_version_number", manifest_version_number);
+        bundle.putString("profile_number", "0");
+        bundle.putString("app_info_version", app_info_version);
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 

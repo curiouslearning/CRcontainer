@@ -32,6 +32,10 @@ public class WebApp extends BaseActivity {
     private SharedPreferences sharedPref;
     private String urlIndex;
     private String language;
+
+    private String manifest_version_number;
+
+    private String app_info_version;
     private String pseudoId;
     private boolean isDataCached;
 
@@ -48,12 +52,14 @@ public class WebApp extends BaseActivity {
     }
 
     private void getIntentData() {
+        app_info_version = BuildConfig.VERSION_NAME;
         Intent intent = getIntent();
         if (intent != null) {
             urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
             appUrl = intent.getStringExtra("appUrl");
             language = intent.getStringExtra("language");
+            manifest_version_number=intent.getStringExtra("version");
         }
     }
 
@@ -163,7 +169,7 @@ public class WebApp extends BaseActivity {
 
     // log firebase Event
     public void logAppLaunchEvent() {
-        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, language);
+        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, language,manifest_version_number,app_info_version);
 
     }
 }
