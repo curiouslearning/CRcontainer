@@ -17,11 +17,20 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
+import android.os.Handler;
+import android.os.Looper;
 import androidx.appcompat.app.AlertDialog;
 
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import java.util.concurrent.TimeUnit;
 
 public class WebApp extends BaseActivity {
 
@@ -34,8 +43,10 @@ public class WebApp extends BaseActivity {
     private String language;
     private String pseudoId;
     private boolean isDataCached;
-
     private static final String SHARED_PREFS_NAME = "appCached";
+
+    // WebSocket client
+    private WebSocket webSocket;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +76,7 @@ public class WebApp extends BaseActivity {
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                finish();
+                sendMessageToServer("pause");
             }
         });
     }
@@ -81,7 +92,6 @@ public class WebApp extends BaseActivity {
         webView.setHorizontalScrollBarEnabled(false);
         webView.setWebViewClient(new WebViewClient());
         webView.getSettings().setDomStorageEnabled(true);
-        webView.getSettings().getDomStorageEnabled();
         webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
@@ -92,13 +102,58 @@ public class WebApp extends BaseActivity {
                 return true;
             }
         });
+
+        // Initialize WebSocket
+        initWebSocket();
+    }
+
+    private void initWebSocket() {
+        OkHttpClient client = new OkHttpClient.Builder()
+                .readTimeout(0, TimeUnit.MILLISECONDS)
+                .build();
+
+        Request request = new Request.Builder()
+                .url("ws://localhost:8080")
+                .build();
+
+        WebSocketListener listener = new WebSocketListener() {
+            @Override
+            public void onOpen(WebSocket webSocket, Response response) {
+                super.onOpen(webSocket, response);
+                Log.d("WebSocket", "Connection opened");
+            }
+
+            @Override
+            public void onMessage(WebSocket webSocket, String text) {
+                super.onMessage(webSocket, text);
+                Log.d("WebSocket", "Received message from server: " + text);
+            }
+
+            @Override
+            public void onFailure(WebSocket webSocket, Throwable t, Response response) {
+                super.onFailure(webSocket, t, response);
+                Log.e("WebSocket", "Connection failed: " + t.getMessage());
+            }
+        };
+
+        webSocket = client.newWebSocket(request, listener);
+    }
+
+    private void sendMessageToServer(String message) {
+        if (webSocket != null) {
+            webSocket.send(message);
+            System.out.println("HYY1");
+            Log.d("WebSocket", "Sent message to server: " + message);
+        } else {
+            System.out.println("HYY2");
+            Log.e("WebSocket", "WebSocket connection is not initialized");
+        }
     }
 
     private String addCrUserIdToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
-        String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" + pseudoId;
-        return modifiedUrl;
+        return originalUri.toString() + separator + "cr_user_id=" + pseudoId;
     }
 
     private boolean isInternetConnected(Context context) {
@@ -120,9 +175,10 @@ public class WebApp extends BaseActivity {
 
     public class WebAppInterface {
         private Context mContext;
-
+        private Handler mHandler;
         WebAppInterface(Context context) {
             mContext = context;
+            mHandler = new Handler(Looper.getMainLooper());
         }
 
         @JavascriptInterface
@@ -146,6 +202,27 @@ public class WebApp extends BaseActivity {
                 Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
             }
         }
+
+        @JavascriptInterface
+        public void pauseGameAndShowConfirmation() {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    // Pause the game
+                    webView.evaluateJavascript("pauseGamePlay();", null);
+
+                    // Show the confirmation popup
+                    webView.evaluateJavascript("showExitConfirmationPopup();", null);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void exitConfirmedFromWebApp(boolean confirmed) {
+            if (confirmed) {
+                ((MainActivity) mContext).onExitConfirmedFromWebApp();
+            }
+        }
     }
 
     public void setAppOrientation(String orientationType) {
@@ -161,9 +238,7 @@ public class WebApp extends BaseActivity {
         }
     }
 
-    // log firebase Event
     public void logAppLaunchEvent() {
         AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, language);
-
     }
 }

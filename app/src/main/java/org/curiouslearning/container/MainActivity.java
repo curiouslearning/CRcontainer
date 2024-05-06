@@ -62,6 +62,7 @@ public class MainActivity extends BaseActivity {
     private SharedPreferences prefs;
     private String selectedLanguage;
     private String manifestVersion;
+    // private WebView webView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +77,15 @@ public class MainActivity extends BaseActivity {
         cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        
+        // webView = findViewById(R.id.webview);
+        // webView.setWebViewClient(new WebViewClient());
+        // WebSettings webSettings = webView.getSettings();
+        // webSettings.setJavaScriptEnabled(true);
+        // webView.addJavascriptInterface(new WebAppInterface(), "Android");
+
+        // // Load your web app URL
+        // webView.loadUrl("https://your-web-app-url.com");
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -253,7 +263,9 @@ public class MainActivity extends BaseActivity {
         }
         return new LinkedHashSet<>(langList);
     }
-
+     public void onExitConfirmedFromWebApp() {
+        finish();
+    }
     public void loadApps(String selectedlanguage) {
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedlanguage;

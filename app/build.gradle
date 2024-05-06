@@ -76,4 +76,7 @@ dependencies {
     implementation 'com.facebook.android:facebook-core:[12.2.0]'
     implementation 'com.facebook.android:facebook-applinks:[12.2.0]'
 
+    //WebSocket in Android
+    implementation 'com.squareup.okhttp3:okhttp:4.9.1'
+
 }
