@@ -76,7 +76,7 @@ public class WebApp extends BaseActivity {
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                sendMessageToServer("pause");
+                sendMessageToServer("pause the  game");
             }
         });
     }
@@ -111,9 +111,9 @@ public class WebApp extends BaseActivity {
         OkHttpClient client = new OkHttpClient.Builder()
                 .readTimeout(0, TimeUnit.MILLISECONDS)
                 .build();
-
+        String webUrl = window.location.href.replace("https","");
         Request request = new Request.Builder()
-                .url("ws://localhost:8080")
+                .url("ws"+webUrl)
                 .build();
 
         WebSocketListener listener = new WebSocketListener() {
@@ -203,26 +203,6 @@ public class WebApp extends BaseActivity {
             }
         }
 
-        @JavascriptInterface
-        public void pauseGameAndShowConfirmation() {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    // Pause the game
-                    webView.evaluateJavascript("pauseGamePlay();", null);
-
-                    // Show the confirmation popup
-                    webView.evaluateJavascript("showExitConfirmationPopup();", null);
-                }
-            });
-        }
-
-        @JavascriptInterface
-        public void exitConfirmedFromWebApp(boolean confirmed) {
-            if (confirmed) {
-                ((MainActivity) mContext).onExitConfirmedFromWebApp();
-            }
-        }
     }
 
     public void setAppOrientation(String orientationType) {
