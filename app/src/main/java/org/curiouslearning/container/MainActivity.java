@@ -30,6 +30,7 @@ import com.google.firebase.FirebaseApp;
 
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
+import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
@@ -100,6 +101,7 @@ public class MainActivity extends BaseActivity {
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                String pseudoId = prefs.getString("pseudoId", "");
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
                 }
@@ -112,6 +114,8 @@ public class MainActivity extends BaseActivity {
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         // Store the selected language
 
+                        AnalyticsUtils.logEvent(MainActivity.this, "language_selected", pseudoId, lang);
+                        
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -126,6 +130,7 @@ public class MainActivity extends BaseActivity {
                             if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
                             } else {
+                                AnalyticsUtils.logEvent(MainActivity.this, "language_selected", pseudoId, selectedLanguage);
                                 loadApps(selectedLanguage);
                             }
                         }
@@ -223,6 +228,8 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 selectedLanguage = (String) parent.getItemAtPosition(position);
+                                String pseudoId = prefs.getString("pseudoId", "");
+                                AnalyticsUtils.logEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage);
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }

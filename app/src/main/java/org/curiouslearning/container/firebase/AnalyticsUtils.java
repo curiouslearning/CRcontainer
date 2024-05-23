@@ -37,6 +37,17 @@ public class AnalyticsUtils {
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
+    public static void logEvent(Context context, String eventName, String pseudoId, String language) {
+        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+
+        Bundle bundle = new Bundle();
+        bundle.putString("cr_user_id", pseudoId);
+        bundle.putString("cr_language", language);
+        firebaseAnalytics.logEvent(eventName, bundle);
+    }
+
+
+
     public static void logReferrerEvent(Context context, String eventName, ReferrerDetails response) {
         if (response != null) {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
