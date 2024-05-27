@@ -24,6 +24,7 @@ import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
+import com.facebook.appevents.iap.InAppPurchaseUtils;
 import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
@@ -35,6 +36,7 @@ import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.math.BigInteger;
@@ -64,6 +66,8 @@ public class MainActivity extends BaseActivity {
     private String selectedLanguage;
     private String manifestVersion;
 
+    private String appVersion;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -77,6 +81,8 @@ public class MainActivity extends BaseActivity {
         cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        appVersion = AppUtils.getAppVersionName(this);
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -102,6 +108,7 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
                 String pseudoId = prefs.getString("pseudoId", "");
+
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
                 }
@@ -114,7 +121,8 @@ public class MainActivity extends BaseActivity {
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         // Store the selected language
 
-                        AnalyticsUtils.logEvent(MainActivity.this, "language_selected", pseudoId, lang);
+
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, appVersion, manifestVersion,"true");
                         
                         runOnUiThread(new Runnable() {
                             @Override
@@ -130,7 +138,6 @@ public class MainActivity extends BaseActivity {
                             if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
                             } else {
-                                AnalyticsUtils.logEvent(MainActivity.this, "language_selected", pseudoId, selectedLanguage);
                                 loadApps(selectedLanguage);
                             }
                         }
@@ -229,7 +236,7 @@ public class MainActivity extends BaseActivity {
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 selectedLanguage = (String) parent.getItemAtPosition(position);
                                 String pseudoId = prefs.getString("pseudoId", "");
-                                AnalyticsUtils.logEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage);
+                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage, appVersion, manifestVersion,"false");
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }
