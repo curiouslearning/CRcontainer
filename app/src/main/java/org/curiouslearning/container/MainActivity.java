@@ -24,16 +24,19 @@ import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
+import com.facebook.appevents.iap.InAppPurchaseUtils;
 import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
+import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.DeepLinkHelper;
 
@@ -65,6 +68,9 @@ public class MainActivity extends BaseActivity {
     private String selectedLanguage;
     private String manifestVersion;
     private static final String TAG = "MainActivity";
+
+    private String appVersion;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,6 +85,8 @@ public class MainActivity extends BaseActivity {
         cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        appVersion = AppUtils.getAppVersionName(this);
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -104,6 +112,8 @@ public class MainActivity extends BaseActivity {
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                String pseudoId = prefs.getString("pseudoId", "");
+
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
@@ -118,6 +128,9 @@ public class MainActivity extends BaseActivity {
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         // Store the selected language
 
+
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, appVersion, manifestVersion,"true");
+                        
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -229,6 +242,8 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 selectedLanguage = (String) parent.getItemAtPosition(position);
+                                String pseudoId = prefs.getString("pseudoId", "");
+                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage, appVersion, manifestVersion,"false");
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }
