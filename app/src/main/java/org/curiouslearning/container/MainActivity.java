@@ -35,6 +35,7 @@ import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
 import org.curiouslearning.container.utilities.CacheUtils;
+import org.curiouslearning.container.utilities.DeepLinkHelper;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -46,7 +47,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
+import android.util.Log;
+import android.content.Intent;
 public class MainActivity extends BaseActivity {
 
     public ActivityMainBinding binding;
@@ -62,7 +64,7 @@ public class MainActivity extends BaseActivity {
     private SharedPreferences prefs;
     private String selectedLanguage;
     private String manifestVersion;
-
+    private static final String TAG = "MainActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -72,6 +74,7 @@ public class MainActivity extends BaseActivity {
 
         FirebaseApp.initializeApp(this);
         FacebookSdk.fullyInitialize();
+        Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
         cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
@@ -86,30 +89,33 @@ public class MainActivity extends BaseActivity {
         initRecyclerView();
         loadingIndicator = findViewById(R.id.loadingIndicator);
         loadingIndicator.setVisibility(View.GONE);
-
+        Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
+        Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
         if (manifestVersion != null && manifestVersion != "") {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
 
-        // Intent intent = getIntent();
-        // if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-        // selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
-        // storeSelectLanguage(selectedLanguage);
-        // }
+        Intent intent = getIntent();
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+        selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
+        storeSelectLanguage(selectedLanguage);
+        }
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
                 }
+                Log.d(TAG, "onDeferredAppLinkDataFetched: AppLinkData: " + appLinkData);
                 if (appLinkData != null) {
-                    // Process the deferred deep link
                     Uri deepLinkUri = appLinkData.getTargetUri();
-
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     if (language != null) {
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                        Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         // Store the selected language
 
                         runOnUiThread(new Runnable() {
@@ -203,7 +209,7 @@ public class MainActivity extends BaseActivity {
                     }
 
                     if (!distinctLanguageList.isEmpty()) {
-                        System.out.println(distinctLanguageList);
+                        Log.d(TAG, "showLanguagePopup: Distinct languages: " + distinctLanguageList);
                         adapter.clear();
                         adapter.addAll(distinctLanguageList);
                         adapter.notifyDataSetChanged();
@@ -255,6 +261,7 @@ public class MainActivity extends BaseActivity {
     }
 
     public void loadApps(String selectedlanguage) {
+        Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguage);
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedlanguage;
         homeViewModal.getSelectedlanguageWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
@@ -282,6 +289,7 @@ public class MainActivity extends BaseActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
+        Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
     }
 
     private void cacheManifestVersion(String versionNumber) {
@@ -289,6 +297,7 @@ public class MainActivity extends BaseActivity {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString("manifestVersion", versionNumber);
             editor.apply();
+            Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
         }
     }
 
