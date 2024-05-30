@@ -1,5 +1,6 @@
 package org.curiouslearning.container;
 
+
 import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
@@ -113,7 +114,7 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
                 String pseudoId = prefs.getString("pseudoId", "");
-
+                String manifestVrsn = prefs.getString("manifestVersion","");
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
@@ -129,7 +130,7 @@ public class MainActivity extends BaseActivity {
                         // Store the selected language
 
 
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, appVersion, manifestVersion,"true");
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, manifestVrsn,"true");
                         
                         runOnUiThread(new Runnable() {
                             @Override
@@ -161,6 +162,7 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
+
 
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
@@ -243,7 +245,8 @@ public class MainActivity extends BaseActivity {
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 selectedLanguage = (String) parent.getItemAtPosition(position);
                                 String pseudoId = prefs.getString("pseudoId", "");
-                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage, appVersion, manifestVersion,"false");
+                                String manifestVrsn = prefs.getString("manifestVersion","");
+                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage, manifestVrsn,"false");
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }
@@ -256,6 +259,7 @@ public class MainActivity extends BaseActivity {
                 public void onClick(View v) {
                     dialog.dismiss();
                 }
+
             });
             dialog.show();
         }

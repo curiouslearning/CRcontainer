@@ -37,7 +37,7 @@ public class AnalyticsUtils {
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
-    public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language, String appVersion, String manifestVersion, String autoSelected) {
+    public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language, String manifestVersion, String autoSelected) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
 
         Bundle bundle = new Bundle();
@@ -45,8 +45,7 @@ public class AnalyticsUtils {
         bundle.putLong("event_timestamp", currentEpochTime);
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
-        bundle.putString("app_info.version",appVersion);
-        bundle.putString("manifest_version_number", manifestVersion);
+        bundle.putString("manifest_version", manifestVersion);
         bundle.putString("auto_selected",autoSelected);
         firebaseAnalytics.logEvent(eventName, bundle);
     }
