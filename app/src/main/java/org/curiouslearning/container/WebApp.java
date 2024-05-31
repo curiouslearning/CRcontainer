@@ -22,7 +22,7 @@ import androidx.appcompat.app.AlertDialog;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
-
+import org.curiouslearning.container.utilities.AudioPlayer;
 public class WebApp extends BaseActivity {
 
     private String title;
@@ -36,10 +36,11 @@ public class WebApp extends BaseActivity {
     private boolean isDataCached;
 
     private static final String SHARED_PREFS_NAME = "appCached";
-
+    private AudioPlayer audioPlayer;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        audioPlayer = new AudioPlayer();
         setContentView(R.layout.activity_web_app);
         getIntentData();
         initViews();
@@ -65,6 +66,7 @@ public class WebApp extends BaseActivity {
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
                 finish();
             }
         });
