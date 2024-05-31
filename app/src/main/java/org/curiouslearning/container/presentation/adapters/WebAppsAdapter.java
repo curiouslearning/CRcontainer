@@ -17,6 +17,7 @@ import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.ImageLoader;
+import org.curiouslearning.container.utilities.AudioPlayer;
 
 import java.util.List;
 
@@ -25,11 +26,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public Context ctx;
     LayoutInflater inflater;
     public List<WebApp> webApps;
+    private AudioPlayer audioPlayer;
 
     public WebAppsAdapter(Context context, List<WebApp> webApps) {
         this.ctx = context;
         this.webApps = webApps;
         this.inflater = LayoutInflater.from(ctx);
+        this.audioPlayer = new AudioPlayer();
     }
 
     @NonNull
@@ -55,6 +58,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                audioPlayer.play(ctx, R.raw.sound_button_pressed);
                 Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));

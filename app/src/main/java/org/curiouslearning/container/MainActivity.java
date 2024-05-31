@@ -40,6 +40,7 @@ import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
 import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.DeepLinkHelper;
+import org.curiouslearning.container.utilities.AudioPlayer;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -69,7 +70,7 @@ public class MainActivity extends BaseActivity {
     private String selectedLanguage;
     private String manifestVersion;
     private static final String TAG = "MainActivity";
-
+    private AudioPlayer audioPlayer;
     private String appVersion;
 
     @Override
@@ -78,7 +79,7 @@ public class MainActivity extends BaseActivity {
 
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(this);
         installReferrerManager.checkPlayStoreAvailability();
-
+        audioPlayer = new AudioPlayer();
         FirebaseApp.initializeApp(this);
         FacebookSdk.fullyInitialize();
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
@@ -158,6 +159,7 @@ public class MainActivity extends BaseActivity {
         settingsButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
                 showLanguagePopup();
             }
         });
@@ -243,6 +245,7 @@ public class MainActivity extends BaseActivity {
                         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
                                 selectedLanguage = (String) parent.getItemAtPosition(position);
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion","");
@@ -257,6 +260,7 @@ public class MainActivity extends BaseActivity {
 
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
+                    audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
                     dialog.dismiss();
                 }
 
