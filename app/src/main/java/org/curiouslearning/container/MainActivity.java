@@ -1,5 +1,6 @@
 package org.curiouslearning.container;
 
+
 import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
@@ -24,17 +25,21 @@ import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
+import com.facebook.appevents.iap.InAppPurchaseUtils;
 import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
+import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
+import org.curiouslearning.container.utilities.DeepLinkHelper;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -46,7 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
+import android.util.Log;
+import android.content.Intent;
 public class MainActivity extends BaseActivity {
 
     public ActivityMainBinding binding;
@@ -62,6 +68,9 @@ public class MainActivity extends BaseActivity {
     private SharedPreferences prefs;
     private String selectedLanguage;
     private String manifestVersion;
+    private static final String TAG = "MainActivity";
+
+    private String appVersion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,10 +81,13 @@ public class MainActivity extends BaseActivity {
 
         FirebaseApp.initializeApp(this);
         FacebookSdk.fullyInitialize();
+        Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
         cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        appVersion = AppUtils.getAppVersionName(this);
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -86,32 +98,40 @@ public class MainActivity extends BaseActivity {
         initRecyclerView();
         loadingIndicator = findViewById(R.id.loadingIndicator);
         loadingIndicator.setVisibility(View.GONE);
-
+        Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
+        Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
         if (manifestVersion != null && manifestVersion != "") {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
 
-        // Intent intent = getIntent();
-        // if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-        // selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
-        // storeSelectLanguage(selectedLanguage);
-        // }
+        Intent intent = getIntent();
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+        selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
+        storeSelectLanguage(selectedLanguage);
+        }
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                String pseudoId = prefs.getString("pseudoId", "");
+                String manifestVrsn = prefs.getString("manifestVersion","");
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
                 }
+                Log.d(TAG, "onDeferredAppLinkDataFetched: AppLinkData: " + appLinkData);
                 if (appLinkData != null) {
-                    // Process the deferred deep link
                     Uri deepLinkUri = appLinkData.getTargetUri();
-
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     if (language != null) {
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                        Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         // Store the selected language
 
+
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, manifestVrsn,"true");
+                        
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -142,6 +162,7 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
+
 
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
@@ -203,7 +224,7 @@ public class MainActivity extends BaseActivity {
                     }
 
                     if (!distinctLanguageList.isEmpty()) {
-                        System.out.println(distinctLanguageList);
+                        Log.d(TAG, "showLanguagePopup: Distinct languages: " + distinctLanguageList);
                         adapter.clear();
                         adapter.addAll(distinctLanguageList);
                         adapter.notifyDataSetChanged();
@@ -223,6 +244,9 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 selectedLanguage = (String) parent.getItemAtPosition(position);
+                                String pseudoId = prefs.getString("pseudoId", "");
+                                String manifestVrsn = prefs.getString("manifestVersion","");
+                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage, manifestVrsn,"false");
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }
@@ -235,6 +259,7 @@ public class MainActivity extends BaseActivity {
                 public void onClick(View v) {
                     dialog.dismiss();
                 }
+
             });
             dialog.show();
         }
@@ -255,6 +280,7 @@ public class MainActivity extends BaseActivity {
     }
 
     public void loadApps(String selectedlanguage) {
+        Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguage);
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedlanguage;
         homeViewModal.getSelectedlanguageWebApps(selectedlanguage).observe(this, new Observer<List<WebApp>>() {
@@ -282,6 +308,7 @@ public class MainActivity extends BaseActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
+        Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
     }
 
     private void cacheManifestVersion(String versionNumber) {
@@ -289,6 +316,7 @@ public class MainActivity extends BaseActivity {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString("manifestVersion", versionNumber);
             editor.apply();
+            Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
         }
     }
 

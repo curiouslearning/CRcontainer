@@ -44,10 +44,25 @@ public class AnalyticsUtils {
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
+    public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language, String manifestVersion, String autoSelected) {
+        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+
+        Bundle bundle = new Bundle();
+        long currentEpochTime = getCurrentEpochTime();
+        bundle.putLong("event_timestamp", currentEpochTime);
+        bundle.putString("cr_user_id", pseudoId);
+        bundle.putString("cr_language", language);
+        bundle.putString("manifest_version", manifestVersion);
+        bundle.putString("auto_selected",autoSelected);
+        firebaseAnalytics.logEvent(eventName, bundle);
+    }
+
+
+
     public static void logReferrerEvent(Context context, String eventName, ReferrerDetails response) {
         if (response != null) {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-
+           
             Bundle bundle = new Bundle();
             bundle.putString("referrer_url", response.getInstallReferrer());
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
@@ -84,6 +99,12 @@ public class AnalyticsUtils {
         params.put("content", content);
 
         return params;
+    }
+
+    public static long getCurrentEpochTime() {
+        long currentTimeMillis = System.currentTimeMillis();
+
+        return currentTimeMillis;
     }
 
     public static String urlDecode(String encodedString) {
