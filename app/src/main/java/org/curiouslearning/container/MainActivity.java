@@ -1,6 +1,5 @@
 package org.curiouslearning.container;
 
-
 import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
@@ -37,6 +36,7 @@ import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.DeepLinkHelper;
@@ -111,6 +111,19 @@ public class MainActivity extends BaseActivity {
         storeSelectLanguage(selectedLanguage);
         }
 
+        settingsButton = findViewById(R.id.settings);
+        settingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AnimationUtil.scaleButton(view, new Runnable() {
+                    @Override
+                    public void run() {
+                        showLanguagePopup();
+                    }
+                });
+            }
+        });
+
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
@@ -160,10 +173,17 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onClick(View view) {
                 audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                showLanguagePopup();
+                AnimationUtil.scaleButton(view, new Runnable() {
+                    @Override
+                    public void run() {
+                        showLanguagePopup();
+                    }
+                });
             }
         });
     }
+
+
 
 
     protected void initRecyclerView() {
@@ -261,7 +281,13 @@ public class MainActivity extends BaseActivity {
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                    dialog.dismiss();
+                    AnimationUtil.scaleButton(v,new Runnable() {
+                    @Override
+                    public void run() {
+                        dialog.dismiss();
+                    }
+                });
+                    
                 }
 
             });

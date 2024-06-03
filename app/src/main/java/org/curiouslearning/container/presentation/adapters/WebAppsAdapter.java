@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
+import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.ImageLoader;
 import org.curiouslearning.container.utilities.AudioPlayer;
@@ -59,13 +60,19 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
             @Override
             public void onClick(View v) {
                 audioPlayer.play(ctx, R.raw.sound_button_pressed);
-                Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
-                intent.putExtra("appUrl", webApps.get(position).getAppUrl());
-                intent.putExtra("title", webApps.get(position).getTitle());
-                intent.putExtra("language", webApps.get(position).getLanguage());
-                ctx.startActivity(intent);
+                AnimationUtil.scaleButton(v,new Runnable() {
+                    @Override
+                    public void run() {
+                       Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
+                        intent.putExtra("appUrl", webApps.get(position).getAppUrl());
+                        intent.putExtra("title", webApps.get(position).getTitle());
+                        intent.putExtra("language", webApps.get(position).getLanguage());
+                        ctx.startActivity(intent);
+                    }
+                });
+                
             }
         });
     }
