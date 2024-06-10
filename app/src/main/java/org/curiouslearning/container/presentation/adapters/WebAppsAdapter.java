@@ -48,32 +48,23 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
         if (!isAppCached(webApps.get(position).getAppId())) {
-        MyItem item = itemList.get(position);
-        holder.textView.setText(item.getText());
-
-        // Dynamically setting IDs
-        holder.textView.setId(View.generateViewId());
-        holder.button.setId(View.generateViewId());
-
-        // Optionally, you can use your own logic to generate unique IDs
-        holder.textView.setId(position + 1000);  // Example of setting a unique ID
-        holder.button.setI
             ColorMatrix matrix = new ColorMatrix();
             matrix.setSaturation(0);
             ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
             holder.downloadIconImage.setImageResource(R.drawable.download_image);
             holder.appIconImage.setColorFilter(filter);
-        }else{
-            holder.downloadIconImage.setImageResource(0);}
+        } else {
+            holder.downloadIconImage.setImageResource(0);
+        }
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 audioPlayer.play(ctx, R.raw.sound_button_pressed);
-                AnimationUtil.scaleButton(v,new Runnable() {
+                AnimationUtil.scaleButton(v, new Runnable() {
                     @Override
                     public void run() {
-                       Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
+                        Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
                         intent.putExtra("appUrl", webApps.get(position).getAppUrl());
@@ -82,7 +73,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                         ctx.startActivity(intent);
                     }
                 });
-                
+
             }
         });
     }
