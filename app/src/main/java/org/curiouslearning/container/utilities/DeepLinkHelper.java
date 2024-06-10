@@ -8,7 +8,8 @@ import org.curiouslearning.container.MainActivity;
 
 public class DeepLinkHelper {
     private static final String TAG = "DeepLinkHelper";
-    public static String handleDeepLink(Activity activity, Intent intent) {
+
+    public static String handleDeepLink(Activity activity, Intent intent, String language_1) {
         Log.d(TAG, "handleDeepLink: Received intent: " + intent);
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
             Log.d(TAG, "handleDeepLink: Action is VIEW");
@@ -25,23 +26,23 @@ public class DeepLinkHelper {
                     && host != null && host.equals("app")
                     && pathPrefix != null && pathPrefix.startsWith("/language")) {
                 Log.d(TAG, "handleDeepLink: Valid deep link URI");
-                String language = pathPrefix.substring("/language=".length());
+                String language = language_1;
                 Log.d(TAG, "handleDeepLink: Extracted language: " + language);
                 Intent mainIntent = new Intent(activity, MainActivity.class);
-                mainIntent.putExtra("language", language);
+                mainIntent.putExtra("language", language_1);
                 activity.startActivity(mainIntent);
-                return language;
+                return language_1;
             }
         }
-        Log.d(TAG, "handleDeepLink: Redirecting to Play Store");
-        redirectToPlayStore(activity);
-        return "";
+        Log.d(TAG, "handleDeepLink: Redirecting to Play Store" + language_1);
+        // redirectToPlayStore(activity);
+        return language_1;
     }
 
     private static void redirectToPlayStore(Activity activity) {
         Log.d(TAG, "redirectToPlayStore: Redirecting to Play Store");
-        Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=org.curiouslearning.container"));
+        Intent marketIntent = new Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://play.google.com/store/apps/details?id=org.curiouslearning.container"));
         activity.startActivity(marketIntent);
     }
 }
-
