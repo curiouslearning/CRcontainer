@@ -10,6 +10,8 @@ import androidx.lifecycle.LiveData;
 import org.curiouslearning.container.data.model.WebApp;
 
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class WebAppDatabase {
 
@@ -24,8 +26,17 @@ public class WebAppDatabase {
         new InsertAllWebAppAsyncTask(webAppDao).execute(webApps);
     }
 
-    public LiveData<List<WebApp>> getAllWebApps(String selectedLanguage) {
-        return webAppDao.getAllWebApp(selectedLanguage);
+     public void deleteWebApps(List<WebApp> webApps) {
+        new DeleteAllWebAppAsyncTask(webAppDao, webApps).execute();
+     }
+
+
+    public LiveData<List<WebApp>> getAllWebApps() {
+        return webAppDao.getAllWebApp();
+    }
+
+    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
+        return webAppDao.getSelectedlanguageWebApps(selectedLanguage);
     }
 
     private static class InsertAllWebAppAsyncTask extends AsyncTask<List<WebApp>, Void, Void> {
@@ -43,4 +54,21 @@ public class WebAppDatabase {
         }
     }
 
+    private static class DeleteAllWebAppAsyncTask extends AsyncTask<Void, Void, Void> {
+        private WebAppDao webAppDao;
+        private List<WebApp> webApps;
+
+        private DeleteAllWebAppAsyncTask(WebAppDao WebAppDao, List<WebApp> webApps)  {
+            this.webAppDao = WebAppDao;
+            this.webApps = webApps;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            webAppDao.deleteAllWebApp();
+            webAppDao.insertAll( webApps);
+
+            return null;
+        }
+    }
 }
