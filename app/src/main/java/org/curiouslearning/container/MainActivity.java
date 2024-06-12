@@ -104,13 +104,6 @@ public class MainActivity extends BaseActivity {
         if (manifestVersion != null && manifestVersion != "") {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
-
-        Intent intent = getIntent();
-        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-        selectedLanguage = DeepLinkHelper.handleDeepLink(this, intent);
-        storeSelectLanguage(selectedLanguage);
-        }
-
         settingsButton = findViewById(R.id.settings);
         settingsButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -127,6 +120,7 @@ public class MainActivity extends BaseActivity {
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                Intent intent = getIntent();
                 String pseudoId = prefs.getString("pseudoId", "");
                 String manifestVrsn = prefs.getString("manifestVersion","");
                 if (dialog != null && dialog.isShowing()) {
@@ -137,12 +131,13 @@ public class MainActivity extends BaseActivity {
                 if (appLinkData != null) {
                     Uri deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
-                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
+                    String language = ((Uri) deepLinkUri).getQueryParameter("cr_lang");
                     if (language != null) {
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         // Store the selected language
-
+                        selectedLanguage = lang;
+                        
 
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, manifestVrsn,"true");
                         
@@ -153,7 +148,28 @@ public class MainActivity extends BaseActivity {
                             }
                         });
                     }
-                } else {
+                }else if(intent != null && Intent.ACTION_VIEW.equals(intent.getAction())){
+                    Uri data = intent.getData();
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: intent URI: " + data);
+                    if(data!=null){
+                        String language = data.getQueryParameter("cr_lang");
+                        if (language != null) {
+                           String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                           Log.d(TAG, "onDeferredAppLinkDataFetched: Language from intent data: " + lang);
+                           // Store the selected language
+                           selectedLanguage = lang;
+
+                           AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, manifestVrsn,"true");
+                        
+                           runOnUiThread(new Runnable() {
+                              @Override
+                              public void run() {
+                                  loadApps(lang);
+                              }
+                           });
+                        }
+                    }
+                }else {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
