@@ -53,26 +53,28 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
             ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
             holder.downloadIconImage.setImageResource(R.drawable.download_image);
             holder.appIconImage.setColorFilter(filter);
-        }else{
-            holder.downloadIconImage.setImageResource(0);}
+        } else {
+            holder.downloadIconImage.setImageResource(0);
+        }
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 audioPlayer.play(ctx, R.raw.sound_button_pressed);
-                AnimationUtil.scaleButton(v,new Runnable() {
+                AnimationUtil.scaleButton(v, new Runnable() {
                     @Override
                     public void run() {
-                       Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
+                        Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
                         intent.putExtra("appUrl", webApps.get(position).getAppUrl());
                         intent.putExtra("title", webApps.get(position).getTitle());
                         intent.putExtra("language", webApps.get(position).getLanguage());
+                        intent.putExtra("languageInEnglishName", webApps.get(position).getLanguageInEnglishName());
                         ctx.startActivity(intent);
                     }
                 });
-                
+
             }
         });
     }
