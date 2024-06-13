@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import android.util.Log;
 import android.content.Intent;
+
 public class MainActivity extends BaseActivity {
 
     public ActivityMainBinding binding;
@@ -122,7 +123,7 @@ public class MainActivity extends BaseActivity {
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
                 Intent intent = getIntent();
                 String pseudoId = prefs.getString("pseudoId", "");
-                String manifestVrsn = prefs.getString("manifestVersion","");
+                String manifestVrsn = prefs.getString("manifestVersion", "");
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
@@ -137,10 +138,10 @@ public class MainActivity extends BaseActivity {
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         // Store the selected language
                         selectedLanguage = lang;
-                        
 
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, manifestVrsn,"true");
-                        
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
+                                manifestVrsn, "true");
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -148,28 +149,30 @@ public class MainActivity extends BaseActivity {
                             }
                         });
                     }
-                }else if(intent != null && Intent.ACTION_VIEW.equals(intent.getAction())){
+                } else if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
                     Uri data = intent.getData();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: intent URI: " + data);
-                    if(data!=null){
+                    if (data != null) {
                         String language = data.getQueryParameter("language");
                         if (language != null) {
-                           String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
-                           Log.d(TAG, "onDeferredAppLinkDataFetched: Language from intent data: " + lang);
-                           // Store the selected language
-                           selectedLanguage = lang;
+                            String lang = Character.toUpperCase(language.charAt(0))
+                                    + language.substring(1).toLowerCase();
+                            Log.d(TAG, "onDeferredAppLinkDataFetched: Language from intent data: " + lang);
+                            // Store the selected language
+                            selectedLanguage = lang;
 
-                           AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang, manifestVrsn,"true");
-                        
-                           runOnUiThread(new Runnable() {
-                              @Override
-                              public void run() {
-                                  loadApps(lang);
-                              }
-                           });
+                            AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId,
+                                    lang, manifestVrsn, "true");
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    loadApps(lang);
+                                }
+                            });
                         }
                     }
-                }else {
+                } else {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -198,9 +201,6 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
-
-
-
 
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
@@ -256,6 +256,7 @@ public class MainActivity extends BaseActivity {
                 @Override
                 public void onChanged(List<WebApp> webApps) {
                     Set<String> distinctLanguages = sortLanguages(webApps);
+                    Map<String, String> languagesEnglishNameMap = MapLanguagesEnglishName(webApps);
                     List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
                     if (!webApps.isEmpty()) {
                         cacheManifestVersion(CacheUtils.manifestVersionNumber);
@@ -282,10 +283,12 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                                selectedLanguage = (String) parent.getItemAtPosition(position);
+                                String userSelectedLanguage = (String) parent.getItemAtPosition(position);
+                                selectedLanguage = languagesEnglishNameMap.get(userSelectedLanguage);
                                 String pseudoId = prefs.getString("pseudoId", "");
-                                String manifestVrsn = prefs.getString("manifestVersion","");
-                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId, selectedLanguage, manifestVrsn,"false");
+                                String manifestVrsn = prefs.getString("manifestVersion", "");
+                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
+                                        selectedLanguage, manifestVrsn, "false");
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }
@@ -297,18 +300,31 @@ public class MainActivity extends BaseActivity {
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                    AnimationUtil.scaleButton(v,new Runnable() {
-                    @Override
-                    public void run() {
-                        dialog.dismiss();
-                    }
-                });
-                    
+                    AnimationUtil.scaleButton(v, new Runnable() {
+                        @Override
+                        public void run() {
+                            dialog.dismiss();
+                        }
+                    });
+
                 }
 
             });
             dialog.show();
         }
+    }
+
+    private Map<String, String> MapLanguagesEnglishName(List<WebApp> webApps) {
+        Map<String, String> languagesEnglishNameMap = new TreeMap<>();
+        for (WebApp webApp : webApps) {
+            String languageInEnglishName = webApp.getLanguageInEnglishName();
+            String languageInLocalName = webApp.getLanguage();
+            if (languageInEnglishName != null && languageInLocalName != null) {
+                languagesEnglishNameMap.put(languageInLocalName, languageInEnglishName); // Key: local language, Value:
+                                                                                         // English name
+            }
+        }
+        return languagesEnglishNameMap;
     }
 
     private Set sortLanguages(List<WebApp> webApps) {
