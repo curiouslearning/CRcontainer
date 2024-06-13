@@ -60,7 +60,7 @@
                 <data
                     android:scheme="curiousreader"
                     android:host="app"
-                    android:pathPrefix="/language" />
+                />
             </intent-filter>
 
             <meta-data
