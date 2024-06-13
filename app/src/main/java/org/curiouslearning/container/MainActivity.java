@@ -131,7 +131,7 @@ public class MainActivity extends BaseActivity {
                 if (appLinkData != null) {
                     Uri deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
-                    String language = ((Uri) deepLinkUri).getQueryParameter("cr_lang");
+                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     if (language != null) {
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
@@ -152,7 +152,7 @@ public class MainActivity extends BaseActivity {
                     Uri data = intent.getData();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: intent URI: " + data);
                     if(data!=null){
-                        String language = data.getQueryParameter("cr_lang");
+                        String language = data.getQueryParameter("language");
                         if (language != null) {
                            String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                            Log.d(TAG, "onDeferredAppLinkDataFetched: Language from intent data: " + lang);
