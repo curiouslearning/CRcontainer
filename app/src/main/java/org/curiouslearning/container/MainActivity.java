@@ -283,8 +283,8 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                                String userSelectedLanguage = (String) parent.getItemAtPosition(position);
-                                selectedLanguage = languagesEnglishNameMap.get(userSelectedLanguage);
+                                selectedLanguage = languagesEnglishNameMap
+                                        .get((String) parent.getItemAtPosition(position));
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
