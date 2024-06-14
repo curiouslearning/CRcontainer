@@ -275,8 +275,8 @@ public class MainActivity extends BaseActivity {
                         autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
 
                         selectedLanguage = prefs.getString("selectedLanguage", "");
-                        if (!selectedLanguage.isEmpty() && distinctLanguages.contains(selectedLanguage)) {
-                            textBox.setHint(selectedLanguage);
+                        if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
+                            textBox.setHint(languagesEnglishNameMap.get(selectedLanguage));
                         }
 
                         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -320,8 +320,8 @@ public class MainActivity extends BaseActivity {
             String languageInEnglishName = webApp.getLanguageInEnglishName();
             String languageInLocalName = webApp.getLanguage();
             if (languageInEnglishName != null && languageInLocalName != null) {
-                languagesEnglishNameMap.put(languageInLocalName, languageInEnglishName); // Key: local language, Value:
-                                                                                         // English name
+                languagesEnglishNameMap.put(languageInLocalName, languageInEnglishName);
+                languagesEnglishNameMap.put(languageInEnglishName, languageInLocalName);
             }
         }
         return languagesEnglishNameMap;
