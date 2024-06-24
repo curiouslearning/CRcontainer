@@ -1,6 +1,5 @@
 package org.curiouslearning.containerdev.data.remote;
 
-
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -13,6 +12,7 @@ import org.curiouslearning.containerdev.utilities.CacheUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -71,7 +71,6 @@ public class RetrofitInstance {
         });
     }
 
-
     public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase) {
         getAppManifest(webAppDatabase);
     }
@@ -91,7 +90,9 @@ public class RetrofitInstance {
                         JsonElement versionElement = jsonObject.get("version");
                         WebAppResponse webAppResponse = findWebApps(jsonElement);
                         webAppResponse.setVersion(versionElement.getAsString());
-                        if (manifestVersion != webAppResponse.getVersion()) {
+                        String latestManifestVersion = webAppResponse.getVersion();
+                        if (!Objects.equals(manifestVersion, latestManifestVersion)) {
+                            CacheUtils.setManifestVersionNumber(latestManifestVersion);
                             webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
                         }
                     }
@@ -116,7 +117,8 @@ public class RetrofitInstance {
 
                 if (key.equals("web_apps") && value.isJsonArray()) {
                     WebAppResponse webAppResponse = new WebAppResponse();
-                    List<WebApp> webApps = new Gson().fromJson(value, new TypeToken<List<WebApp>>() {}.getType());
+                    List<WebApp> webApps = new Gson().fromJson(value, new TypeToken<List<WebApp>>() {
+                    }.getType());
                     webAppResponse.setWebApp(webApps);
 
                     return webAppResponse;

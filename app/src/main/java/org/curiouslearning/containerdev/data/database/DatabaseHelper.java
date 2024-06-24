@@ -12,12 +12,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 import org.curiouslearning.containerdev.data.model.WebApp;
 import org.curiouslearning.containerdev.utilities.ConnectionUtils;
 
-@Database(entities = { WebApp.class }, version = 1)
+@Database(entities = { WebApp.class }, version = 2)
 public abstract class DatabaseHelper extends RoomDatabase {
 
     private static DatabaseHelper instance;
 
     public abstract WebAppDao webAppDao();
+
     private static Context context;
 
     public static synchronized DatabaseHelper getInstance(Context context) {

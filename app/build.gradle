@@ -8,11 +8,13 @@ android {
     compileSdk 33
 
     defaultConfig {
+
         applicationId "org.curiouslearning.containerdev"
         minSdk 21
         targetSdk 33
         versionCode 5
         versionName "2.3"
+
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -61,6 +63,9 @@ dependencies {
     //picasso (image caching)
     implementation 'com.squareup.picasso:picasso:2.71828'
 
+    //install refferal
+    implementation "com.android.installreferrer:installreferrer:2.2"
+
 
     implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.7.0'
@@ -69,7 +74,7 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
 
-    implementation 'com.facebook.android:facebook-android-sdk:latest.release'
+    implementation 'com.facebook.android:facebook-android-sdk:16.0.0'
     implementation 'com.facebook.android:facebook-core:[12.2.0]'
     implementation 'com.facebook.android:facebook-applinks:[12.2.0]'
 
