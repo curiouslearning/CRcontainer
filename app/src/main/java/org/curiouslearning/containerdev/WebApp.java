@@ -19,9 +19,10 @@ import android.widget.ImageView;
 
 import androidx.appcompat.app.AlertDialog;
 
-import org.curiouslearning.containerdev.firebase.AnalyticsUtils;
-import org.curiouslearning.containerdev.presentation.base.BaseActivity;
-import org.curiouslearning.containerdev.utilities.ConnectionUtils;
+import org.curiouslearning.container.firebase.AnalyticsUtils;
+import org.curiouslearning.container.presentation.base.BaseActivity;
+import org.curiouslearning.container.utilities.ConnectionUtils;
+import org.curiouslearning.container.utilities.AudioPlayer;
 
 public class WebApp extends BaseActivity {
 
@@ -32,14 +33,17 @@ public class WebApp extends BaseActivity {
     private SharedPreferences sharedPref;
     private String urlIndex;
     private String language;
+    private String languageInEnglishName;
     private String pseudoId;
     private boolean isDataCached;
 
     private static final String SHARED_PREFS_NAME = "appCached";
+    private AudioPlayer audioPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        audioPlayer = new AudioPlayer();
         setContentView(R.layout.activity_web_app);
         getIntentData();
         initViews();
@@ -54,6 +58,7 @@ public class WebApp extends BaseActivity {
             title = intent.getStringExtra("title");
             appUrl = intent.getStringExtra("appUrl");
             language = intent.getStringExtra("language");
+            languageInEnglishName = intent.getStringExtra("languageInEnglishName");
         }
     }
 
@@ -65,6 +70,7 @@ public class WebApp extends BaseActivity {
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
                 finish();
             }
         });
@@ -163,7 +169,7 @@ public class WebApp extends BaseActivity {
 
     // log firebase Event
     public void logAppLaunchEvent() {
-        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, language);
+        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, languageInEnglishName);
 
     }
 }

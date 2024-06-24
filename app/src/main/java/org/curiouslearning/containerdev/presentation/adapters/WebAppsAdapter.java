@@ -13,9 +13,12 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.curiouslearning.containerdev.R;
-import org.curiouslearning.containerdev.data.model.WebApp;
-import org.curiouslearning.containerdev.utilities.CacheUtils;
+import org.curiouslearning.container.R;
+import org.curiouslearning.container.data.model.WebApp;
+import org.curiouslearning.container.utilities.AnimationUtil;
+import org.curiouslearning.container.utilities.CacheUtils;
+import org.curiouslearning.container.utilities.ImageLoader;
+import org.curiouslearning.container.utilities.AudioPlayer;
 
 import java.util.List;
 
@@ -24,11 +27,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public Context ctx;
     LayoutInflater inflater;
     public List<WebApp> webApps;
+    private AudioPlayer audioPlayer;
 
     public WebAppsAdapter(Context context, List<WebApp> webApps) {
         this.ctx = context;
         this.webApps = webApps;
         this.inflater = LayoutInflater.from(ctx);
+        this.audioPlayer = new AudioPlayer();
     }
 
     @NonNull
@@ -40,7 +45,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
-        CacheUtils.loadWithPicasso(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
+        ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
         if (!isAppCached(webApps.get(position).getAppId())) {
             ColorMatrix matrix = new ColorMatrix();
@@ -48,19 +53,28 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
             ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
             holder.downloadIconImage.setImageResource(R.drawable.download_image);
             holder.appIconImage.setColorFilter(filter);
-        }else{
-            holder.downloadIconImage.setImageResource(0);}
+        } else {
+            holder.downloadIconImage.setImageResource(0);
+        }
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(ctx, org.curiouslearning.containerdev.WebApp.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
-                intent.putExtra("appUrl", webApps.get(position).getAppUrl());
-                intent.putExtra("title", webApps.get(position).getTitle());
-                intent.putExtra("language", webApps.get(position).getLanguage());
-                ctx.startActivity(intent);
+                audioPlayer.play(ctx, R.raw.sound_button_pressed);
+                AnimationUtil.scaleButton(v, new Runnable() {
+                    @Override
+                    public void run() {
+                        Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
+                        intent.putExtra("appUrl", webApps.get(position).getAppUrl());
+                        intent.putExtra("title", webApps.get(position).getTitle());
+                        intent.putExtra("language", webApps.get(position).getLanguage());
+                        intent.putExtra("languageInEnglishName", webApps.get(position).getLanguageInEnglishName());
+                        ctx.startActivity(intent);
+                    }
+                });
+
             }
         });
     }
