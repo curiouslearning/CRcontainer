@@ -82,7 +82,9 @@ public class MainActivity extends BaseActivity {
         installReferrerManager.checkPlayStoreAvailability();
         audioPlayer = new AudioPlayer();
         FirebaseApp.initializeApp(this);
+        FacebookSdk.setAutoInitEnabled(true);
         FacebookSdk.fullyInitialize();
+        FacebookSdk.setAdvertiserIDCollectionEnabled(true);
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
         cachePseudoId();
