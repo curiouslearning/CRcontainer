@@ -18,7 +18,7 @@ import android.widget.ProgressBar;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
+import androidx.appcompat.app.AppCompatActivity;
 import com.android.installreferrer.api.InstallReferrerClient;
 import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
@@ -73,11 +73,11 @@ public class MainActivity extends BaseActivity {
     private static final String TAG = "MainActivity";
     private AudioPlayer audioPlayer;
     private String appVersion;
-
+    private InstallReferrerClient referrerClient;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        handleIntent(getIntent());
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(this);
         installReferrerManager.checkPlayStoreAvailability();
         audioPlayer = new AudioPlayer();
@@ -117,7 +117,34 @@ public class MainActivity extends BaseActivity {
                 });
             }
         });
+     referrerClient = InstallReferrerClient.newBuilder(this).build();
+        referrerClient.startConnection(new InstallReferrerStateListener() {
+            @Override
+            public void onInstallReferrerSetupFinished(int responseCode) {
+                switch (responseCode) {
+                    case InstallReferrerClient.InstallReferrerResponse.OK:
+                        try {
+                            ReferrerDetails response = referrerClient.getInstallReferrer();
+                            String referrerUrl = response.getInstallReferrer();
+                            saveReferrerInfo(referrerUrl);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
+                        // Handle feature not supported error
+                        break;
+                    case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
+                        // Handle service unavailable error
+                        break;
+                }
+            }
 
+            @Override
+            public void onInstallReferrerServiceDisconnected() {
+                // Try to restart the connection on the next request to Google Play by calling the startConnection() method.
+            }
+        });
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
@@ -201,7 +228,32 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
-
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // Handle the intent when the app is already running
+        setIntent(intent);
+        handleIntent(intent);
+    }
+    private void handleIntent(Intent intent) {
+        System.out.println("uri>>>>>  "+intent);
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            Uri uri = intent.getData();
+            System.out.println("uri>>>>>  "+uri);
+            
+        }
+    }
+ private void saveReferrerInfo(String referrerUrl) {
+        // Save the referrer URL in SharedPreferences or any other persistent storage
+        SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString("referrer_url", referrerUrl);
+        editor.apply();
+    }
+    private String getLanguageFromReferrer(String referrerUrl) {
+    Uri referrerUri = Uri.parse("https://play.google.com?" + referrerUrl);
+    return referrerUri.getQueryParameter("language");
+}
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
         recyclerView.setLayoutManager(
@@ -229,8 +281,20 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
+        SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
+    String referrerUrl = sharedPreferences.getString("referrer_url", null);
+    if (referrerUrl != null) {
+        String language = getLanguageFromReferrer(referrerUrl);
+        if (language != null) {
+            // Apply the language setting in your app
+            applyLanguageSetting(language);
+        }
     }
-
+    }
+private void applyLanguageSetting(String language) {
+    // Implement your logic to change the app's language
+    System.out.println("this is the language >> "+language);
+}
     private String generatePseudoId() {
         SecureRandom random = new SecureRandom();
         String pseudoId = new BigInteger(130, random).toString(32);
