@@ -43,10 +43,12 @@ import org.curiouslearning.container.utilities.DeepLinkHelper;
 import org.curiouslearning.container.utilities.AudioPlayer;
 
 import java.math.BigInteger;
+import java.net.URLDecoder;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +76,10 @@ public class MainActivity extends BaseActivity {
     private AudioPlayer audioPlayer;
     private String appVersion;
     private InstallReferrerClient referrerClient;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        handleIntent(getIntent());
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(this);
         installReferrerManager.checkPlayStoreAvailability();
         audioPlayer = new AudioPlayer();
@@ -85,12 +87,11 @@ public class MainActivity extends BaseActivity {
         FacebookSdk.fullyInitialize();
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
+        handleReferrerData();
         cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
         appVersion = AppUtils.getAppVersionName(this);
-
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         selectedLanguage = prefs.getString("selectedLanguage", "");
         manifestVersion = prefs.getString("manifestVersion", "");
@@ -117,34 +118,7 @@ public class MainActivity extends BaseActivity {
                 });
             }
         });
-     referrerClient = InstallReferrerClient.newBuilder(this).build();
-        referrerClient.startConnection(new InstallReferrerStateListener() {
-            @Override
-            public void onInstallReferrerSetupFinished(int responseCode) {
-                switch (responseCode) {
-                    case InstallReferrerClient.InstallReferrerResponse.OK:
-                        try {
-                            ReferrerDetails response = referrerClient.getInstallReferrer();
-                            String referrerUrl = response.getInstallReferrer();
-                            saveReferrerInfo(referrerUrl);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        break;
-                    case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
-                        // Handle feature not supported error
-                        break;
-                    case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
-                        // Handle service unavailable error
-                        break;
-                }
-            }
-
-            @Override
-            public void onInstallReferrerServiceDisconnected() {
-                // Try to restart the connection on the next request to Google Play by calling the startConnection() method.
-            }
-        });
+ 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
@@ -228,6 +202,59 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
+    private void handleReferrerData() {
+        if (getIntent()!=null)
+        handleIntent(getIntent());
+    referrerClient = InstallReferrerClient.newBuilder(this).build();
+    referrerClient.startConnection(new InstallReferrerStateListener() {
+        @Override
+        public void onInstallReferrerSetupFinished(int responseCode) {
+            switch (responseCode) {
+                case InstallReferrerClient.InstallReferrerResponse.OK:
+                    try {
+                        ReferrerDetails response = referrerClient.getInstallReferrer();
+                        String referrerUrl = response.getInstallReferrer();
+                        // String referrerUrl="referrer=utm_source%3Dfacebook%26utm_medium%3Dprint%26utm_campaign%3D120208084211250195%26deferred_deeplink%3Dcuriousreader%3A%2F%2Fapp%3Flanguage%3Dhindi";
+                        String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
+                        long referrerClickTime = response.getReferrerClickTimestampSeconds();
+                        long appInstallTime = response.getInstallBeginTimestampSeconds();
+                        boolean instantExperienceLaunched = response.getGooglePlayInstantParam();
+                        Log.d(TAG, ">>>>>reponse " + response);
+                        Log.d(TAG, ">>>>>referrerClickTime " + referrerClickTime);
+                        Log.d(TAG, ">>>>>appInstallTime " + appInstallTime);
+                        Log.d(TAG, ">>>>>instantExperienceLaunched " + instantExperienceLaunched);
+                        Log.d(TAG, ">>>>>referrerUrl " + referrerUrl);
+                        Log.d(TAG, ">>>>>decodedReferrerUrl " + decodedReferrerUrl);
+                        if (referrerUrl != null) {
+                            System.out.println("referrerURL>>>");
+                            String language = getLanguageFromReferrer(referrerUrl);
+                            if (language != null) {
+                                // Apply the language setting in your app
+                                System.out.println("language>>>>>>"+language);
+                                applyLanguageSetting(language);
+                            }
+                        }
+                        saveReferrerInfo(decodedReferrerUrl);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
+                    Log.d(TAG, ">>>>> InstallReferrer feature not supported error " );
+                    break;
+                case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
+                    Log.d(TAG, ">>>>>InstallReferrer service unavailable error ");
+                    break;
+            }
+        }
+
+        @Override
+        public void onInstallReferrerServiceDisconnected() {
+            // Try to restart the connection on the next request to Google Play by calling
+            Log.d(TAG, ">>>>>InstallReferrer service disconnected error ");
+        }
+    });
+    }
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -235,25 +262,78 @@ public class MainActivity extends BaseActivity {
         setIntent(intent);
         handleIntent(intent);
     }
+
     private void handleIntent(Intent intent) {
-        System.out.println("uri>>>>>  "+intent);
+        System.out.println("uri>>>>>  " + intent);
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
             Uri uri = intent.getData();
-            System.out.println("uri>>>>>  "+uri);
-            
+            System.out.println("uri>>>>>  " + uri);
+            String referrer = uri.getQueryParameter("referrer");
+            getLanguageFromReferrer(referrer);
         }
     }
- private void saveReferrerInfo(String referrerUrl) {
+
+    private void saveReferrerInfo(String referrerUrl) {
+
         // Save the referrer URL in SharedPreferences or any other persistent storage
         SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString("referrer_url", referrerUrl);
         editor.apply();
+        getLanguageFromReferrer(referrerUrl);
     }
+
     private String getLanguageFromReferrer(String referrerUrl) {
-    Uri referrerUri = Uri.parse("https://play.google.com?" + referrerUrl);
-    return referrerUri.getQueryParameter("language");
-}
+        try {
+            // Decode the referrer URL
+            String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
+            System.out.println("Decoded referrerUrl: " + decodedReferrerUrl);
+            // Parse the parameters into a map
+            Map<String, String> params = getQueryMap(decodedReferrerUrl);
+            String deferredDeeplink = params.get("deferred_deeplink");
+            if (deferredDeeplink != null) {
+                // Parse the deferred_deeplink parameters
+                Map<String, String> deeplinkParams = getQueryMap(deferredDeeplink.replace("curiousreader://app?", ""));
+                String language = deeplinkParams.get("language");
+                if (language != null) {
+                    System.out.println("Language: " + language);
+                    return language;
+                } else {
+                    System.out.println("Language parameter not found.");
+                    return "";
+                }
+            } else {
+                System.out.println("deferred_deeplink parameter not found.");
+                return "";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    public static Map<String, String> getQueryMap(String query) {
+        Map<String, String> map = new HashMap<>();
+        String[] params = query.split("&");
+        for (String param : params) {
+            System.out.println(">>>>param  "+param);
+            String[] keyValue = param.split("=");
+            if (keyValue.length == 2) {
+                System.out.println(">>>>key value  "+keyValue[0]+"  "+ keyValue[1]);
+                map.put(keyValue[0], keyValue[1]);
+            }else if (keyValue.length > 2) {
+                // If there are more than two parts, concatenate the rest as the value
+                String key = keyValue[0];
+                StringBuilder value = new StringBuilder(keyValue[1]);
+                for (int i = 2; i < keyValue.length; i++) {
+                    value.append("=").append(keyValue[i]);
+                }
+                map.put(key, value.toString());
+            }
+        }
+        return map;
+    }
+
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
         recyclerView.setLayoutManager(
@@ -281,20 +361,28 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
-        SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
-    String referrerUrl = sharedPreferences.getString("referrer_url", null);
-    if (referrerUrl != null) {
-        String language = getLanguageFromReferrer(referrerUrl);
-        if (language != null) {
-            // Apply the language setting in your app
-            applyLanguageSetting(language);
-        }
     }
+
+    private void applyLanguageSetting(String language) {
+        System.out.println("this is the language >> " + language);
+        String lang = Character.toUpperCase(language.charAt(0))
+                + language.substring(1).toLowerCase();
+        Log.d(TAG, "onDeferredAppLinkDataFetched: Language from intent data: " + lang);
+        // Store the selected language
+        selectedLanguage = lang;
+        String pseudoId = prefs.getString("pseudoId", "");
+        String manifestVrsn = prefs.getString("manifestVersion", "");
+        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId,
+                lang, manifestVrsn, "true");
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                loadApps(lang);
+            }
+        });
     }
-private void applyLanguageSetting(String language) {
-    // Implement your logic to change the app's language
-    System.out.println("this is the language >> "+language);
-}
+
     private String generatePseudoId() {
         SecureRandom random = new SecureRandom();
         String pseudoId = new BigInteger(130, random).toString(32);
