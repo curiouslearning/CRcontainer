@@ -40,11 +40,14 @@ public class WebAppRepository {
         webApp.observe(lifecycleOwner, new Observer<List<WebApp>>() {
             @Override
             public void onChanged(List<WebApp> webApps) {
+                String appUrl = webApps.getAppUrl();
+                boolean cahedStatus = ctx.getSharedPreferences("appCached", Context.MODE_PRIVATE)
+                        .getBoolean(String.valueOf(appUrl), false);
                 if (webApps != null && !webApps.isEmpty()) {
                     selectedLanguageWebApps.setValue(webApps);
                 } else {
                     selectedLanguageWebApps.setValue(Collections.emptyList());
-//                   fetchWebApp();
+                    // fetchWebApp();
                 }
             }
         });

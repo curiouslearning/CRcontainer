@@ -64,7 +64,7 @@ public class WebApp extends BaseActivity {
 
     private void initViews() {
         sharedPref = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
-        isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
+        isDataCached = sharedPref.getBoolean(String.valueOf(appUrl), false);
         pseudoId = sharedPref.getString("pseudoId", "");
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
