@@ -58,6 +58,7 @@ public class InstallReferrerManager {
         ReferrerDetails referrerDetails = null;
         try {
             referrerDetails = installReferrerClient.getInstallReferrer();
+            Log.d("referal", referrerDetails.toString() +" ");
             String referrerUrl = referrerDetails.getInstallReferrer();
             Log.d("referal", referrerUrl +" ");
             logFirstOpenEvent(referrerDetails);
