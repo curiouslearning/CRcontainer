@@ -118,7 +118,7 @@ public class MainActivity extends BaseActivity {
                 });
             }
         });
- 
+
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
@@ -202,59 +202,70 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
-    private void handleReferrerData() {
-        if (getIntent()!=null)
-        handleIntent(getIntent());
-    referrerClient = InstallReferrerClient.newBuilder(this).build();
-    referrerClient.startConnection(new InstallReferrerStateListener() {
-        @Override
-        public void onInstallReferrerSetupFinished(int responseCode) {
-            switch (responseCode) {
-                case InstallReferrerClient.InstallReferrerResponse.OK:
-                    try {
-                        ReferrerDetails response = referrerClient.getInstallReferrer();
-                        String referrerUrl = response.getInstallReferrer();
-                        // String referrerUrl="referrer=utm_source%3Dfacebook%26utm_medium%3Dprint%26utm_campaign%3D120208084211250195%26deferred_deeplink%3Dcuriousreader%3A%2F%2Fapp%3Flanguage%3Dhindi";
-                        String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
-                        long referrerClickTime = response.getReferrerClickTimestampSeconds();
-                        long appInstallTime = response.getInstallBeginTimestampSeconds();
-                        boolean instantExperienceLaunched = response.getGooglePlayInstantParam();
-                        Log.d(TAG, ">>>>>reponse " + response);
-                        Log.d(TAG, ">>>>>referrerClickTime " + referrerClickTime);
-                        Log.d(TAG, ">>>>>appInstallTime " + appInstallTime);
-                        Log.d(TAG, ">>>>>instantExperienceLaunched " + instantExperienceLaunched);
-                        Log.d(TAG, ">>>>>referrerUrl " + referrerUrl);
-                        Log.d(TAG, ">>>>>decodedReferrerUrl " + decodedReferrerUrl);
-                        if (referrerUrl != null) {
-                            System.out.println("referrerURL>>>");
-                            String language = getLanguageFromReferrer(referrerUrl);
-                            if (language != null) {
-                                // Apply the language setting in your app
-                                System.out.println("language>>>>>>"+language);
-                                applyLanguageSetting(language);
-                            }
-                        }
-                        saveReferrerInfo(decodedReferrerUrl);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    break;
-                case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
-                    Log.d(TAG, ">>>>> InstallReferrer feature not supported error " );
-                    break;
-                case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
-                    Log.d(TAG, ">>>>>InstallReferrer service unavailable error ");
-                    break;
-            }
-        }
 
-        @Override
-        public void onInstallReferrerServiceDisconnected() {
-            // Try to restart the connection on the next request to Google Play by calling
-            Log.d(TAG, ">>>>>InstallReferrer service disconnected error ");
-        }
-    });
+    private void handleReferrerData() {
+        if (getIntent() != null)
+            handleIntent(getIntent());
+        referrerClient = InstallReferrerClient.newBuilder(this).build();
+        referrerClient.startConnection(new InstallReferrerStateListener() {
+            @Override
+            public void onInstallReferrerSetupFinished(int responseCode) {
+                switch (responseCode) {
+                    case InstallReferrerClient.InstallReferrerResponse.OK:
+                        try {
+                            ReferrerDetails response = referrerClient.getInstallReferrer();
+                            String referrerUrl = response.getInstallReferrer();
+                            // String
+                            // referrerUrl="referrer=utm_source%3Dfacebook%26utm_medium%3Dprint%26utm_campaign%3D120208084211250195%26deferred_deeplink%3Dcuriousreader%3A%2F%2Fapp%3Flanguage%3Dhindi";
+                            String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
+                            long referrerClickTime = response.getReferrerClickTimestampSeconds();
+                            long appInstallTime = response.getInstallBeginTimestampSeconds();
+                            boolean instantExperienceLaunched = response.getGooglePlayInstantParam();
+                            Log.d(TAG, ">>>>>reponse " + response);
+                            Log.d(TAG, ">>>>>referrerClickTime " + referrerClickTime);
+                            Log.d(TAG, ">>>>>appInstallTime " + appInstallTime);
+                            Log.d(TAG, ">>>>>instantExperienceLaunched " + instantExperienceLaunched);
+                            Log.d(TAG, ">>>>>referrerUrl " + referrerUrl);
+                            Log.d(TAG, ">>>>>decodedReferrerUrl " + decodedReferrerUrl);
+                            if (referrerUrl != null) {
+                                System.out.println("referrerURL>>>");
+                                String utmSource = getReferrerUrlParameters(referrerUrl, "utm_source");
+                                String utmCampaign = getReferrerUrlParameters(referrerUrl, "utm_campaign");
+                                SharedPreferences.Editor editor = prefs.edit();
+                                editor.putString("utmSource", utmSource);
+                                Log.d(TAG, "utm source stored: " + utmSource);
+                                editor.putString("utmCampaign", utmCampaign);
+                                editor.apply();
+                                Log.d(TAG, "utm campaign stored: " + utmCampaign);
+                                String language = getLanguageFromReferrer(referrerUrl);
+                                if (language != null) {
+                                    // Apply the language setting in your app
+                                    System.out.println("language>>>>>>" + language);
+                                    applyLanguageSetting(language);
+                                }
+                            }
+                            saveReferrerInfo(decodedReferrerUrl);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
+                        Log.d(TAG, ">>>>> InstallReferrer feature not supported error ");
+                        break;
+                    case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
+                        Log.d(TAG, ">>>>>InstallReferrer service unavailable error ");
+                        break;
+                }
+            }
+
+            @Override
+            public void onInstallReferrerServiceDisconnected() {
+                // Try to restart the connection on the next request to Google Play by calling
+                Log.d(TAG, ">>>>>InstallReferrer service disconnected error ");
+            }
+        });
     }
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -281,6 +292,23 @@ public class MainActivity extends BaseActivity {
         editor.putString("referrer_url", referrerUrl);
         editor.apply();
         getLanguageFromReferrer(referrerUrl);
+    }
+
+    private String getReferrerUrlParameters(String referrerUrl, String paramName) {
+        try {
+            String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
+            System.out.println("Decoded referrer URL :" + decodedReferrerUrl);
+            Map<String, String> params = getQueryMap(decodedReferrerUrl);
+            String paramValue = "";
+            if (params.containsKey(paramName))
+                paramValue = params.get(paramName);
+
+            return paramValue;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 
     private String getLanguageFromReferrer(String referrerUrl) {
@@ -316,12 +344,12 @@ public class MainActivity extends BaseActivity {
         Map<String, String> map = new HashMap<>();
         String[] params = query.split("&");
         for (String param : params) {
-            System.out.println(">>>>param  "+param);
+            System.out.println(">>>>param  " + param);
             String[] keyValue = param.split("=");
             if (keyValue.length == 2) {
-                System.out.println(">>>>key value  "+keyValue[0]+"  "+ keyValue[1]);
+                System.out.println(">>>>key value  " + keyValue[0] + "  " + keyValue[1]);
                 map.put(keyValue[0], keyValue[1]);
-            }else if (keyValue.length > 2) {
+            } else if (keyValue.length > 2) {
                 // If there are more than two parts, concatenate the rest as the value
                 String key = keyValue[0];
                 StringBuilder value = new StringBuilder(keyValue[1]);
