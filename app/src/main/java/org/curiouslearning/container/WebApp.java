@@ -35,8 +35,6 @@ public class WebApp extends BaseActivity {
     private String language;
     private String languageInEnglishName;
     private String pseudoId;
-    private String utmSource;
-    private String utmCampaign;
     private boolean isDataCached;
 
     private static final String SHARED_PREFS_NAME = "appCached";
@@ -68,9 +66,6 @@ public class WebApp extends BaseActivity {
         sharedPref = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
         isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         pseudoId = sharedPref.getString("pseudoId", "");
-        utmCampaign= sharedPref.getString("utmCampaign","");
-        utmSource = sharedPref.getString("utmSource","");
-        System.out.println(">>>utmCampaign in webapp "+utmCampaign);
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -174,7 +169,7 @@ public class WebApp extends BaseActivity {
 
     // log firebase Event
     public void logAppLaunchEvent() {
-        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, languageInEnglishName, utmSource, utmCampaign);
+        AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, languageInEnglishName);
 
     }
 }

@@ -26,7 +26,7 @@ public class AnalyticsUtils {
         return mFirebaseAnalytics;
     }
 
-    public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId, String language, String utmSource, String utmCampaign) {
+    public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId, String language) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
 
         Bundle bundle = new Bundle();
@@ -34,10 +34,6 @@ public class AnalyticsUtils {
         bundle.putString("web_app_url", appUrl);
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
-        bundle.putString("utm_source", utmSource);
-        bundle.putString("utm_campaign", utmCampaign);
-        System.out.println(">>>>>utmCampaign  "+utmCampaign);
-        System.out.println(">>>>>event logged  "+ eventName+"  "+bundle);
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
