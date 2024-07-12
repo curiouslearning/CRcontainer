@@ -67,6 +67,9 @@ public class WebAppRepository {
         });
         return newWebApps;
     }
+    public LiveData<List<String>> getAllLanguagesInEnglish() {
+        return webAppDatabase.getAllLanguagesInEnglish();
+    }
 
     public void getUpdatedAppManifest(String manifestVersion) {
         if (ConnectionUtils.getInstance().isInternetConnected(application)) {

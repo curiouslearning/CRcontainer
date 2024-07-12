@@ -29,6 +29,7 @@ import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 
+import org.curiouslearning.container.data.database.WebAppDao;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -69,6 +70,7 @@ public class MainActivity extends BaseActivity {
     private ProgressBar loadingIndicator;
 
     private static final String SHARED_PREFS_NAME = "appCached";
+    private static final String REFERRER_HANDLED_KEY = "isReferrerHandled";
     private SharedPreferences prefs;
     private String selectedLanguage;
     private String manifestVersion;
@@ -76,6 +78,7 @@ public class MainActivity extends BaseActivity {
     private AudioPlayer audioPlayer;
     private String appVersion;
     private InstallReferrerClient referrerClient;
+    private boolean isReferrerHandled;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,12 +92,15 @@ public class MainActivity extends BaseActivity {
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
-        handleReferrerData();
+        prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
+        isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
+        if (!isReferrerHandled) {
+            handleReferrerData();
+        }
         cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         appVersion = AppUtils.getAppVersionName(this);
-        prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         selectedLanguage = prefs.getString("selectedLanguage", "");
         manifestVersion = prefs.getString("manifestVersion", "");
 
@@ -115,12 +121,13 @@ public class MainActivity extends BaseActivity {
                 AnimationUtil.scaleButton(view, new Runnable() {
                     @Override
                     public void run() {
+
                         showLanguagePopup();
                     }
                 });
             }
         });
- 
+
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
@@ -179,10 +186,15 @@ public class MainActivity extends BaseActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (selectedLanguage.equals("")) {
-                                showLanguagePopup();
-                            } else {
-                                loadApps(selectedLanguage);
+
+                            if (isReferrerHandled) {
+                                if (selectedLanguage.equals("")) {
+
+                                    showLanguagePopup();
+                                } else {
+                                    loadApps(selectedLanguage);
+
+                                }
                             }
                         }
                     });
@@ -198,91 +210,88 @@ public class MainActivity extends BaseActivity {
                 AnimationUtil.scaleButton(view, new Runnable() {
                     @Override
                     public void run() {
+
                         showLanguagePopup();
                     }
                 });
             }
         });
     }
+
     private void handleReferrerData() {
-        if (getIntent()!=null)
-        handleIntent(getIntent());
-    referrerClient = InstallReferrerClient.newBuilder(this).build();
-    referrerClient.startConnection(new InstallReferrerStateListener() {
-        @Override
-        public void onInstallReferrerSetupFinished(int responseCode) {
-            switch (responseCode) {
-                case InstallReferrerClient.InstallReferrerResponse.OK:
-                    try {
-                        ReferrerDetails response = referrerClient.getInstallReferrer();
-                        String referrerUrl = response.getInstallReferrer();
-                        // String referrerUrl="referrer=utm_source%3Dfacebook%26utm_medium%3Dprint%26utm_campaign%3D120208084211250195%26deferred_deeplink%3Dcuriousreader%3A%2F%2Fapp%3Flanguage%3Dhindi";
-                        String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
-                        long referrerClickTime = response.getReferrerClickTimestampSeconds();
-                        long appInstallTime = response.getInstallBeginTimestampSeconds();
-                        boolean instantExperienceLaunched = response.getGooglePlayInstantParam();
-                        Log.d(TAG, ">>>>>reponse " + response);
-                        Log.d(TAG, ">>>>>referrerClickTime " + referrerClickTime);
-                        Log.d(TAG, ">>>>>appInstallTime " + appInstallTime);
-                        Log.d(TAG, ">>>>>instantExperienceLaunched " + instantExperienceLaunched);
-                        Log.d(TAG, ">>>>>referrerUrl " + referrerUrl);
-                        Log.d(TAG, ">>>>>decodedReferrerUrl " + decodedReferrerUrl);
-                        if (referrerUrl != null) {
-                            System.out.println("referrerURL>>>");
-                            String language = getLanguageFromReferrer(referrerUrl);
-                            if (language != null) {
-                                // Apply the language setting in your app
-                                System.out.println("language>>>>>>"+language);
-                                applyLanguageSetting(language);
+        referrerClient = InstallReferrerClient.newBuilder(this).build();
+        referrerClient.startConnection(new InstallReferrerStateListener() {
+            @Override
+            public void onInstallReferrerSetupFinished(int responseCode) {
+                switch (responseCode) {
+                    case InstallReferrerClient.InstallReferrerResponse.OK:
+                        try {
+                            ReferrerDetails response = referrerClient.getInstallReferrer();
+                            // String referrerUrl = response.getInstallReferrer();
+                            String referrerUrl = "referrer=utm_source%3Dfacebook%26utm_medium%3Dprint%26utm_campaign%3D120208084211250195%26deferred_deeplink%3Dcuriousreader%3A%2F%2Fapp%3Flanguage%3Dhindii";
+                            String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
+                            long referrerClickTime = response.getReferrerClickTimestampSeconds();
+                            long appInstallTime = response.getInstallBeginTimestampSeconds();
+                            boolean instantExperienceLaunched = response.getGooglePlayInstantParam();
+                            Log.d(TAG, ">>>>>reponse " + response);
+                            Log.d(TAG, ">>>>>referrerClickTime, " + referrerClickTime);
+                            Log.d(TAG, ">>>>>appInstallTime " + appInstallTime);
+                            Log.d(TAG, ">>>>>instantExperienceLaunched " + instantExperienceLaunched);
+                            Log.d(TAG, ">>>>>referrerUrl " + referrerUrl);
+                            Log.d(TAG, ">>>>>decodedReferrerUrl " + decodedReferrerUrl);
+                            if (referrerUrl != null && !isReferrerHandled) {
+
+                                SharedPreferences.Editor editor = prefs.edit();
+                                editor.putBoolean(REFERRER_HANDLED_KEY, true);
+                                editor.apply();
+                                System.out.println("referrerURL>>>");
+                                String language = getLanguageFromReferrer(referrerUrl);
+                                System.out.println("selectedLanguage>>>  " + selectedLanguage);
+                                if (language != null) {
+                                    String lang = Character.toUpperCase(language.charAt(0))
+                                            + language.substring(1).toLowerCase();
+                                    homeViewModal.getAllLanguagesInEnglish().observe(MainActivity.this,
+                                            new Observer<List<String>>() {
+                                                @Override
+                                                public void onChanged(List<String> languages) {
+
+                                                    boolean languageFound = false;
+                                                    for (String language : languages) {
+                                                        if (language.equalsIgnoreCase(lang)) {
+                                                            languageFound = true;
+                                                            break;
+                                                        }
+                                                    }
+
+                                                    if (languageFound) {
+                                                        isReferrerHandled = true;
+                                                        applyLanguageSetting(language);
+                                                    } else {
+                                                        showLanguagePopup();
+                                                    }
+                                                }
+                                            });
+                                }
                             }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                        saveReferrerInfo(decodedReferrerUrl);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    break;
-                case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
-                    Log.d(TAG, ">>>>> InstallReferrer feature not supported error " );
-                    break;
-                case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
-                    Log.d(TAG, ">>>>>InstallReferrer service unavailable error ");
-                    break;
+                        break;
+                    case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
+                        Log.d(TAG, ">>>>> InstallReferrer feature not supported error ");
+                        break;
+                    case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
+                        Log.d(TAG, ">>>>>InstallReferrer service unavailable error ");
+                        break;
+                }
             }
-        }
 
-        @Override
-        public void onInstallReferrerServiceDisconnected() {
-            // Try to restart the connection on the next request to Google Play by calling
-            Log.d(TAG, ">>>>>InstallReferrer service disconnected error ");
-        }
-    });
-    }
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        // Handle the intent when the app is already running
-        setIntent(intent);
-        handleIntent(intent);
-    }
-
-    private void handleIntent(Intent intent) {
-        System.out.println("uri>>>>>  " + intent);
-        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-            Uri uri = intent.getData();
-            System.out.println("uri>>>>>  " + uri);
-            String referrer = uri.getQueryParameter("referrer");
-            getLanguageFromReferrer(referrer);
-        }
-    }
-
-    private void saveReferrerInfo(String referrerUrl) {
-
-        // Save the referrer URL in SharedPreferences or any other persistent storage
-        SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("referrer_url", referrerUrl);
-        editor.apply();
-        getLanguageFromReferrer(referrerUrl);
+            @Override
+            public void onInstallReferrerServiceDisconnected() {
+                // Try to restart the connection on the next request to Google Play by calling
+                Log.d(TAG, ">>>>>InstallReferrer service disconnected error ");
+            }
+        });
     }
 
     private String getLanguageFromReferrer(String referrerUrl) {
@@ -318,12 +327,12 @@ public class MainActivity extends BaseActivity {
         Map<String, String> map = new HashMap<>();
         String[] params = query.split("&");
         for (String param : params) {
-            System.out.println(">>>>param  "+param);
+            System.out.println(">>>>param  " + param);
             String[] keyValue = param.split("=");
             if (keyValue.length == 2) {
-                System.out.println(">>>>key value  "+keyValue[0]+"  "+ keyValue[1]);
+                System.out.println(">>>>key value  " + keyValue[0] + "  " + keyValue[1]);
                 map.put(keyValue[0], keyValue[1]);
-            }else if (keyValue.length > 2) {
+            } else if (keyValue.length > 2) {
                 // If there are more than two parts, concatenate the rest as the value
                 String key = keyValue[0];
                 StringBuilder value = new StringBuilder(keyValue[1]);
