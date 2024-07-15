@@ -227,8 +227,8 @@ public class MainActivity extends BaseActivity {
                     case InstallReferrerClient.InstallReferrerResponse.OK:
                         try {
                             ReferrerDetails response = referrerClient.getInstallReferrer();
-                            // String referrerUrl = response.getInstallReferrer();
-                            String referrerUrl = "referrer=utm_source%3Dfacebook%26utm_medium%3Dprint%26utm_campaign%3D120208084211250195%26deferred_deeplink%3Dcuriousreader%3A%2F%2Fapp%3Flanguage%3Dhindii";
+                            String referrerUrl = response.getInstallReferrer();
+                            // String referrerUrl = "referrer=utm_source%3Dfacebook%26utm_medium%3Dprint%26utm_campaign%3D120208084211250195%26deferred_deeplink%3Dcuriousreader%3A%2F%2Fapp%3Flanguage%3Dhindii";
                             String decodedReferrerUrl = URLDecoder.decode(referrerUrl, "UTF-8");
                             long referrerClickTime = response.getReferrerClickTimestampSeconds();
                             long appInstallTime = response.getInstallBeginTimestampSeconds();
