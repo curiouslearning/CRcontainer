@@ -25,4 +25,7 @@ public interface WebAppDao {
 
     @Query("SELECT * FROM web_app_table  ORDER BY appId ASC")
     LiveData<List<WebApp>> getAllWebApp();
+
+    @Query("SELECT languageInEnglishName FROM web_app_table")
+    LiveData<List<String>> getAllLanguagesInEnglish();
 }

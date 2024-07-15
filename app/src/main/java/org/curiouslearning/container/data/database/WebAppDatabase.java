@@ -38,6 +38,9 @@ public class WebAppDatabase {
     public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
         return webAppDao.getSelectedlanguageWebApps(selectedLanguage);
     }
+    public LiveData<List<String>> getAllLanguagesInEnglish() {
+        return webAppDao.getAllLanguagesInEnglish();
+    }
 
     private static class InsertAllWebAppAsyncTask extends AsyncTask<List<WebApp>, Void, Void> {
         private WebAppDao WebAppDao;
