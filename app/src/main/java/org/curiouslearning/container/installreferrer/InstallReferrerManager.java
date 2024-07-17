@@ -81,7 +81,7 @@ public class InstallReferrerManager {
     }
     private Map<String, String> extractReferrerParameters(String referrerUrl) {
         Map<String, String> params = new HashMap<>();
-        
+        //create a dummmy url
         // Using a dummy URL to ensure `Uri.parse` correctly processes the referrerUrl as part of a valid URL.
         Uri uri = Uri.parse("http://dummyurl.com/?" +referrerUrl);
         String deeplink= uri.getQueryParameter("deferred_deeplink");
