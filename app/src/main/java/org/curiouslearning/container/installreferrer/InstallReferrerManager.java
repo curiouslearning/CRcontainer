@@ -2,6 +2,7 @@ package org.curiouslearning.container.installreferrer;
 
 
 import android.content.Context;
+import android.net.Uri;
 import android.os.RemoteException;
 import android.util.Log;
 
@@ -11,13 +12,21 @@ import com.android.installreferrer.api.ReferrerDetails;
 
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
 public class InstallReferrerManager {
 
     private final InstallReferrerClient installReferrerClient;
     private Context context;
+    private ReferrerCallback callback;
 
-    public InstallReferrerManager(Context context) {
+    public InstallReferrerManager(Context context, ReferrerCallback callback) {
         this.context = context;
+        this.callback = callback;
         installReferrerClient = InstallReferrerClient.newBuilder(context).build();
     }
 
@@ -61,6 +70,7 @@ public class InstallReferrerManager {
             Log.d("referal", referrerDetails.toString() +" ");
             String referrerUrl = referrerDetails.getInstallReferrer();
             Log.d("referal", referrerUrl +" ");
+            extractReferrerParameters(referrerUrl);
             logFirstOpenEvent(referrerDetails);
 
         } catch (RemoteException e) {
@@ -69,9 +79,47 @@ public class InstallReferrerManager {
             installReferrerClient.endConnection();
         }
     }
+    private Map<String, String> extractReferrerParameters(String referrerUrl) {
+        Map<String, String> params = new HashMap<>();
+        Uri uri = Uri.parse("http://dummyurl.com/?" +referrerUrl);
+        String deeplink= uri.getQueryParameter("deferred_deeplink");
+        if(deeplink!=null && deeplink.contains("curiousreader://app?language")){
+            callback.onReferrerReceived(deeplink.replace("curiousreader://app?language=", ""));
+        }
+        String source = uri.getQueryParameter("utm_source");
+        String campaign = uri.getQueryParameter("utm_campaign");
+        String content = uri.getQueryParameter("utm_content");
+        Log.d("data without decode",deeplink+" "+ campaign + " " + source + " " + content);
+        content = urlDecode(content);
 
+        Log.d("referral data", uri+" "+campaign + " " + source + " " + content+" "+referrerUrl);
+
+        params.put("source", source);
+        params.put("campaign", campaign);
+        params.put("content", content);
+
+        return params;
+    }
     public void logFirstOpenEvent(ReferrerDetails referrerDetails) {
         AnalyticsUtils.logReferrerEvent(this.context, "first_open_cl", referrerDetails);
+    }
+    public interface ReferrerCallback {
+        void onReferrerReceived(String referrerUrl);
+    }
+    public static String urlDecode(String encodedString) {
+        try {
+            if (encodedString != null) {
+                String decodedString = URLDecoder.decode(encodedString, StandardCharsets.UTF_8.toString());
+                System.out.println("Decoded utm_content: " + decodedString);
+                return decodedString;
+            } else {
+                System.out.println("Encoded string is null.");
+                return null;
+            }
+        } catch (UnsupportedEncodingException | IllegalArgumentException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
 
