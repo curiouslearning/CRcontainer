@@ -77,7 +77,7 @@ public class AnalyticsUtils {
 
     private  static Map<String, String> extractReferrerParameters(String referrerUrl) {
         Map<String, String> params = new HashMap<>();
-        Uri uri = Uri.parse("http://dummyurl.com/?" +referrerUrl);
+        Uri uri = Uri.parse(referrerUrl);
 
         String source = uri.getQueryParameter("utm_source");
         String campaign = uri.getQueryParameter("utm_campaign");
@@ -85,7 +85,7 @@ public class AnalyticsUtils {
         Log.d("data without decode", campaign + " " + source + " " + content);
         content = urlDecode(content);
 
-        Log.d("referral data", uri+" "+campaign + " " + source + " " + content+" "+referrerUrl);
+        Log.d("referral data", campaign + " " + source + " " + content);
 
         params.put("source", source);
         params.put("campaign", campaign);
