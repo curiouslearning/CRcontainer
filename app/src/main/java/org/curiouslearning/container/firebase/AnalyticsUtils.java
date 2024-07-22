@@ -59,7 +59,7 @@ public class AnalyticsUtils {
     public static void logReferrerEvent(Context context, String eventName, ReferrerDetails response) {
         if (response != null) {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-            String referrerUrl = referrerDetails.getInstallReferrer();
+            String referrerUrl = response.getInstallReferrer();
             Bundle bundle = new Bundle();
             bundle.putString("referrer_url", referrerUrl);
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
