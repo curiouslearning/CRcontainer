@@ -70,7 +70,7 @@ public class InstallReferrerManager {
             Log.d("referal", referrerDetails.toString() +" ");
             String referrerUrl = referrerDetails.getInstallReferrer();
             Log.d("referal", referrerUrl +" ");
-            extractReferrerParameters("utm_source=facebook&utm_medium=print&utm_campaign=120208084211250195&deferred_deeplink=curiousreader://app?language=nepalii");
+            extractReferrerParameters(referrerUrl);
             logFirstOpenEvent(referrerDetails);
 
         } catch (RemoteException e) {

@@ -79,31 +79,20 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private InstallReferrerClient referrerClient;
     private boolean isReferrerHandled;
-    private boolean isDataReceived;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
-        isDataReceived = false;
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
-            public void onReferrerReceived(String urlLanguage) {
+            public void onReferrerReceived(String language) {
                 // Handle referrer language received
+                String lang = Character.toUpperCase(language.charAt(0))
+                + language.substring(1).toLowerCase();
                 
                 if(!isReferrerHandled){
-                if(isDataReceived == true || urlLanguage==null){
-                    System.out.println("return from playstore");
-                    return;
-                }
-                if(urlLanguage!=null){
-                    isDataReceived = true;
-                }
-                String lang = Character.toUpperCase(urlLanguage.charAt(0))
-                + urlLanguage.substring(1).toLowerCase();
-                
-                loadingIndicator.setVisibility(View.VISIBLE);
                     homeViewModal.getAllLanguagesInEnglish().observe(MainActivity.this,
                     new Observer<List<String>>() {
                         @Override
@@ -111,30 +100,23 @@ public class MainActivity extends BaseActivity {
 
                             boolean languageFound = false;
                             for (String language : languages) {
-                                System.out.println("lang> "+language);
                                 if (language.equalsIgnoreCase(lang)) {
                                     languageFound = true;
-                                    System.out.println("foundd");
                                     break;
                                 }
                             }
-                            System.out.println(">>?");
+
                             if (languageFound==true) {
                                 selectedLanguage=lang;
                                 if (dialog != null && dialog.isShowing()) {
                                     dialog.dismiss();
                                 }
-                                loadingIndicator.setVisibility(View.GONE);
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
                                         loadApps(lang);
                                     }
                                 });
-                                System.out.println("inside playstore if");
-                            }else{
-                                System.out.println("inside playstore else");
-
                             }
                         }
                     });
@@ -142,10 +124,9 @@ public class MainActivity extends BaseActivity {
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putBoolean(REFERRER_HANDLED_KEY, true);
                     editor.apply();
-                    Log.d(TAG, "Referrer language received: " + urlLanguage+" "+lang);
                 }
                 
-                
+                Log.d(TAG, "Referrer language received: " + language+" "+lang);
             }
         };
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(this,referrerCallback);
@@ -191,11 +172,6 @@ public class MainActivity extends BaseActivity {
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
-                if(isDataReceived==true){
-                    System.out.println("return from facebook");
-                    return;
-                }
-                
                 Intent intent = getIntent();
                 String pseudoId = prefs.getString("pseudoId", "");
                 String manifestVrsn = prefs.getString("manifestVersion", "");
@@ -205,7 +181,6 @@ public class MainActivity extends BaseActivity {
                 }
                 Log.d(TAG, "onDeferredAppLinkDataFetched: AppLinkData: " + appLinkData);
                 if (appLinkData != null) {
-                    isDataReceived=true;
                     Uri deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
@@ -253,10 +228,8 @@ public class MainActivity extends BaseActivity {
                         @Override
                         public void run() {
                                 if (selectedLanguage.equals("")) {
-                                    System.out.println("inside facebook else if");
                                     showLanguagePopup();
                                 } else {
-                                    System.out.println("inside facebook else else");
                                     loadApps(selectedLanguage);
                                 }
 
@@ -318,7 +291,7 @@ public class MainActivity extends BaseActivity {
         System.out.println(pseudoId);
         return pseudoId;
     }
-    
+
     private void showLanguagePopup() {
         if (!dialog.isShowing()) {
             dialog.setContentView(R.layout.language_popup);
