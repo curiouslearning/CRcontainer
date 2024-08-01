@@ -79,57 +79,45 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private InstallReferrerClient referrerClient;
     private boolean isReferrerHandled;
+    private boolean isDataReceived;
+    private boolean langCheck;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
+        langCheck = true;
+        isDataReceived = false;
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
             public void onReferrerReceived(String language) {
                 // Handle referrer language received
                 String lang = Character.toUpperCase(language.charAt(0))
-                + language.substring(1).toLowerCase();
-                
-                if(!isReferrerHandled){
-                    homeViewModal.getAllLanguagesInEnglish().observe(MainActivity.this,
-                    new Observer<List<String>>() {
+                        + language.substring(1).toLowerCase();
+                if (!isReferrerHandled) {
+                    if (isDataReceived == true || language == null) {
+                        System.out.println("return from playstore");
+                        return;
+                    }
+                    if (language != null) {
+                        isDataReceived = true;
+                    }
+                    selectedLanguage = lang;
+                    runOnUiThread(new Runnable() {
                         @Override
-                        public void onChanged(List<String> languages) {
-
-                            boolean languageFound = false;
-                            for (String language : languages) {
-                                if (language.equalsIgnoreCase(lang)) {
-                                    languageFound = true;
-                                    break;
-                                }
-                            }
-
-                            if (languageFound==true) {
-                                selectedLanguage=lang;
-                                if (dialog != null && dialog.isShowing()) {
-                                    dialog.dismiss();
-                                }
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        loadApps(lang);
-                                    }
-                                });
-                            }
+                        public void run() {
+                            loadApps(lang);
                         }
                     });
-                    
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putBoolean(REFERRER_HANDLED_KEY, true);
                     editor.apply();
                 }
-                
-                Log.d(TAG, "Referrer language received: " + language+" "+lang);
+                Log.d(TAG, "Referrer language received: " + language + " " + lang);
             }
         };
-        InstallReferrerManager installReferrerManager = new InstallReferrerManager(this,referrerCallback);
+        InstallReferrerManager installReferrerManager = new InstallReferrerManager(this, referrerCallback);
         installReferrerManager.checkPlayStoreAvailability();
         audioPlayer = new AudioPlayer();
         FirebaseApp.initializeApp(this);
@@ -168,10 +156,14 @@ public class MainActivity extends BaseActivity {
                 });
             }
         });
-     
+
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                if (isDataReceived == true) {
+                    System.out.println("return from facebook");
+                    return;
+                }
                 Intent intent = getIntent();
                 String pseudoId = prefs.getString("pseudoId", "");
                 String manifestVrsn = prefs.getString("manifestVersion", "");
@@ -181,6 +173,7 @@ public class MainActivity extends BaseActivity {
                 }
                 Log.d(TAG, "onDeferredAppLinkDataFetched: AppLinkData: " + appLinkData);
                 if (appLinkData != null) {
+                    isDataReceived = true;
                     Uri deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
@@ -189,7 +182,7 @@ public class MainActivity extends BaseActivity {
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         // Store the selected language
                         selectedLanguage = lang;
-
+                        storeSelectLanguage(lang);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
                                 manifestVrsn, "true");
 
@@ -227,11 +220,11 @@ public class MainActivity extends BaseActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                                if (selectedLanguage.equals("")) {
-                                    showLanguagePopup();
-                                } else {
-                                    loadApps(selectedLanguage);
-                                }
+                            if (selectedLanguage.equals("")) {
+                                showLanguagePopup();
+                            } else {
+                                loadApps(selectedLanguage);
+                            }
 
                         }
                     });
@@ -254,7 +247,7 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
-   
+
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
         recyclerView.setLayoutManager(
@@ -283,7 +276,6 @@ public class MainActivity extends BaseActivity {
         super.onResume();
         recyclerView.setAdapter(apps);
     }
-
 
     private String generatePseudoId() {
         SecureRandom random = new SecureRandom();
@@ -404,19 +396,21 @@ public class MainActivity extends BaseActivity {
             public void onChanged(List<WebApp> webApps) {
                 loadingIndicator.setVisibility(View.GONE);
                 if (!webApps.isEmpty()) {
+                    langCheck = true;
                     apps.webApps = webApps;
                     apps.notifyDataSetChanged();
                     storeSelectLanguage(language);
                 } else {
-                    System.out.println("inside loadapps "+!prefs.getString("selectedLanguage", "").equals("")+" "+language.equals(""));
                     if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
                         showLanguagePopup();
-                    }
-                    if (manifestVersion.equals("")) {
+                    } else if (manifestVersion.equals("") && langCheck) {
+                        langCheck = false;
                         loadingIndicator.setVisibility(View.VISIBLE);
                         homeViewModal.getAllWebApps();
+                    } else {
+                        showLanguagePopup();
                     }
-                    
+
                 }
             }
         });
