@@ -4,26 +4,46 @@
     android:layout_width="120dp"
     android:layout_height="120dp"
     android:layout_margin="20dp"
-    android:contentDescription="@string/background"
     android:orientation="horizontal">
 
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
+
+                <ImageView
+                    android:id="@+id/shadow"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="3dp"
+                    android:layout_marginBottom="3dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginStart="10dp"
+                    android:elevation="2dp"
+                    android:background="@drawable/shadowrect" />
+
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/app_image"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:contentDescription="@string/app_name"
                     app:srcCompat="@drawable/ftm_english"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:elevation="3dp"
                     app:shapeAppearanceOverlay="@style/circular" />
+
                 <ImageView
                     android:id="@+id/download_image"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_gravity="center"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:elevation="4dp"
                     android:contentDescription="@string/background" />
 
-        </FrameLayout>
 
+
+        </FrameLayout>
 </LinearLayout>
