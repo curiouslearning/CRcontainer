@@ -87,6 +87,7 @@ public class MainActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
+        selectedLanguage = prefs.getString("selectedLanguage", "");
         langCheck = true;
         isDataReceived = false;
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
@@ -95,14 +96,12 @@ public class MainActivity extends BaseActivity {
                 // Handle referrer language received
                 String lang = Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
-                if (!isReferrerHandled) {
+                if (!isReferrerHandled && language.length() > 0) {
                     if (isDataReceived == true || language == null) {
                         System.out.println("return from playstore");
                         return;
                     }
-                    if (language != null) {
-                        isDataReceived = true;
-                    }
+                    isDataReceived=true;
                     selectedLanguage = lang;
                     runOnUiThread(new Runnable() {
                         @Override
@@ -119,6 +118,14 @@ public class MainActivity extends BaseActivity {
         };
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(this, referrerCallback);
         installReferrerManager.checkPlayStoreAvailability();
+        Intent intent = getIntent();
+        if (intent.getData() != null) {
+            String language = intent.getData().getQueryParameter("language");
+            if (language != null) {
+                selectedLanguage = Character.toUpperCase(language.charAt(0))
+                        + language.substring(1).toLowerCase();
+            }
+        }
         audioPlayer = new AudioPlayer();
         FirebaseApp.initializeApp(this);
         FacebookSdk.setAutoInitEnabled(true);
@@ -130,7 +137,6 @@ public class MainActivity extends BaseActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         appVersion = AppUtils.getAppVersionName(this);
-        selectedLanguage = prefs.getString("selectedLanguage", "");
         manifestVersion = prefs.getString("manifestVersion", "");
 
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
@@ -164,7 +170,6 @@ public class MainActivity extends BaseActivity {
                     System.out.println("return from facebook");
                     return;
                 }
-                Intent intent = getIntent();
                 String pseudoId = prefs.getString("pseudoId", "");
                 String manifestVrsn = prefs.getString("manifestVersion", "");
                 if (dialog != null && dialog.isShowing()) {
@@ -177,15 +182,17 @@ public class MainActivity extends BaseActivity {
                     Uri deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
+                    String source = ((Uri) deepLinkUri).getQueryParameter("source");
+                    String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language Source CampaignId: " + language + " " + source
+                            + " " + campaign_id);
                     if (language != null) {
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
-                        // Store the selected language
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
                                 manifestVrsn, "true");
-
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -193,33 +200,10 @@ public class MainActivity extends BaseActivity {
                             }
                         });
                     }
-                } else if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-                    Uri data = intent.getData();
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: intent URI: " + data);
-                    if (data != null) {
-                        String language = data.getQueryParameter("language");
-                        if (language != null) {
-                            String lang = Character.toUpperCase(language.charAt(0))
-                                    + language.substring(1).toLowerCase();
-                            Log.d(TAG, "onDeferredAppLinkDataFetched: Language from intent data: " + lang);
-                            // Store the selected language
-                            selectedLanguage = lang;
-
-                            AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId,
-                                    lang, manifestVrsn, "true");
-
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    loadApps(lang);
-                                }
-                            });
-                        }
-                    }
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
-                        public void run() {
+                        public void run() {                   
                             if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
                             } else {
