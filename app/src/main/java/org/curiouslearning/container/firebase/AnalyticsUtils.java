@@ -32,26 +32,33 @@ public class AnalyticsUtils {
 
     public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId, String language) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-
-        Bundle bundle = createEventBundle(context);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        Bundle bundle = new Bundle();
+        String source = prefs.getString(UTM_SOURCE, "");
+        String campaign_id = prefs.getString(UTM_CAMPAIGN, "");
         bundle.putString("web_app_title", appName);
         bundle.putString("web_app_url", appUrl);
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
+        firebaseAnalytics.setUserProperty("source", source);
+        firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
     public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language, String manifestVersion, String autoSelected) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-
-        Bundle bundle = createEventBundle(context);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        Bundle bundle = new Bundle();
         long currentEpochTime = getCurrentEpochTime();
         bundle.putLong("event_timestamp", currentEpochTime);
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
         bundle.putString("manifest_version", manifestVersion);
         bundle.putString("auto_selected",autoSelected);
+        firebaseAnalytics.setUserProperty("source", prefs.getString(UTM_SOURCE, ""));
+        firebaseAnalytics.setUserProperty("campaign_id", prefs.getString(UTM_CAMPAIGN, ""));
         firebaseAnalytics.logEvent(eventName, bundle);
+
     }
 
 
@@ -79,7 +86,7 @@ public class AnalyticsUtils {
             firebaseAnalytics.logEvent(eventName, bundle);
         }
     }
-    private static void storeReferrerParams(Context context, String source, String campaign) {
+    public static void storeReferrerParams(Context context, String source, String campaign) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(UTM_SOURCE, source);
@@ -87,13 +94,6 @@ public class AnalyticsUtils {
         editor.apply();
     }
 
-    private static Bundle createEventBundle(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        Bundle bundle = new Bundle();
-        bundle.putString("utm_source", prefs.getString(UTM_SOURCE, ""));
-        bundle.putString("utm_campaign", prefs.getString(UTM_CAMPAIGN, ""));
-        return bundle;
-    }
 
     private  static Map<String, String> extractReferrerParameters(String referrerUrl) {
         Map<String, String> params = new HashMap<>();

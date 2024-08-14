@@ -191,8 +191,10 @@ public class MainActivity extends BaseActivity {
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
+                        AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
                                 manifestVrsn, "true");
+                        
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -202,7 +204,7 @@ public class MainActivity extends BaseActivity {
                     }
                 } else {
                     runOnUiThread(new Runnable() {
-                        @Override
+                             @Override
                         public void run() {                   
                             if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
