@@ -20,8 +20,8 @@ public class AnalyticsUtils {
 
     private static FirebaseAnalytics mFirebaseAnalytics;
     private static final String PREFS_NAME = "InstallReferrerPrefs";
-    private static final String UTM_SOURCE = "utm_source";
-    private static final String UTM_CAMPAIGN = "utm_campaign";
+    private static final String SOURCE = "source";
+    private static final String CAMPAIGN_ID = "campaign_id";
 
     public static FirebaseAnalytics getFirebaseAnalytics(Context context) {
         if (mFirebaseAnalytics == null) {
@@ -34,8 +34,8 @@ public class AnalyticsUtils {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Bundle bundle = new Bundle();
-        String source = prefs.getString(UTM_SOURCE, "");
-        String campaign_id = prefs.getString(UTM_CAMPAIGN, "");
+        String source = prefs.getString(SOURCE, "");
+        String campaign_id = prefs.getString(CAMPAIGN_ID, "");
         bundle.putString("web_app_title", appName);
         bundle.putString("web_app_url", appUrl);
         bundle.putString("cr_user_id", pseudoId);
@@ -55,8 +55,8 @@ public class AnalyticsUtils {
         bundle.putString("cr_language", language);
         bundle.putString("manifest_version", manifestVersion);
         bundle.putString("auto_selected",autoSelected);
-        firebaseAnalytics.setUserProperty("source", prefs.getString(UTM_SOURCE, ""));
-        firebaseAnalytics.setUserProperty("campaign_id", prefs.getString(UTM_CAMPAIGN, ""));
+        firebaseAnalytics.setUserProperty("source", prefs.getString(SOURCE, ""));
+        firebaseAnalytics.setUserProperty("campaign_id", prefs.getString(CAMPAIGN_ID, ""));
         firebaseAnalytics.logEvent(eventName, bundle);
 
     }
@@ -75,22 +75,22 @@ public class AnalyticsUtils {
             Map<String, String> extractedParams = extractReferrerParameters(referrerUrl);
             if (extractedParams != null) {
                 String source = extractedParams.get("source");
-                String campaign = extractedParams.get("campaign");
+                String campaign_id = extractedParams.get("campaign_id");
                 String content = extractedParams.get("content");
-                bundle.putString("utm_source", source);
-                bundle.putString("utm_campaign", campaign);
+                bundle.putString("source", source);
+                bundle.putString("campaign_id", campaign_id);
                 bundle.putString("utm_content", content);
-                storeReferrerParams(context, source, campaign);
+                storeReferrerParams(context, source, campaign_id);
             }
 
             firebaseAnalytics.logEvent(eventName, bundle);
         }
     }
-    public static void storeReferrerParams(Context context, String source, String campaign) {
+    public static void storeReferrerParams(Context context, String source, String campaign_id) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(UTM_SOURCE, source);
-        editor.putString(UTM_CAMPAIGN, campaign);
+        editor.putString(SOURCE, source);
+        editor.putString(CAMPAIGN_ID, campaign_id);
         editor.apply();
     }
 
@@ -100,8 +100,8 @@ public class AnalyticsUtils {
         // Using a dummy URL to ensure `Uri.parse` correctly processes the referrerUrl as part of a valid URL.
         Uri uri = Uri.parse("http://dummyurl.com/?" +referrerUrl);
 
-        String source = uri.getQueryParameter("utm_source");
-        String campaign = uri.getQueryParameter("utm_campaign");
+        String source = uri.getQueryParameter("source");
+        String campaign_id = uri.getQueryParameter("campaign_id");
         String content = uri.getQueryParameter("utm_content");
         Log.d("data without decode util", campaign + " " + source + " " + content);
         content = urlDecode(content);
@@ -109,7 +109,7 @@ public class AnalyticsUtils {
         Log.d("referral data", uri+" "+campaign + " " + source + " " + content+" "+referrerUrl);
 
         params.put("source", source);
-        params.put("campaign", campaign);
+        params.put("campaign_id", campaign_id);
         params.put("content", content);
 
         return params;

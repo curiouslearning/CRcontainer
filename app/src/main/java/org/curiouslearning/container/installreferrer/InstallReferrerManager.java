@@ -87,17 +87,17 @@ public class InstallReferrerManager {
         if(deeplink!=null && deeplink.contains("curiousreader://app?language")){
             callback.onReferrerReceived(deeplink.replace("curiousreader://app?language=", ""));
         }
-        String source = uri.getQueryParameter("utm_source");
-        String campaign = uri.getQueryParameter("utm_campaign");
+        String source = uri.getQueryParameter("source");
+        String campaign_id = uri.getQueryParameter("campaign_id");
         String content = uri.getQueryParameter("utm_content");
-        Log.d("data without decode",deeplink+" "+ campaign + " " + source + " " + content);
+        Log.d("data without decode",deeplink+" "+ campaign_id + " " + source + " " + content);
         content = urlDecode(content);
 
-        Log.d("referral data", uri+" "+campaign + " " + source + " " + content+" "+referrerUrl);
+        Log.d("referral data", uri+" "+campaign_id + " " + source + " " + content+" "+referrerUrl);
 
         params.put("source", source);
-        params.put("campaign", campaign);
-        params.put("content", content);
+        params.put("campaign_id", campaign_id);
+        // params.put("content", content);
 
         return params;
     }
