@@ -67,6 +67,8 @@ public class AnalyticsUtils {
         if (response != null) {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
             String referrerUrl = response.getInstallReferrer();
+            // below one is the url for testing purpose
+            // String referrerUrl = "source=facebook&utm_medium=print&campaign_id=120208084211250195&deferred_deeplink=curiousreader://app?language=nepali";
             Bundle bundle = new Bundle();
             bundle.putString("referrer_url", referrerUrl);
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
@@ -103,10 +105,10 @@ public class AnalyticsUtils {
         String source = uri.getQueryParameter("source");
         String campaign_id = uri.getQueryParameter("campaign_id");
         String content = uri.getQueryParameter("utm_content");
-        Log.d("data without decode util", campaign + " " + source + " " + content);
+        Log.d("data without decode util", campaign_id + " " + source + " " + content);
         content = urlDecode(content);
 
-        Log.d("referral data", uri+" "+campaign + " " + source + " " + content+" "+referrerUrl);
+        Log.d("referral data", uri+" "+campaign_id + " " + source + " " + content+" "+referrerUrl);
 
         params.put("source", source);
         params.put("campaign_id", campaign_id);
