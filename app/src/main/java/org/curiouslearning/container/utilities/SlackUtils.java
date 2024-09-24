@@ -27,7 +27,6 @@ public class SlackUtils {
                     .filename("env") // instead of '.env', use 'env'
                     .load();
             String webHookUrl = dotenv.get("SLACK_WEBHOOK_URL");
-            System.out.println("slackURLTesting : "+webHookUrl);
 
 
             OkHttpClient client = new OkHttpClient();
