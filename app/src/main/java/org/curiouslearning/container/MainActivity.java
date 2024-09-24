@@ -43,6 +43,7 @@ import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.DeepLinkHelper;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import org.curiouslearning.container.utilities.SlackUtils;
+import io.github.cdimascio.dotenv.Dotenv;
 
 import java.math.BigInteger;
 import java.net.URLDecoder;
@@ -86,6 +87,9 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Dotenv dotenv = Dotenv.load();
+        String webookUrl = dotenv.get("Slack_webhook_url");
+
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
