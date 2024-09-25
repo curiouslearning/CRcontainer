@@ -87,7 +87,7 @@ public class InstallReferrerManager {
         Uri uri = Uri.parse("http://dummyurl.com/?" +referrerUrl);
         String deeplink= uri.getQueryParameter("deferred_deeplink");
         if(deeplink!=null && deeplink.contains("curiousreader://app?language")){
-            callback.onReferrerReceived(deeplink.replace("curiousreader://app?language=", ""),deeplink);
+            callback.onReferrerReceived(deeplink.replace("curiousreader://app?language=", ""), String.valueOf(uri));
         }
         String source = uri.getQueryParameter("source");
         String campaign_id = uri.getQueryParameter("campaign_id");
