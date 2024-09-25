@@ -47,15 +47,15 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
-        if (!isAppCached(webApps.get(position).getAppId())) {
-            ColorMatrix matrix = new ColorMatrix();
-            matrix.setSaturation(0);
-            ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
-            holder.downloadIconImage.setImageResource(R.drawable.download_image);
-            holder.appIconImage.setColorFilter(filter);
-        } else {
+        // if (!isAppCached(webApps.get(position).getAppId())) {
+        //     ColorMatrix matrix = new ColorMatrix();
+        //     matrix.setSaturation(0);
+        //     ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+        //     // holder.downloadIconImage.setImageResource(R.drawable.download_image);
+        //     holder.appIconImage.setColorFilter(filter);
+        // } else {
             holder.downloadIconImage.setImageResource(0);
-        }
+        // }
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
