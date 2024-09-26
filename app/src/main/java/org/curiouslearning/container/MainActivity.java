@@ -42,6 +42,7 @@ import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.DeepLinkHelper;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import org.curiouslearning.container.utilities.SlackUtils;
 
 import java.math.BigInteger;
 import java.net.URLDecoder;
@@ -82,9 +83,13 @@ public class MainActivity extends BaseActivity {
     private boolean isDataReceived;
     private boolean langCheck;
 
+    private Uri deepLinkUri;
+    private String deferredURL;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SlackUtils.sendMessageToSlack(MainActivity.this," Meesage from Oncreate from Rajesh");
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -97,11 +102,16 @@ public class MainActivity extends BaseActivity {
                 String lang = Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
                 if (!isReferrerHandled && language.length() > 0) {
-                    if (isDataReceived == true || language == null) {
+                    if (isDataReceived == true ) {
                         System.out.println("return from playstore");
                         return;
                     }
+                    if(language == null){
+//                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for google defeered deep link URL: "+fullURL);
+                        return;
+                    }
                     isDataReceived=true;
+//                    deferredURL = fullURL;
                     selectedLanguage = lang;
                     runOnUiThread(new Runnable() {
                         @Override
@@ -179,7 +189,7 @@ public class MainActivity extends BaseActivity {
                 Log.d(TAG, "onDeferredAppLinkDataFetched: AppLinkData: " + appLinkData);
                 if (appLinkData != null) {
                     isDataReceived = true;
-                    Uri deepLinkUri = appLinkData.getTargetUri();
+                    deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     String source = ((Uri) deepLinkUri).getQueryParameter("source");
@@ -187,6 +197,7 @@ public class MainActivity extends BaseActivity {
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language Source CampaignId: " + language + " " + source
                             + " " + campaign_id);
                     if (language != null) {
+                        deferredURL = String.valueOf(deepLinkUri);
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         selectedLanguage = lang;
@@ -194,18 +205,20 @@ public class MainActivity extends BaseActivity {
                         AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
                                 manifestVrsn, "true");
-                        
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 loadApps(lang);
                             }
                         });
+                    }else{
+                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is null for Facebook defereed deep link URL: "+deepLinkUri);
                     }
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
-                        public void run() {                   
+                        public void run() {
                             if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
                             } else {
@@ -394,6 +407,8 @@ public class MainActivity extends BaseActivity {
                         loadingIndicator.setVisibility(View.VISIBLE);
                         homeViewModal.getAllWebApps();
                     } else {
+                        if(deferredURL!=null)
+                            SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for defeered deep link URL: "+deferredURL);
                         showLanguagePopup();
                     }
 
