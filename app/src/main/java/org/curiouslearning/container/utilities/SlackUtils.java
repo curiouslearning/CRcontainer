@@ -1,6 +1,8 @@
 package org.curiouslearning.container.utilities;
 
 import android.content.Context;
+import android.util.Log;
+
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -12,7 +14,12 @@ public class SlackUtils {
 
     // Method to send message to Slack
     public static void sendMessageToSlack(Context context, String message) {
-        new SendSlackMessageTask(context).execute(message);
+        try {
+            new SendSlackMessageTask(context).execute(message);
+        } catch (Exception e) {
+            Log.e("SLACK-ERROR", "Error occurred while sending Slack message: ", e);
+            return;
+        }
     }
 
     // AsyncTask to send Slack message in the background
