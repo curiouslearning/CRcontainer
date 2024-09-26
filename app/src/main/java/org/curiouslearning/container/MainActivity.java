@@ -89,7 +89,6 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        SlackUtils.sendMessageToSlack(MainActivity.this," Meesage from Oncreate from Rajesh");
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -97,21 +96,22 @@ public class MainActivity extends BaseActivity {
         isDataReceived = false;
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
-            public void onReferrerReceived(String language) {
+            public void onReferrerReceived(String language, String fullURL) {
                 // Handle referrer language received
-                String lang = Character.toUpperCase(language.charAt(0))
-                        + language.substring(1).toLowerCase();
-                if (!isReferrerHandled && language.length() > 0) {
+
+                if (!isReferrerHandled ) {
                     if (isDataReceived == true ) {
                         System.out.println("return from playstore");
                         return;
                     }
-                    if(language == null){
-//                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for google defeered deep link URL: "+fullURL);
+                    if(language == null || language.length() ==0){
+                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for google defeered deep link URL: "+fullURL);
                         return;
                     }
+                    String lang = Character.toUpperCase(language.charAt(0))
+                            + language.substring(1).toLowerCase();
                     isDataReceived=true;
-//                    deferredURL = fullURL;
+                    deferredURL = fullURL;
                     selectedLanguage = lang;
                     runOnUiThread(new Runnable() {
                         @Override
@@ -122,8 +122,9 @@ public class MainActivity extends BaseActivity {
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putBoolean(REFERRER_HANDLED_KEY, true);
                     editor.apply();
+                    Log.d(TAG, "Referrer language received: " + language + " " + lang);
                 }
-                Log.d(TAG, "Referrer language received: " + language + " " + lang);
+
             }
         };
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(this, referrerCallback);
