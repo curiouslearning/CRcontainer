@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
+import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.model.WebAppResponse;
@@ -27,7 +28,7 @@ public class RetrofitInstance {
     private static RetrofitInstance retrofitInstance;
     private Map<String, Object> data;
 
-    private static String URL = "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/";
+    private static String URL = BuildConfig.API_URL;;
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
