@@ -82,12 +82,14 @@ public class MainActivity extends BaseActivity {
     private boolean isReferrerHandled;
     private boolean isDataReceived;
     private boolean langCheck;
+    private boolean isDebugApk;
     private Uri deepLinkUri;
     private String deferredURL;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        isDebugApk = BuildConfig.DEBUG;
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -115,7 +117,8 @@ public class MainActivity extends BaseActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            settingsButton.setVisibility(View.GONE);
+                            if(!isDebugApk)
+                                settingsButton.setVisibility(View.GONE);
                             loadApps(lang);
                         }
                     });
@@ -161,7 +164,7 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
         settingsButton = findViewById(R.id.settings);
-        if(selectedLanguage.length() == 0 || selectedLanguage ==null){
+        if( isDebugApk || selectedLanguage.length() == 0 || selectedLanguage ==null){
             settingsButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -177,6 +180,7 @@ public class MainActivity extends BaseActivity {
         }else{
             settingsButton.setVisibility(View.GONE);
         }
+
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
@@ -200,9 +204,10 @@ public class MainActivity extends BaseActivity {
                     String source = ((Uri) deepLinkUri).getQueryParameter("source");
                     String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language Source CampaignId: " + language + " " + source
-                            + " " + campaign_id);
+                            + " " + campaign_id +" "+isDebugApk);
+
                     if (language != null) {
-                        settingsButton.setVisibility(View.GONE);
+
                         deferredURL = String.valueOf(deepLinkUri);
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
@@ -211,10 +216,13 @@ public class MainActivity extends BaseActivity {
                         AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
                                 manifestVrsn, "true");
-                        
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                if(isDebugApk == false){
+                                    settingsButton = findViewById(R.id.settings);
+                                    settingsButton.setVisibility(View.GONE);
+                                }
                                 loadApps(lang);
                             }
                         });
@@ -345,7 +353,8 @@ public class MainActivity extends BaseActivity {
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                         selectedLanguage, manifestVrsn, "false");
                                 dialog.dismiss();
-                                settingsButton.setVisibility(View.GONE);
+                                if(!isDebugApk)
+                                    settingsButton.setVisibility(View.GONE);
                                 loadApps(selectedLanguage);
                             }
                         });

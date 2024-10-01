@@ -29,9 +29,13 @@ android {
     }
 
     buildTypes {
+        debug{
+            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing/\""
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/\""
         }
     }
     compileOptions {
