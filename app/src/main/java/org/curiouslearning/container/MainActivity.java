@@ -82,7 +82,6 @@ public class MainActivity extends BaseActivity {
     private boolean isReferrerHandled;
     private boolean isDataReceived;
     private boolean langCheck;
-
     private Uri deepLinkUri;
     private String deferredURL;
 
@@ -116,6 +115,7 @@ public class MainActivity extends BaseActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            settingsButton.setVisibility(View.GONE);
                             loadApps(lang);
                         }
                     });
@@ -161,18 +161,22 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
         settingsButton = findViewById(R.id.settings);
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                AnimationUtil.scaleButton(view, new Runnable() {
-                    @Override
-                    public void run() {
+        if(selectedLanguage.length() == 0 || selectedLanguage ==null){
+            settingsButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    AnimationUtil.scaleButton(view, new Runnable() {
+                        @Override
+                        public void run() {
 
-                        showLanguagePopup();
-                    }
-                });
-            }
-        });
+                            showLanguagePopup();
+                        }
+                    });
+                }
+            });
+        }else{
+            settingsButton.setVisibility(View.GONE);
+        }
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
@@ -198,6 +202,7 @@ public class MainActivity extends BaseActivity {
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language Source CampaignId: " + language + " " + source
                             + " " + campaign_id);
                     if (language != null) {
+                        settingsButton.setVisibility(View.GONE);
                         deferredURL = String.valueOf(deepLinkUri);
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
@@ -206,7 +211,7 @@ public class MainActivity extends BaseActivity {
                         AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
                                 manifestVrsn, "true");
-
+                        
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -232,20 +237,24 @@ public class MainActivity extends BaseActivity {
             }
         });
 
-        settingsButton = findViewById(R.id.settings);
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                AnimationUtil.scaleButton(view, new Runnable() {
-                    @Override
-                    public void run() {
+        // settingsButton = findViewById(R.id.settings);
+        // if(selectedLanguage ==null){
+        //     settingsButton.setOnClickListener(new View.OnClickListener() {
+        //         @Override
+        //         public void onClick(View view) {
+        //             audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
+        //             AnimationUtil.scaleButton(view, new Runnable() {
+        //                 @Override
+        //                 public void run() {
 
-                        showLanguagePopup();
-                    }
-                });
-            }
-        });
+        //                     showLanguagePopup();
+        //                 }
+        //             });
+        //         }
+        //     });
+        // }else{
+        //     settingsButton.setVisibility(View.GONE);
+        // }
     }
 
     protected void initRecyclerView() {
@@ -336,6 +345,7 @@ public class MainActivity extends BaseActivity {
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                         selectedLanguage, manifestVrsn, "false");
                                 dialog.dismiss();
+                                settingsButton.setVisibility(View.GONE);
                                 loadApps(selectedLanguage);
                             }
                         });
@@ -402,14 +412,17 @@ public class MainActivity extends BaseActivity {
                     storeSelectLanguage(language);
                 } else {
                     if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
+                        settingsButton.setVisibility(View.VISIBLE);
                         showLanguagePopup();
                     } else if (manifestVersion.equals("") && langCheck) {
                         langCheck = false;
                         loadingIndicator.setVisibility(View.VISIBLE);
                         homeViewModal.getAllWebApps();
                     } else {
-                        if(deferredURL!=null)
+                        if(deferredURL!=null){
                             SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for defeered deep link URL: "+deferredURL);
+                        }
+                        settingsButton.setVisibility(View.VISIBLE);
                         showLanguagePopup();
                     }
 
