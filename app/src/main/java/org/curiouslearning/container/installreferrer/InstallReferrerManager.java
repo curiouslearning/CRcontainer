@@ -2,6 +2,7 @@ package org.curiouslearning.container.installreferrer;
 
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.RemoteException;
 import android.util.Log;
@@ -23,6 +24,9 @@ public class InstallReferrerManager {
     private final InstallReferrerClient installReferrerClient;
     private Context context;
     private ReferrerCallback callback;
+    private static final String UTM_PREFS_NAME = "utmPrefs";
+    private static final String SOURCE = "source";
+    private static final String CAMPAIGN_ID = "campaign_id";
 
     public InstallReferrerManager(Context context, ReferrerCallback callback) {
         this.context = context;
@@ -99,7 +103,11 @@ public class InstallReferrerManager {
         content = urlDecode(content);
 
         Log.d("referral data", uri+" "+campaign_id + " " + source + " " + content+" "+referrerUrl);
-
+        SharedPreferences prefs = context.getSharedPreferences(UTM_PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(SOURCE, source);
+        editor.putString(CAMPAIGN_ID, campaign_id);
+        editor.apply();
         params.put("source", source);
         params.put("campaign_id", campaign_id);
         // params.put("content", content);

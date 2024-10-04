@@ -31,13 +31,17 @@ public class WebApp extends BaseActivity {
 
     private WebView webView;
     private SharedPreferences sharedPref;
+    private SharedPreferences utmPrefs;
     private String urlIndex;
     private String language;
     private String languageInEnglishName;
     private String pseudoId;
     private boolean isDataCached;
+    private String source;
+    private String campaignId;
 
     private static final String SHARED_PREFS_NAME = "appCached";
+    private static final String UTM_PREFS_NAME = "utmPrefs";
     private AudioPlayer audioPlayer;
 
     @Override
@@ -64,8 +68,11 @@ public class WebApp extends BaseActivity {
 
     private void initViews() {
         sharedPref = getApplicationContext().getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+        utmPrefs = getApplicationContext().getSharedPreferences(UTM_PREFS_NAME, Context.MODE_PRIVATE);
         isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         pseudoId = sharedPref.getString("pseudoId", "");
+        source = utmPrefs.getString("source", "");
+        campaignId = utmPrefs.getString("campaign_id","");
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -91,7 +98,17 @@ public class WebApp extends BaseActivity {
         webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
+        if (appUrl.contains("feedthemonster")) {
+            System.out.println(">> url source and campaign params added to the subapp url "+source+" "+campaignId);
+            if (source != null && !source.isEmpty()) {
+                appUrl = addSourceToUrl(appUrl);
+            }
+            if (campaignId != null && !campaignId.isEmpty()) {
+                appUrl = addCampaignIdToUrl(appUrl);
+            }
+        }
         webView.loadUrl(addCrUserIdToUrl(appUrl));
+        System.out.println("subapp url : "appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 Log.d("WebView", consoleMessage.message());
@@ -104,6 +121,18 @@ public class WebApp extends BaseActivity {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
         String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" + pseudoId;
+        return modifiedUrl;
+    }
+    private String addSourceToUrl(String appUrl) {
+        Uri originalUri = Uri.parse(appUrl);
+        String separator = (originalUri.getQuery() == null) ? "?" : "&";
+        String modifiedUrl = originalUri.toString() + separator + "source=" + source;
+        return modifiedUrl;
+    }
+    private String addCampaignIdToUrl(String appUrl) {
+        Uri originalUri = Uri.parse(appUrl);
+        String separator = (originalUri.getQuery() == null) ? "?" : "&";
+        String modifiedUrl = originalUri.toString() + separator + "campaign_id=" + campaignId;
         return modifiedUrl;
     }
 
