@@ -72,6 +72,8 @@ public class MainActivity extends BaseActivity {
 
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String REFERRER_HANDLED_KEY = "isReferrerHandled";
+    private static final String UTM_PREFS_NAME = "utmPrefs";
+    private SharedPreferences utmPrefs;
     private SharedPreferences prefs;
     private String selectedLanguage;
     private String manifestVersion;
@@ -91,6 +93,7 @@ public class MainActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         isDebugApk = BuildConfig.DEBUG;
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
+        utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
         langCheck = true;
@@ -130,7 +133,7 @@ public class MainActivity extends BaseActivity {
 
             }
         };
-        InstallReferrerManager installReferrerManager = new InstallReferrerManager(this, referrerCallback);
+        InstallReferrerManager installReferrerManager = new InstallReferrerManager(getApplicationContext(), referrerCallback);
         installReferrerManager.checkPlayStoreAvailability();
         Intent intent = getIntent();
         if (intent.getData() != null) {
@@ -203,6 +206,10 @@ public class MainActivity extends BaseActivity {
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     String source = ((Uri) deepLinkUri).getQueryParameter("source");
                     String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
+                    SharedPreferences.Editor editor = utmPrefs.edit();
+                    editor.putString("source", source);
+                    editor.putString("campaign_id", campaign_id);
+                    editor.apply();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language Source CampaignId: " + language + " " + source
                             + " " + campaign_id +" "+isDebugApk);
 
