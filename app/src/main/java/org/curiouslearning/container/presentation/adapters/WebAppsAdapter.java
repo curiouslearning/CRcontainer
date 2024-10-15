@@ -153,8 +153,8 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            appIconImage = itemView.findViewById(R.id.app_image);
-            downloadIconImage = itemView.findViewById(R.id.download_image);
+            appIconImage = (ImageView) itemView.findViewById(R.id.app_image);
+            downloadIconImage = (ImageView) itemView.findViewById(R.id.download_image);
             pulseView = itemView.findViewById(R.id.pulse_view);
         }
     }
