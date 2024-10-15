@@ -4,6 +4,7 @@ import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
@@ -37,12 +38,17 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public List<WebApp> webApps;
     private AudioPlayer audioPlayer;
     private Handler handler = new Handler();
-
+    private static final String SHARED_PREFS_NAME = "animatePulse";
+    private static final String PULSE_ANIMATION_KEY = "pulse_animaton";
+    private SharedPreferences prefs;
+    private boolean isAnimated;
     public WebAppsAdapter(Context context, List<WebApp> webApps) {
         this.ctx = context;
         this.webApps = webApps;
         this.inflater = LayoutInflater.from(ctx);
         this.audioPlayer = new AudioPlayer();
+        prefs = ctx.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+        isAnimated = prefs.getBoolean(PULSE_ANIMATION_KEY,false);
     }
 
     @NonNull
@@ -54,13 +60,31 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
+
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
 
-         if (webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId()))
-             startCircularPulseAnimation(holder);
-         else
+         if (webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId()) && !isAnimated) {
+             holder.itemView.postDelayed(new Runnable() {
+                 @Override
+                 public void run() {
+                     startCircularPulseAnimation(holder);
+                 }
+             }, 1000);
+             SharedPreferences.Editor editor = prefs.edit();
+             editor.putBoolean(PULSE_ANIMATION_KEY, true);
+             editor.apply();
+         }else if(webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId()) && isAnimated) {
+             holder.itemView.postDelayed(new Runnable() {
+                 @Override
+                 public void run() {
+                     startCircularPulseAnimation(holder);
+                 }
+             }, 5000);
+         }
+         else {
              holder.pulseView.setBackgroundResource(0);
+         }
 
         holder.downloadIconImage.setImageResource(0);
 
@@ -105,6 +129,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         }
         Animation pulseAnimation = AnimationUtils.loadAnimation(ctx, R.anim.pulse_scale);
         holder.pulseView.startAnimation(pulseAnimation);
+
     }
     
     private void stopCircularPulseAnimation(ViewHolder holder) {
