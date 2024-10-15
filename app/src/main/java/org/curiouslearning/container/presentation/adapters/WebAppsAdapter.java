@@ -61,12 +61,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         holder.appIconImage.clearColorFilter();
 
          if (webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId()) && !isAnimated) {
-             holder.itemView.postDelayed(new Runnable() {
-                 @Override
-                 public void run() {
-                     startCircularPulseAnimation(holder);
-                 }
-             }, 1000);
+             startCircularPulseAnimation(holder);
              SharedPreferences.Editor editor = prefs.edit();
              editor.putBoolean(PULSE_ANIMATION_KEY, true);
              editor.apply();
