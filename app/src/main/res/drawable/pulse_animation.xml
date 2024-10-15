@@ -1,6 +1,6 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
-    <size android:width="200dp" android:height="200dp" /> <!-- Adjust to control pulse size -->
-    <solid android:color="#B3B3B3" /> <!-- Grey color -->
-    <corners android:radius="100dp" /> <!-- Rounded corners to make it circular -->
+    <size android:width="200dp" android:height="200dp" />
+    <solid android:color="#B3B3B3" />
+    <corners android:radius="100dp" />
 </shape>

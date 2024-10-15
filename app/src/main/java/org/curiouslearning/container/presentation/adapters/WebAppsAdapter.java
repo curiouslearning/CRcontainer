@@ -57,9 +57,10 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
 
-        // Start the ripple animation on the app icon
-        // if (webApps.get(position).getTitle().contains("Feed The Monster"))
-        //     startCircularPulseAnimation(holder);
+         if (webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId()))
+             startCircularPulseAnimation(holder);
+         else
+             holder.pulseView.setBackgroundResource(0);
 
         holder.downloadIconImage.setImageResource(0);
 
@@ -78,8 +79,6 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                         intent.putExtra("language", webApps.get(position).getLanguage());
                         intent.putExtra("languageInEnglishName", webApps.get(position).getLanguageInEnglishName());
                         ctx.startActivity(intent);
-
-                        // Stop ripple animation when the icon is clicked
                         stopCircularPulseAnimation(holder);
                     }
                 });
@@ -95,33 +94,24 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     private void startCircularPulseAnimation(ViewHolder holder) {
         if (holder.pulseView == null) {
             holder.pulseView = new ImageView(ctx);
-            holder.pulseView.setBackgroundResource(R.drawable.pulse_animation); // Ensure this drawable is correct and exists
-    
-            // Ensure the pulse view is larger than the icon
+            holder.pulseView.setBackgroundResource(R.drawable.pulse_animation);
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, // Full width for pulse effect
-                FrameLayout.LayoutParams.MATCH_PARENT  // Full height for pulse effect
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
             );
-    
-            // Center the pulse view behind the app icon
-            params.gravity = Gravity.CENTER; // Center it in the parent layout
+            params.gravity = Gravity.CENTER;
             holder.pulseView.setLayoutParams(params);
-    
-            // Add the pulseView to the item layout behind the app icon
-            ((ViewGroup) holder.itemView).addView(holder.pulseView, 0); // Add at index 0 to place it behind the icon
+            ((ViewGroup) holder.itemView).addView(holder.pulseView, 0);
         }
-    
-        // Start the scale animation
         Animation pulseAnimation = AnimationUtils.loadAnimation(ctx, R.anim.pulse_scale);
         holder.pulseView.startAnimation(pulseAnimation);
     }
     
     private void stopCircularPulseAnimation(ViewHolder holder) {
-        // Clear all animations and remove the pulse view when stopped
         if (holder.pulseView != null) {
             holder.pulseView.clearAnimation();
             ((ViewGroup) holder.itemView).removeView(holder.pulseView);
-            holder.pulseView = null; // Reset to avoid duplicates
+            holder.pulseView = null;
         }
     }
     public boolean isAppCached(int appId) {
@@ -129,13 +119,14 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView appIconImage, downloadIconImage, pulseView; // Add pulseView here
+        ImageView appIconImage, downloadIconImage;
+        View pulseView;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             appIconImage = itemView.findViewById(R.id.app_image);
             downloadIconImage = itemView.findViewById(R.id.download_image);
-            pulseView = null; // Initialize as null, we create it dynamically
+            pulseView = itemView.findViewById(R.id.pulse_view);
         }
     }
 }
