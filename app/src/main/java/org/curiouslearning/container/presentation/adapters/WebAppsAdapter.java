@@ -89,7 +89,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         //     // holder.downloadIconImage.setImageResource(R.drawable.download_image);
         //     holder.appIconImage.setColorFilter(filter);
         // } else {
-        holder.downloadIconImage.setImageResource(0);
+            holder.downloadIconImage.setImageResource(0);
         // }
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
