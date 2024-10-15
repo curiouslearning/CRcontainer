@@ -1,14 +1,10 @@
 package org.curiouslearning.container.presentation.adapters;
 
-import android.animation.ValueAnimator;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.view.Gravity;
 import android.view.LayoutInflater;
