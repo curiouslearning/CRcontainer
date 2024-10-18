@@ -108,7 +108,7 @@ public class WebApp extends BaseActivity {
             }
         }
         webView.loadUrl(addCrUserIdToUrl(appUrl));
-        System.out.println("subapp url : "appUrl);
+        System.out.println("subapp url : "+appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 Log.d("WebView", consoleMessage.message());
