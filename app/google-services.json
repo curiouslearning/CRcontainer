@@ -154,7 +154,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:602402387941:android:a85c07170e8e9e3c9de10c",
         "android_client_info": {
-          "package_name": "org.curiouslearning.container"
+          "package_name": "org.curiouslearning.devcontainer"
         }
       },
       "oauth_client": [
