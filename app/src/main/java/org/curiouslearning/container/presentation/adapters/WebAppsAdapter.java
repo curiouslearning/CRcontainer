@@ -6,16 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -26,6 +20,8 @@ import org.curiouslearning.container.utilities.ImageLoader;
 import org.curiouslearning.container.utilities.AudioPlayer;
 
 import java.util.List;
+
+import pl.bclogic.pulsator4droid.library.PulsatorLayout;
 
 public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHolder> {
 
@@ -59,23 +55,23 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
+        if (holder.pulsatorLayout != null && webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
 
-         if (webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId()) && !isAnimated) {
-             startCircularPulseAnimation(holder);
-             SharedPreferences.Editor editor = prefs.edit();
+            System.out.println("it is not null");
+            if(!isAnimated){
+                holder.pulsatorLayout.start();
+                SharedPreferences.Editor editor = prefs.edit();
              editor.putBoolean(PULSE_ANIMATION_KEY, true);
              editor.apply();
-         }else if(webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId()) && isAnimated) {
-             holder.itemView.postDelayed(new Runnable() {
+            }else {
+                holder.itemView.postDelayed(new Runnable() {
                  @Override
                  public void run() {
-                     startCircularPulseAnimation(holder);
+                     holder.pulsatorLayout.start();
                  }
              }, 5000);
-         }
-         else {
-             holder.pulseView.setBackgroundResource(0);
-         }
+            }
+        }
 
         // if (!isAppCached(webApps.get(position).getAppId())) {
         //     ColorMatrix matrix = new ColorMatrix();
@@ -102,7 +98,6 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                         intent.putExtra("language", webApps.get(position).getLanguage());
                         intent.putExtra("languageInEnglishName", webApps.get(position).getLanguageInEnglishName());
                         ctx.startActivity(intent);
-                        stopCircularPulseAnimation(holder);
                     }
                 });
             }
@@ -114,43 +109,19 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         return webApps.size();
     }
 
-    private void startCircularPulseAnimation(ViewHolder holder) {
-        if (holder.pulseView == null) {
-            holder.pulseView = new ImageView(ctx);
-            holder.pulseView.setBackgroundResource(R.drawable.pulse_animation);
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            );
-            params.gravity = Gravity.CENTER;
-            holder.pulseView.setLayoutParams(params);
-            ((ViewGroup) holder.itemView).addView(holder.pulseView, 0);
-        }
-        Animation pulseAnimation = AnimationUtils.loadAnimation(ctx, R.anim.pulse_scale);
-        holder.pulseView.startAnimation(pulseAnimation);
-
-    }
-    
-    private void stopCircularPulseAnimation(ViewHolder holder) {
-        if (holder.pulseView != null) {
-            holder.pulseView.clearAnimation();
-            ((ViewGroup) holder.itemView).removeView(holder.pulseView);
-            holder.pulseView = null;
-        }
-    }
     public boolean isAppCached(int appId) {
         return ctx.getSharedPreferences("appCached", Context.MODE_PRIVATE).getBoolean(String.valueOf(appId), false);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIconImage, downloadIconImage;
-        View pulseView;
+        PulsatorLayout pulsatorLayout;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             appIconImage = (ImageView) itemView.findViewById(R.id.app_image);
             downloadIconImage = (ImageView) itemView.findViewById(R.id.download_image);
-            pulseView = itemView.findViewById(R.id.pulse_view);
+            pulsatorLayout = itemView.findViewById(R.id.pulsator);
         }
     }
 }
