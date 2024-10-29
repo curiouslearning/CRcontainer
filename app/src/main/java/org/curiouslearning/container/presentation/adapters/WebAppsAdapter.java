@@ -68,6 +68,8 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                  holder.appIconImage.setColorFilter(filter);
                  holder.pulsatorLayout.startAnimation();
 
+        }else{
+            holder.pulsatorLayout.stopAnimation();
         }
 
         // if (!isAppCached(webApps.get(position).getAppId())) {
