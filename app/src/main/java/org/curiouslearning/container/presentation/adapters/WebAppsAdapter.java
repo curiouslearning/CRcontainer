@@ -5,6 +5,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +20,7 @@ import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.ImageLoader;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import org.curiouslearning.container.utilities.PulsingView;
 
 import java.util.List;
 
@@ -55,22 +58,16 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
-        if (holder.pulsatorLayout != null && webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
+        if ( webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
 
             System.out.println("it is not null");
-            if(!isAnimated){
-                holder.pulsatorLayout.start();
-                SharedPreferences.Editor editor = prefs.edit();
-             editor.putBoolean(PULSE_ANIMATION_KEY, true);
-             editor.apply();
-            }else {
-                holder.itemView.postDelayed(new Runnable() {
-                 @Override
-                 public void run() {
-                     holder.pulsatorLayout.start();
-                 }
-             }, 5000);
-            }
+                 ColorMatrix matrix = new ColorMatrix();
+                 matrix.setSaturation(0);
+                 ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+                  holder.downloadIconImage.setImageResource(R.drawable.download_image);
+                 holder.appIconImage.setColorFilter(filter);
+                 holder.pulsatorLayout.startAnimation();
+
         }
 
         // if (!isAppCached(webApps.get(position).getAppId())) {
@@ -115,13 +112,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIconImage, downloadIconImage;
-        PulsatorLayout pulsatorLayout;
+        PulsingView pulsatorLayout;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             appIconImage = (ImageView) itemView.findViewById(R.id.app_image);
             downloadIconImage = (ImageView) itemView.findViewById(R.id.download_image);
-            pulsatorLayout = itemView.findViewById(R.id.pulsator);
+            pulsatorLayout = itemView.findViewById(R.id.pulsing_view);
         }
     }
 }
