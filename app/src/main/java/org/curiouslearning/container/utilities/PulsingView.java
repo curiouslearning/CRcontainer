@@ -22,12 +22,12 @@ public class PulsingView extends View {
 
     private void init() {
         paint = new Paint();
-        paint.setColor(Color.parseColor("#B3B3B3")); // Grey color
+        paint.setColor(Color.parseColor("#B3B3B3"));
         paint.setAlpha(100);
         radius = 0;
-
-        animator = ValueAnimator.ofFloat(0, 100);
-        animator.setDuration(1800); // Pulse duration
+        int maxRadius = (int) (168 * getResources().getDisplayMetrics().density / 2);
+        animator = ValueAnimator.ofFloat(0, maxRadius);
+        animator.setDuration(1200); // Pulse duration
         animator.setRepeatCount(ValueAnimator.INFINITE);
         animator.setRepeatMode(ValueAnimator.REVERSE);
         animator.addUpdateListener(animation -> {
@@ -42,8 +42,8 @@ public class PulsingView extends View {
 
     public void stopAnimation() {
         animator.cancel();
-        radius = 0; // Reset radius if needed
-        invalidate(); // Redraw to clear the previous pulse
+        radius = 0;
+        invalidate();
     }
 
     @Override

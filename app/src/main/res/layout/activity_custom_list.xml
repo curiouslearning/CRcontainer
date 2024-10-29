@@ -47,17 +47,5 @@
                     android:elevation="5dp"
                     android:contentDescription="@string/background" />
 
-                <pl.bclogic.pulsator4droid.library.PulsatorLayout
-                    android:id="@+id/pulsator"
-                    android:layout_width="168dp"
-                    android:layout_height="168dp"
-                    android:layout_gravity="center"
-                    app:pulse_color="#B3B3B3"
-                    app:pulse_duration="1800"
-                    app:pulse_interpolator="Linear"
-                    android:elevation="2dp"
-                    app:pulse_startFromScratch="false">
-                </pl.bclogic.pulsator4droid.library.PulsatorLayout>
-
         </FrameLayout>
 </LinearLayout>
