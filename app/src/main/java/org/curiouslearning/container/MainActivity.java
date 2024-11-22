@@ -403,7 +403,6 @@ public class MainActivity extends BaseActivity {
     private Set<String> sortLanguages(List<WebApp> webApps) {
         Map<String, List<String>> dialectGroups = new TreeMap<>();
         Map<String, String> languages = new TreeMap<>();
-
         for (WebApp webApp : webApps) {
             String languageInEnglishName = webApp.getLanguageInEnglishName();
             String languageInLocaName = webApp.getLanguage();
@@ -411,8 +410,7 @@ public class MainActivity extends BaseActivity {
         }
         for (WebApp webApp : webApps) {
             String languageInEnglishName = webApp.getLanguageInEnglishName(); 
-            String languageInLocalName = webApp.getLanguage();           
-
+            String languageInLocalName = webApp.getLanguage();
             String[] parts = extractBaseLanguageAndDialect(languageInLocalName, languageInEnglishName);
             String baseLanguage = parts[0];  // The root language (e.g., "English", "Portuguese")
             String dialect = parts[1];       // The dialect (e.g., "US", "Brazilian")
@@ -429,7 +427,6 @@ public class MainActivity extends BaseActivity {
         for (Map.Entry<String, List<String>> entry : dialectGroups.entrySet()) {
             String baseLanguage = entry.getKey();
             List<String> dialects = entry.getValue();
-
             Collections.sort(dialects);
             for (String dialect : dialects) {
                 if(languages.get(baseLanguage) == null || !languages.get(baseLanguage).equals(dialect)) {
