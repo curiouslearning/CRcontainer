@@ -49,6 +49,7 @@ import java.net.URLDecoder;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -399,19 +400,64 @@ public class MainActivity extends BaseActivity {
         return languagesEnglishNameMap;
     }
 
-    private Set sortLanguages(List<WebApp> webApps) {
-        List<String> langList = new ArrayList<>();
+    private Set<String> sortLanguages(List<WebApp> webApps) {
+        Map<String, List<String>> dialectGroups = new TreeMap<>();
         Map<String, String> languages = new TreeMap<>();
         for (WebApp webApp : webApps) {
             String languageInEnglishName = webApp.getLanguageInEnglishName();
             String languageInLocaName = webApp.getLanguage();
             languages.put(languageInEnglishName, languageInLocaName);
         }
-        for (Map.Entry<String, String> entry : languages.entrySet()) {
-            langList.add(entry.getValue());
+        for (WebApp webApp : webApps) {
+            String languageInEnglishName = webApp.getLanguageInEnglishName(); 
+            String languageInLocalName = webApp.getLanguage();
+            String[] parts = extractBaseLanguageAndDialect(languageInLocalName, languageInEnglishName);
+            String baseLanguage = parts[0];  // The root language (e.g., "English", "Portuguese")
+            String dialect = parts[1];       // The dialect (e.g., "US", "Brazilian")
+            if(baseLanguage.contains("Kreyòl")){
+                dialectGroups.putIfAbsent("Creole"+baseLanguage, new ArrayList<>());
+                dialectGroups.get("Creole"+baseLanguage).add(dialect);
+            }else {
+                dialectGroups.putIfAbsent(baseLanguage, new ArrayList<>());
+                dialectGroups.get(baseLanguage).add(dialect);
+            }
         }
-        return new LinkedHashSet<>(langList);
+
+        List<String> sortedLanguages = new ArrayList<>();
+        for (Map.Entry<String, List<String>> entry : dialectGroups.entrySet()) {
+            String baseLanguage = entry.getKey();
+            List<String> dialects = entry.getValue();
+            Collections.sort(dialects);
+            for (String dialect : dialects) {
+                if(languages.get(baseLanguage) == null || !languages.get(baseLanguage).equals(dialect)) {
+                    if (baseLanguage.contains("Creole"))
+                        sortedLanguages.add(baseLanguage.substring(6) + " - " + dialect);
+                    else
+                        sortedLanguages.add(baseLanguage+ " - " + dialect);
+                }
+                else
+                    sortedLanguages.add(dialect);
+            }
+        }
+
+        return new LinkedHashSet<>(sortedLanguages);
     }
+
+    private String[] extractBaseLanguageAndDialect(String languageInLocalName, String languageInEnglishName) {
+        String baseLanguage = languageInEnglishName;  
+        String dialect = "";
+
+        if (languageInLocalName.contains(" - ")) {
+            String[] parts = languageInLocalName.split(" - ");
+            baseLanguage = parts[0].trim();  
+            dialect = parts[1].trim();    
+        } else {
+            baseLanguage = languageInEnglishName;
+            dialect = languageInLocalName;
+        }
+        return new String[]{baseLanguage, dialect};
+    }
+
 
     public void loadApps(String selectedlanguage) {
         Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguage);
