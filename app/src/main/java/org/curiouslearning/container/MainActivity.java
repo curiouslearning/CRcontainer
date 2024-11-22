@@ -416,9 +416,13 @@ public class MainActivity extends BaseActivity {
             String[] parts = extractBaseLanguageAndDialect(languageInLocalName, languageInEnglishName);
             String baseLanguage = parts[0];  // The root language (e.g., "English", "Portuguese")
             String dialect = parts[1];       // The dialect (e.g., "US", "Brazilian")
-
-            dialectGroups.putIfAbsent(baseLanguage, new ArrayList<>());
-            dialectGroups.get(baseLanguage).add(dialect);
+            if(baseLanguage.contains("Kreyòl")){
+                dialectGroups.putIfAbsent("Creole"+baseLanguage, new ArrayList<>());
+                dialectGroups.get("Creole"+baseLanguage).add(dialect);
+            }else {
+                dialectGroups.putIfAbsent(baseLanguage, new ArrayList<>());
+                dialectGroups.get(baseLanguage).add(dialect);
+            }
         }
 
         List<String> sortedLanguages = new ArrayList<>();
@@ -428,8 +432,12 @@ public class MainActivity extends BaseActivity {
 
             Collections.sort(dialects);
             for (String dialect : dialects) {
-                if(languages.get(baseLanguage) == null || !languages.get(baseLanguage).equals(dialect))
-                    sortedLanguages.add(baseLanguage + " - " + dialect);
+                if(languages.get(baseLanguage) == null || !languages.get(baseLanguage).equals(dialect)) {
+                    if (baseLanguage.contains("Creole"))
+                        sortedLanguages.add(baseLanguage.substring(6) + " - " + dialect);
+                    else
+                        sortedLanguages.add(baseLanguage+ " - " + dialect);
+                }
                 else
                     sortedLanguages.add(dialect);
             }
