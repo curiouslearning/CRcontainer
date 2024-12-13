@@ -92,7 +92,9 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        isDebugApk = BuildConfig.DEBUG;
+        // Turn this back to BuildConfig.DEBUG just in case if you want to have 
+        // language selection button in debug only
+        isDebugApk = true; //BuildConfig.DEBUG;
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
