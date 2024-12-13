@@ -121,8 +121,8 @@ public class MainActivity extends BaseActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if(!isDebugApk)
-                                settingsButton.setVisibility(View.GONE);
+                            // if(!isDebugApk)
+                                // settingsButton.setVisibility(View.GONE);
                             loadApps(lang);
                         }
                     });
@@ -168,7 +168,7 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
         settingsButton = findViewById(R.id.settings);
-        if( isDebugApk || selectedLanguage.length() == 0 || selectedLanguage ==null){
+        // if( isDebugApk || selectedLanguage.length() == 0 || selectedLanguage ==null){
             settingsButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -181,9 +181,10 @@ public class MainActivity extends BaseActivity {
                     });
                 }
             });
-        }else{
-            settingsButton.setVisibility(View.GONE);
-        }
+        // }
+        // else{
+        //     settingsButton.setVisibility(View.GONE);
+        // }
 
 
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
@@ -227,10 +228,10 @@ public class MainActivity extends BaseActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                if(isDebugApk == false){
-                                    settingsButton = findViewById(R.id.settings);
-                                    settingsButton.setVisibility(View.GONE);
-                                }
+                                // if(isDebugApk == false){
+                                //     settingsButton = findViewById(R.id.settings);
+                                //     settingsButton.setVisibility(View.GONE);
+                                // }
                                 loadApps(lang);
                             }
                         });
@@ -361,8 +362,8 @@ public class MainActivity extends BaseActivity {
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                         selectedLanguage, manifestVrsn, "false");
                                 dialog.dismiss();
-                                if(!isDebugApk)
-                                    settingsButton.setVisibility(View.GONE);
+                                // if(!isDebugApk)
+                                //     settingsButton.setVisibility(View.GONE);
                                 loadApps(selectedLanguage);
                             }
                         });
@@ -474,7 +475,7 @@ public class MainActivity extends BaseActivity {
                     storeSelectLanguage(language);
                 } else {
                     if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
-                        settingsButton.setVisibility(View.VISIBLE);
+                        // settingsButton.setVisibility(View.VISIBLE);
                         showLanguagePopup();
                     } else if (manifestVersion.equals("") && langCheck) {
                         langCheck = false;
@@ -484,7 +485,7 @@ public class MainActivity extends BaseActivity {
                         if(deferredURL!=null){
                             SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for defeered deep link URL: "+deferredURL);
                         }
-                        settingsButton.setVisibility(View.VISIBLE);
+                        // settingsButton.setVisibility(View.VISIBLE);
                         showLanguagePopup();
                     }
 
