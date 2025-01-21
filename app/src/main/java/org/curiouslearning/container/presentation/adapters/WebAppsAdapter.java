@@ -54,6 +54,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
+        holder.pulsatorLayout.stopAnimation();
         if ( webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
             if(!isAnimated){
                 holder.pulsatorLayout.startAnimation();
@@ -64,7 +65,8 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 holder.itemView.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        holder.pulsatorLayout.startAnimation();
+                        if( webApps.get(position).getTitle().contains("Feed The Monster") && holder.getLayoutPosition() == position)
+                            holder.pulsatorLayout.startAnimation();
                     }
                 }, 5000);
             }
