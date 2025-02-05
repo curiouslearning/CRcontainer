@@ -72,11 +72,12 @@ public class WebApp extends BaseActivity {
         isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         pseudoId = sharedPref.getString("pseudoId", "");
         source = utmPrefs.getString("source", "");
-        campaignId = utmPrefs.getString("campaign_id","");
+        campaignId = utmPrefs.getString("campaign_id", "");
         ImageView goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                logAppExitEvent();
                 audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
                 finish();
             }
@@ -99,7 +100,8 @@ public class WebApp extends BaseActivity {
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
         if (appUrl.contains("feedthemonster")) {
-            System.out.println(">> url source and campaign params added to the subapp url "+source+" "+campaignId);
+            System.out
+                    .println(">> url source and campaign params added to the subapp url " + source + " " + campaignId);
             if (source != null && !source.isEmpty()) {
                 appUrl = addSourceToUrl(appUrl);
             }
@@ -108,7 +110,7 @@ public class WebApp extends BaseActivity {
             }
         }
         webView.loadUrl(addCrUserIdToUrl(appUrl));
-        System.out.println("subapp url : "+appUrl);
+        System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 Log.d("WebView", consoleMessage.message());
@@ -123,12 +125,14 @@ public class WebApp extends BaseActivity {
         String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" + pseudoId;
         return modifiedUrl;
     }
+
     private String addSourceToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
         String modifiedUrl = originalUri.toString() + separator + "source=" + source;
         return modifiedUrl;
     }
+
     private String addCampaignIdToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
@@ -200,5 +204,9 @@ public class WebApp extends BaseActivity {
     public void logAppLaunchEvent() {
         AnalyticsUtils.logEvent(this, "app_launch", title, appUrl, pseudoId, languageInEnglishName);
 
+    }
+
+    public void logAppExitEvent() {
+        AnalyticsUtils.logEvent(this, "app_exit", title, appUrl, pseudoId, languageInEnglishName);
     }
 }
