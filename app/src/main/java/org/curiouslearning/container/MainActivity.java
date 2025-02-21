@@ -47,6 +47,9 @@ import org.curiouslearning.container.utilities.SlackUtils;
 import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -88,7 +91,7 @@ public class MainActivity extends BaseActivity {
     private boolean isDebugApk;
     private Uri deepLinkUri;
     private String deferredURL;
-
+    private long initialSlackAlertTime;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,6 +104,7 @@ public class MainActivity extends BaseActivity {
         selectedLanguage = prefs.getString("selectedLanguage", "");
         langCheck = true;
         isDataReceived = false;
+        initialSlackAlertTime= AnalyticsUtils.getCurrentEpochTime();
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
             public void onReferrerReceived(String language, String fullURL) {
@@ -112,7 +116,9 @@ public class MainActivity extends BaseActivity {
                         return;
                     }
                     if(language == null || language.length() ==0){
-                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for google defeered deep link URL: "+fullURL);
+                        String pseudoId = prefs.getString("pseudoId", "");
+                        long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
+                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for google defeered deep link URL: "+fullURL+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
                         return;
                     }
                     String lang = Character.toUpperCase(language.charAt(0))
@@ -238,7 +244,8 @@ public class MainActivity extends BaseActivity {
                             }
                         });
                     }else{
-                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is null for Facebook defereed deep link URL: "+deepLinkUri);
+                        long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
+                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is null for Facebook defereed deep link URL: "+deepLinkUri+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
                     }
                 } else {
                     runOnUiThread(new Runnable() {
@@ -297,6 +304,12 @@ public class MainActivity extends BaseActivity {
                             + calendar.get(Calendar.MINUTE) + calendar.get(Calendar.SECOND));
             editor.commit();
         }
+    }
+    public static String convertEpochToDate(long epochTimeMillis) {
+        Instant instant = Instant.ofEpochMilli(epochTimeMillis);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy hh:mm a")
+                                                       .withZone(ZoneId.systemDefault());
+        return formatter.format(instant);
     }
 
     @Override
@@ -485,7 +498,9 @@ public class MainActivity extends BaseActivity {
                         homeViewModal.getAllWebApps();
                     } else {
                         if(deferredURL!=null){
-                            SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for defeered deep link URL: "+deferredURL);
+                            String pseudoId = prefs.getString("pseudoId", "");
+                            long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
+                            SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for defeered deep link URL: "+deferredURL+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
                         }
                         // settingsButton.setVisibility(View.VISIBLE);
                         showLanguagePopup();
