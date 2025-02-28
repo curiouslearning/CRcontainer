@@ -195,7 +195,7 @@ public class MainActivity extends BaseActivity {
                     editor.putString("source", source);
                     editor.putString("campaign_id", campaign_id);
                     editor.apply();
-                    validLanguage(language,"google", String.valueOf(deepLinkUri));
+                    validLanguage(language,"facebook", String.valueOf(deepLinkUri));
                     if (language != null) {
 
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
