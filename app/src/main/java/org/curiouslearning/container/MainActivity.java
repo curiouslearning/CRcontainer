@@ -60,6 +60,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+
 import android.util.Log;
 import android.content.Intent;
 
@@ -89,8 +91,6 @@ public class MainActivity extends BaseActivity {
     private boolean isDataReceived;
     private boolean langCheck;
     private boolean isDebugApk;
-    private Uri deepLinkUri;
-    private String deferredURL;
     private long initialSlackAlertTime;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,6 +105,7 @@ public class MainActivity extends BaseActivity {
         langCheck = true;
         isDataReceived = false;
         initialSlackAlertTime= AnalyticsUtils.getCurrentEpochTime();
+        cachePseudoId();
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
             public void onReferrerReceived(String language, String fullURL) {
@@ -115,17 +116,15 @@ public class MainActivity extends BaseActivity {
                         System.out.println("return from playstore");
                         return;
                     }
-                    if(language == null || language.length() ==0){
-                        String pseudoId = prefs.getString("pseudoId", "");
-                        long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
-                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for google defeered deep link URL: "+fullURL+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
-                        return;
-                    }
+                    String pseudoId = prefs.getString("pseudoId", "");
+                    String manifestVrsn = prefs.getString("manifestVersion", "");
+                    validLanguage(language,"google", fullURL);
                     String lang = Character.toUpperCase(language.charAt(0))
                             + language.substring(1).toLowerCase();
                     isDataReceived=true;
-                    deferredURL = fullURL;
                     selectedLanguage = lang;
+                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
+                            manifestVrsn, "true");
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -159,7 +158,6 @@ public class MainActivity extends BaseActivity {
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
-        cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         appVersion = AppUtils.getAppVersionName(this);
@@ -208,10 +206,10 @@ public class MainActivity extends BaseActivity {
                     dialog.dismiss();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
                 }
-                Log.d(TAG, "onDeferredAppLinkDataFetched: AppLinkData: " + appLinkData);
+                Log.d(TAG, "onDeferredAppLinkDataFetched:Facebook AppLinkData: " + appLinkData);
                 if (appLinkData != null) {
                     isDataReceived = true;
-                    deepLinkUri = appLinkData.getTargetUri();
+                    Uri deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     String source = ((Uri) deepLinkUri).getQueryParameter("source");
@@ -222,10 +220,9 @@ public class MainActivity extends BaseActivity {
                     editor.apply();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language Source CampaignId: " + language + " " + source
                             + " " + campaign_id +" "+isDebugApk);
-
+                    validLanguage(language,"google", String.valueOf(deepLinkUri));
                     if (language != null) {
 
-                        deferredURL = String.valueOf(deepLinkUri);
                         String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
                         Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                         selectedLanguage = lang;
@@ -243,9 +240,6 @@ public class MainActivity extends BaseActivity {
                                 loadApps(lang);
                             }
                         });
-                    }else{
-                        long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
-                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is null for Facebook defereed deep link URL: "+deepLinkUri+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
                     }
                 } else {
                     runOnUiThread(new Runnable() {
@@ -324,6 +318,25 @@ public class MainActivity extends BaseActivity {
         System.out.println(pseudoId);
         return pseudoId;
     }
+    private void validLanguage(String language, String source, String deepLinkUri) {
+        homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
+                List<String> lowerCaseLanguages = validLanguages.stream()
+                        .map(String::toLowerCase) // Convert each string to lowercase
+                        .collect(Collectors.toList());
+                long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
+                String pseudoId = prefs.getString("pseudoId", "");
+                if (language != null) {
+                    if (lowerCaseLanguages!=null && lowerCaseLanguages.size()!=0 &&!lowerCaseLanguages.contains(language.toLowerCase().trim())) {
+                        SlackUtils.sendMessageToSlack(MainActivity.this, "Language is incorrect for " + source + " deferred deep link URL: " + deepLinkUri + " , cr_user_id: " + pseudoId + " , currentTimestamp: " + convertEpochToDate(currentEpochTime) + " , initialSlackAlertTime: " + convertEpochToDate(initialSlackAlertTime));
+                    }
+                }
+             else {
+                SlackUtils.sendMessageToSlack(MainActivity.this, "Language is null for " + source + " deferred deep link URL: " + deepLinkUri + " , cr_user_id: " + pseudoId + " , currentTimestamp: " + convertEpochToDate(currentEpochTime) + " , initialSlackAlertTime: " + convertEpochToDate(initialSlackAlertTime));
+
+            }
+        });
+    }
+
 
     private void showLanguagePopup() {
         if (!dialog.isShowing()) {
@@ -497,11 +510,6 @@ public class MainActivity extends BaseActivity {
                         loadingIndicator.setVisibility(View.VISIBLE);
                         homeViewModal.getAllWebApps();
                     } else {
-                        if(deferredURL!=null){
-                            String pseudoId = prefs.getString("pseudoId", "");
-                            long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
-                            SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for defeered deep link URL: "+deferredURL+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
-                        }
                         // settingsButton.setVisibility(View.VISIBLE);
                         showLanguagePopup();
                     }
