@@ -93,10 +93,10 @@ public class InstallReferrerManager {
         if(deeplink!=null && deeplink.contains("curiousreader://app?language")){
             callback.onReferrerReceived(deeplink.replace("curiousreader://app?language=", ""), String.valueOf(uri));
         }else if(deeplink !=null){
-            callback.onReferrerReceived(null, String.valueOf(uri));
+            callback.onReferrerReceived("", String.valueOf(uri));
         }
         else{
-            callback.onReferrerReceived(null, String.valueOf(uri));
+            callback.onReferrerReceived("", String.valueOf(uri));
         }
         String source = uri.getQueryParameter("source");
         String campaign_id = uri.getQueryParameter("campaign_id");
