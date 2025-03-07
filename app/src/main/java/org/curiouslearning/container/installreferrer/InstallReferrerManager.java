@@ -73,8 +73,8 @@ public class InstallReferrerManager {
             referrerDetails = installReferrerClient.getInstallReferrer();
             Log.d("referal", referrerDetails.toString() +" ");
             String referrerUrl = referrerDetails.getInstallReferrer();
-            // the below url is for testing purpose
-            // String referrerUrl = "source=facebook&utm_medium=print&campaign_id=120208084211250195&deferred_deeplink=curiousreader://app?language=nepali";
+//          the below url is for testing purpose
+//          String referrerUrl = "source=facebook&utm_medium=print&campaign_id=120208084211250195&deferred_deeplink=curiousreader://app?language= ";
             Log.d("referal", referrerUrl +" ");
             extractReferrerParameters(referrerUrl);
             logFirstOpenEvent(referrerDetails);
@@ -93,8 +93,10 @@ public class InstallReferrerManager {
         if(deeplink!=null && deeplink.contains("curiousreader://app?language")){
             callback.onReferrerReceived(deeplink.replace("curiousreader://app?language=", ""), String.valueOf(uri));
         }else if(deeplink !=null){
-            callback.onReferrerReceived("", String.valueOf(uri));
-
+            callback.onReferrerReceived(null, String.valueOf(uri));
+        }
+        else{
+            callback.onReferrerReceived(null, String.valueOf(uri));
         }
         String source = uri.getQueryParameter("source");
         String campaign_id = uri.getQueryParameter("campaign_id");
