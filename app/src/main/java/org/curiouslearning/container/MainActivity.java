@@ -111,17 +111,14 @@ public class MainActivity extends BaseActivity {
                         fetchFacebookDeferredData();
                     }
                 }else {
-                    System.out.println("isReferrernotHandled");
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
                             } else {
-                                System.out.println("loading125");
                                 loadApps(selectedLanguage);
                             }
-
                         }
                     });
                 }
@@ -206,7 +203,6 @@ public class MainActivity extends BaseActivity {
                             if (selectedLanguage.equals("")) {
                                 showLanguagePopup();
                             } else {
-                                System.out.println("loading213");
                                 loadApps(selectedLanguage);
                             }
 
@@ -277,13 +273,10 @@ public class MainActivity extends BaseActivity {
                 loadingIndicator.setVisibility(View.GONE);
                 selectedLanguage="";
                 storeSelectLanguage("");
-                System.out.println("loading285:1");
                 return;
             }else if(lowerCaseLanguages !=null){
-                System.out.println("loading285");
                 String lang =  Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
-
                         loadApps(lang);
             }
         });
@@ -342,7 +335,6 @@ public class MainActivity extends BaseActivity {
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                         selectedLanguage, manifestVrsn, "false");
                                 dialog.dismiss();
-                                System.out.println("loading345");
                                 loadApps(selectedLanguage);
                             }
                         });
@@ -456,7 +448,6 @@ public class MainActivity extends BaseActivity {
                         showLanguagePopup();
                     }
                     if (manifestVersion.equals("")) {
-                        System.out.println("this is problem"+manifestVersion);
                         loadingIndicator.setVisibility(View.VISIBLE);
                         homeViewModal.getAllWebApps();
                     }
