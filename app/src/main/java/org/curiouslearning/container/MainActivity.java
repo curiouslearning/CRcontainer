@@ -87,20 +87,19 @@ public class MainActivity extends BaseActivity {
         cachePseudoId();
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
-            public void onReferrerReceived(String language, String fullURL) {
+            public void onReferrerReceived(String deferredLang, String fullURL) {
+                String language = deferredLang.trim();
 
                 if (!isReferrerHandled ) {
-                    System.out.println("isReferrerHandled");
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putBoolean(REFERRER_HANDLED_KEY, true);
                     editor.apply();
-
-                    if((language!=null && !language.isEmpty()) || fullURL.contains("curiousreader://app")) {
+                    if((language!=null && language.length()>0) || fullURL.contains("curiousreader://app")) {
                         validLanguage(language, "google", fullURL);
                         String pseudoId = prefs.getString("pseudoId", "");
                         String manifestVrsn = prefs.getString("manifestVersion", "");
                         String lang ="";
-                        if(language!=null && !language.isEmpty())
+                        if(language!=null && language.length()>0)
                                lang =  Character.toUpperCase(language.charAt(0))
                                 + language.substring(1).toLowerCase();
                         selectedLanguage = lang;
@@ -263,7 +262,7 @@ public class MainActivity extends BaseActivity {
         String language = deferredLang.trim();
         long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
         String pseudoId = prefs.getString("pseudoId", "");
-        if( language == null || language == "" ){
+        if( language == null || language.length()==0 ){
             SlackUtils.sendMessageToSlack(MainActivity.this, "Language is incorrect or null for " + source + " deferred deep link URL: " + deepLinkUri + " , cr_user_id: " + pseudoId + " , currentTimestamp: " + convertEpochToDate(currentEpochTime) + " , initialSlackAlertTime: " + convertEpochToDate(initialSlackAlertTime));
             showLanguagePopup();
             return;
@@ -281,9 +280,10 @@ public class MainActivity extends BaseActivity {
                 System.out.println("loading285:1");
                 return;
             }else if(lowerCaseLanguages !=null){
+                System.out.println("loading285");
                 String lang =  Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
-                System.out.println("loading285");
+
                         loadApps(lang);
             }
         });
