@@ -273,11 +273,16 @@ public class MainActivity extends BaseActivity {
                 loadingIndicator.setVisibility(View.GONE);
                 selectedLanguage="";
                 storeSelectLanguage("");
+                System.out.println("this is 1>>>");
                 return;
-            }else if(lowerCaseLanguages !=null){
+            }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
+                System.out.println("this is 2>>>");
                 String lang =  Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
                         loadApps(lang);
+            }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
+                System.out.println("this is 3>>>");
+                loadApps("notValidLanguage");
             }
         });
     }
@@ -448,6 +453,8 @@ public class MainActivity extends BaseActivity {
                         showLanguagePopup();
                     }
                     if (manifestVersion.equals("")) {
+                        System.out.println("this is loadapps>>>");
+                        if(selectedlanguage != "notValidLanguage")
                         loadingIndicator.setVisibility(View.VISIBLE);
                         homeViewModal.getAllWebApps();
                     }
