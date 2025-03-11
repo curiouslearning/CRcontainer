@@ -66,6 +66,7 @@ public class MainActivity extends BaseActivity {
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String REFERRER_HANDLED_KEY = "isReferrerHandled";
     private static final String UTM_PREFS_NAME = "utmPrefs";
+    private final String isValidLanguage = "notValidLanguage";
     private SharedPreferences utmPrefs;
     private SharedPreferences prefs;
     private String selectedLanguage;
@@ -274,10 +275,12 @@ public class MainActivity extends BaseActivity {
                 selectedLanguage="";
                 storeSelectLanguage("");
                 return;
-            }else if(lowerCaseLanguages !=null){
+            }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
                 String lang =  Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
                         loadApps(lang);
+            }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
+                loadApps(isValidLanguage);
             }
         });
     }
@@ -448,7 +451,8 @@ public class MainActivity extends BaseActivity {
                         showLanguagePopup();
                     }
                     if (manifestVersion.equals("")) {
-                        loadingIndicator.setVisibility(View.VISIBLE);
+                        if(!selectedlanguage.equals(isValidLanguage))
+                            loadingIndicator.setVisibility(View.VISIBLE);
                         homeViewModal.getAllWebApps();
                     }
                 }
