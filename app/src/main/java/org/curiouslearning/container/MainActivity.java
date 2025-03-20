@@ -259,14 +259,15 @@ public class MainActivity extends BaseActivity {
         String language = deferredLang.trim();
         long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
         String pseudoId = prefs.getString("pseudoId", "");
-        String[] uriParts = deepLinkUri.split("\"(?<=[?&])\"");
+        String[] uriParts = deepLinkUri.split("(?=[?&])");
         StringBuilder message = new StringBuilder();
         message.append("An incorrect or null language value was detected in a ")
                 .append(source)
-                .append(" campaign’s deferred deep link with the following details:\n");
+                .append(" campaign’s deferred deep link with the following details:\n\n");
         for (String part : uriParts) {
             message.append(part).append("\n");
         }
+        message.append("\n");
         message.append("User affected:: ").append(pseudoId).append("\n")
                 .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
                 .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
