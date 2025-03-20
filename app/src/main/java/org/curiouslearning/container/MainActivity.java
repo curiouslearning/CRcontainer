@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -52,6 +54,8 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import android.util.Log;
 import android.content.Intent;
+import android.widget.TextView;
+import androidx.core.view.GestureDetectorCompat;
 
 public class MainActivity extends BaseActivity {
 
@@ -76,6 +80,9 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private boolean isReferrerHandled;
     private long initialSlackAlertTime;
+    private GestureDetectorCompat gestureDetector;
+    private TextView textView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,8 +108,8 @@ public class MainActivity extends BaseActivity {
                         String manifestVrsn = prefs.getString("manifestVersion", "");
                         String lang ="";
                         if(language!=null && language.length()>0)
-                               lang =  Character.toUpperCase(language.charAt(0))
-                                + language.substring(1).toLowerCase();
+                            lang =  Character.toUpperCase(language.charAt(0))
+                                    + language.substring(1).toLowerCase();
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
@@ -168,6 +175,19 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
+
+    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            android.util.Log.d("MainActivity", " Double tapped on settings_box");
+
+            String pseudoId = prefs.getString("pseudoId", "");
+            textView.setText("cr_user_id_"+pseudoId);
+            textView.setVisibility(View.VISIBLE);
+            return true;
+        }
+    }
+
     private void fetchFacebookDeferredData(){
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
@@ -190,13 +210,13 @@ public class MainActivity extends BaseActivity {
                     editor.putString("campaign_id", campaign_id);
                     editor.apply();
                     validLanguage(language,"facebook", String.valueOf(deepLinkUri));
-                        String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
-                        Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
-                        selectedLanguage = lang;
-                        storeSelectLanguage(lang);
-                        AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                                manifestVrsn, "true");
+                    String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
+                    selectedLanguage = lang;
+                    storeSelectLanguage(lang);
+                    AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
+                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
+                            manifestVrsn, "true");
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -278,7 +298,7 @@ public class MainActivity extends BaseActivity {
             }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
                 String lang =  Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
-                        loadApps(lang);
+                loadApps(lang);
             }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
                 loadApps(isValidLanguage);
             }
@@ -290,8 +310,13 @@ public class MainActivity extends BaseActivity {
         if (!dialog.isShowing()) {
             dialog.setContentView(R.layout.language_popup);
 
+
             dialog.setCanceledOnTouchOutside(false);
             dialog.getWindow().setBackgroundDrawable(null);
+
+            ImageView invisibleBox = dialog.findViewById(R.id.invisible_box);
+            textView = dialog.findViewById(R.id.pseudo_id_text);
+
             ImageView closeButton = dialog.findViewById(R.id.setting_close);
             TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
             AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
@@ -345,12 +370,21 @@ public class MainActivity extends BaseActivity {
                 }
             });
 
+            gestureDetector = new GestureDetectorCompat(this, new GestureListener());
+            if(invisibleBox!=null){
+                invisibleBox.setOnTouchListener((v, event) -> {
+                    gestureDetector.onTouchEvent(event); // Process the touch events with GestureDetector
+                    return true;
+                });
+            }
+
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
                     AnimationUtil.scaleButton(v, new Runnable() {
                         @Override
                         public void run() {
+                            textView.setVisibility(View.GONE);
                             dialog.dismiss();
                         }
                     });
