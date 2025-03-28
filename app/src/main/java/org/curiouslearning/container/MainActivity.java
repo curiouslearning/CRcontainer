@@ -96,7 +96,7 @@ public class MainActivity extends BaseActivity {
                     editor.putBoolean(REFERRER_HANDLED_KEY, true);
                     editor.apply();
                     if((language!=null && language.length()>0) || fullURL.contains("curiousreader://app")) {
-                        validLanguage(language, "google", fullURL);
+                        validLanguage(language, "google", fullURL.replace("deferred_deeplink=",""));
                         String pseudoId = prefs.getString("pseudoId", "");
                         String manifestVrsn = prefs.getString("manifestVersion", "");
                         String lang ="";
@@ -259,8 +259,20 @@ public class MainActivity extends BaseActivity {
         String language = deferredLang.trim();
         long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
         String pseudoId = prefs.getString("pseudoId", "");
+        String[] uriParts = deepLinkUri.split("(?=[?&])");
+        StringBuilder message = new StringBuilder();
+        message.append("An incorrect or null language value was detected in a ")
+                .append(source)
+                .append(" campaign’s deferred deep link with the following details:\n\n");
+        for (String part : uriParts) {
+            message.append(part).append("\n");
+        }
+        message.append("\n");
+        message.append("User affected:: ").append(pseudoId).append("\n")
+                .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
+                .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
         if( language == null || language.length()==0 ){
-            SlackUtils.sendMessageToSlack(MainActivity.this, "Language is incorrect or null for " + source + " deferred deep link URL: " + deepLinkUri + " , cr_user_id: " + pseudoId + " , currentTimestamp: " + convertEpochToDate(currentEpochTime) + " , initialSlackAlertTime: " + convertEpochToDate(initialSlackAlertTime));
+            SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
             showLanguagePopup();
             return;
         }
@@ -269,7 +281,7 @@ public class MainActivity extends BaseActivity {
                     .map(String::toLowerCase)
                     .collect(Collectors.toList());
             if (lowerCaseLanguages!=null && lowerCaseLanguages.size() > 0 &&!lowerCaseLanguages.contains(language.toLowerCase().trim())) {
-                SlackUtils.sendMessageToSlack(MainActivity.this, "Language is incorrect or null for " + source + " deferred deep link URL: " + deepLinkUri + " , cr_user_id: " + pseudoId + " , currentTimestamp: " + convertEpochToDate(currentEpochTime) + " , initialSlackAlertTime: " + convertEpochToDate(initialSlackAlertTime));
+                SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
                 showLanguagePopup();
                 loadingIndicator.setVisibility(View.GONE);
                 selectedLanguage="";
