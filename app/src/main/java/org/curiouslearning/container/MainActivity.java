@@ -76,9 +76,13 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private boolean isReferrerHandled;
     private long initialSlackAlertTime;
+
+//  private RespectClientManager respectClientManager = new RespectClientManager();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+//      respectClientManager.bindService(this);
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
@@ -101,8 +105,8 @@ public class MainActivity extends BaseActivity {
                         String manifestVrsn = prefs.getString("manifestVersion", "");
                         String lang ="";
                         if(language!=null && language.length()>0)
-                               lang =  Character.toUpperCase(language.charAt(0))
-                                + language.substring(1).toLowerCase();
+                            lang =  Character.toUpperCase(language.charAt(0))
+                                    + language.substring(1).toLowerCase();
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
@@ -190,13 +194,13 @@ public class MainActivity extends BaseActivity {
                     editor.putString("campaign_id", campaign_id);
                     editor.apply();
                     validLanguage(language,"facebook", String.valueOf(deepLinkUri));
-                        String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
-                        Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
-                        selectedLanguage = lang;
-                        storeSelectLanguage(lang);
-                        AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                                manifestVrsn, "true");
+                    String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
+                    selectedLanguage = lang;
+                    storeSelectLanguage(lang);
+                    AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
+                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
+                            manifestVrsn, "true");
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -278,7 +282,7 @@ public class MainActivity extends BaseActivity {
             }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
                 String lang =  Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
-                        loadApps(lang);
+                loadApps(lang);
             }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
                 loadApps(isValidLanguage);
             }

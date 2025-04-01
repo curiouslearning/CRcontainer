@@ -29,13 +29,20 @@ public class RetrofitInstance {
     private Map<String, Object> data;
 
     private static String URL = BuildConfig.API_URL;;
+
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
         if (retrofit == null) {
+            // okHTTp kt code for lib respect cache in retrofit instance please don't remove it
+            //    LibRespectCache libRespectCache = LibRespectCacheBuilder.build();
+//            OkHttpClient client = new OkHttpClient.Builder()
+//                    .addInterceptor(new LibRespectCacheInterceptor(libRespectCache))
+//                    .build();
             retrofitInstance = new RetrofitInstance();
             retrofit = new Retrofit.Builder()
                     .baseUrl(URL)
+//                  .client(client)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
         }
