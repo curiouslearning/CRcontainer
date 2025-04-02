@@ -76,9 +76,27 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private boolean isReferrerHandled;
     private long initialSlackAlertTime;
+    private XAPIManager xapiManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        xapiManager = new XAPIManager();
+        // Call xAPI statement when MainActivity starts
+
+        // Send xAPI statement with required parameters
+        xapiManager.sendXAPIStatement(
+                "testuser@example.com",                  // User Email
+                "http://adlnet.gov/expapi/verbs/completed",      // Verb ID
+                "completed",                                     // Verb Display Name
+                "http://example.com/activity/12345",            // Activity ID
+                "Demo Activity"                                 // Activity Name
+        );
+
+        // call xapi Retrieve data
+        xapiManager.retrieveXAPIStatements();
+
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
