@@ -83,16 +83,9 @@ public class MainActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
 
         xapiManager = new XAPIManager();
-        // Call xAPI statement when MainActivity starts
 
         // Send xAPI statement with required parameters
-        xapiManager.sendXAPIStatement(
-                "testuser@example.com",                  // User Email
-                "http://adlnet.gov/expapi/verbs/completed",      // Verb ID
-                "completed",                                     // Verb Display Name
-                "http://example.com/activity/12345",            // Activity ID
-                "Demo Activity"                                 // Activity Name
-        );
+        xapiManager.sendXAPIStatement();
 
         // call xapi Retrieve data
         xapiManager.retrieveXAPIStatements();

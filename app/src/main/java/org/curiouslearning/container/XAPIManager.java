@@ -4,65 +4,78 @@ import com.rusticisoftware.tincan.*;
 import com.rusticisoftware.tincan.lrsresponses.*;
 import com.rusticisoftware.tincan.v10x.StatementsQuery;
 import com.rusticisoftware.tincan.lrsresponses.StatementsResultLRSResponse;
-import android.util.Base64;
 import android.util.Log;
+import org.joda.time.DateTime;
+import java.net.URISyntaxException;
+import java.net.URI;
+import java.util.UUID;
+
 
 public class XAPIManager {
     private static final String TAG = "XAPIManager";
-    // Your LRS details (replace with real values)
+    // LRS details
     private static final String LRS_ENDPOINT = "https://curious-reader.lrs.io/xapi/";
     private static final String LRS_USERNAME = "chimp";
     private static final String LRS_PASSWORD = "chimpoo";
 
     private RemoteLRS lrs;
+
     public XAPIManager() {
         try {
             lrs = new RemoteLRS();
             lrs.setEndpoint(LRS_ENDPOINT);
             lrs.setVersion(TCAPIVersion.V100);  // Set xAPI version explicitly
-            // Encode username & password for authentication
-            String authString = "Basic " + Base64.encodeToString(
-                    (LRS_USERNAME + ":" + LRS_PASSWORD).getBytes(), Base64.NO_WRAP);
-            lrs.setAuth(authString);
+            lrs.setUsername(LRS_USERNAME);
+            lrs.setPassword(LRS_PASSWORD);
+
         } catch (Exception e) {
-            Log.e(TAG, "Error initializing LRS: " + e.getMessage());
+            Log.e(TAG, " Error initializing LRS: " + e.getMessage());
         }
     }
 
     /**
      * Send xAPI Statement
      */
-    public void sendXAPIStatement(String userEmail, String verbId, String verbDisplay, String activityId, String activityName) {
+    public void sendXAPIStatement() {
+        
         try {
-            // Define Actor (User)
-            Agent actor = new Agent();
-            actor.setMbox("mailto:" + userEmail);
+            // Define Actor
+            Agent agent  = new Agent();
+            agent.setMbox("mailto:info@tincanapi.com");
+            agent.setName("CR");
 
-            // Define Verb (Action)
-            Verb verb = new Verb(verbId);
+            Verb verb = new Verb("http://adlnet.gov/expapi/verbs/attempted");
             verb.setDisplay(new LanguageMap());
-            verb.getDisplay().put("en-US", verbDisplay);
+            verb.getDisplay().put("en-US", "Completed");
 
-            // Define Activity (Object)
-            Activity activity = new Activity(activityId);
+            Activity activity = new Activity();
+            activity.setId(new URI("http://tincanapi.com/TinCanJava/Test/Unit/0"));
             activity.setDefinition(new ActivityDefinition());
+            activity.getDefinition().setType(new URI("http://id.tincanapi.com/activitytype/unit-test"));
             activity.getDefinition().setName(new LanguageMap());
-            activity.getDefinition().getName().put("en-US", activityName);
+            activity.getDefinition().getName().put("en-US", "TinCanJava Tests: Unit 0");
+
+            Context context = new Context();
+            context.setRegistration(UUID.randomUUID());
 
             // Create Statement
-            Statement statement = new Statement(actor, verb, activity);
+            Statement st = new Statement();
+            st.setActor(agent);
+            st.setVerb(verb);
+            st.setObject(activity);
+            st.setContext(context);
+            st.setTimestamp(new DateTime());
 
             // Send Statement to LRS
-            StatementLRSResponse response = lrs.saveStatement(statement);
-
-            // Check response
-            if (response.getSuccess()) {
-                Log.d(TAG, "xAPI Statement sent successfully: " + response.getContent().getId());
+            StatementLRSResponse lrsRes = lrs.saveStatement(st);
+            // Check Response
+            if (lrsRes != null && lrsRes.getSuccess()) {
+                Log.d(TAG, "xAPI Statement sent successfully!" + lrsRes.getContent().getId());
             } else {
-                Log.e(TAG, "Failed to send xAPI Statement: " + response.getErrMsg());
+                Log.e(TAG, "Failed to send xAPI Statement: " + lrsRes.getErrMsg());
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error sending xAPI statement: " + e.getMessage());
+        } catch (URISyntaxException e) {
+            Log.e(TAG, "URI Syntax Exception: " + e.getMessage());
         }
     }
 
@@ -72,16 +85,16 @@ public class XAPIManager {
     public void retrieveXAPIStatements() {
         try {
             StatementsQuery query = new StatementsQuery();
-            query.setLimit(5); // Retrieve last 5 statements
-
+            query.setLimit(10);  // Set query limit to 5
             StatementsResultLRSResponse response = lrs.queryStatements(query);
+
             if (response.getSuccess()) {
-                Log.d(TAG, "Retrieved xAPI Statements:");
+                Log.d(TAG, "Retrieved Statements: " + response.getContent().getStatements().size());
                 for (Statement statement : response.getContent().getStatements()) {
                     Log.d(TAG, "Statement: " + statement.toJSON());
                 }
             } else {
-                Log.e(TAG, "Error retrieving xAPI statements: " + response.getErrMsg());
+                Log.e(TAG, "Failed to retrieve statements: " + response.getErrMsg());
             }
         } catch (Exception e) {
             Log.e(TAG, "Exception retrieving xAPI statements: " + e.getMessage());
