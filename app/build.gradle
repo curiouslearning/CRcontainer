@@ -78,5 +78,4 @@ dependencies {
     implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
 
     implementation 'com.github.RusticiSoftware:TinCanJava:tincan-1.1.2'
-    implementation 'joda-time:joda-time:2.10.14'
 }

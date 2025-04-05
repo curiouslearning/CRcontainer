@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import android.util.Log;
 import android.content.Intent;
@@ -85,10 +86,28 @@ public class MainActivity extends BaseActivity {
         xapiManager = new XAPIManager();
 
         // Send xAPI statement with required parameters
-        xapiManager.sendXAPIStatement();
+        xapiManager.sendXAPIStatement(
+                "test01@gmail.com",
+                "test",
+                "http://adlnet.gov/expapi/verbs/completed",
+                "completed",
+                "http://example.com/activity/" + "l2",
+                "Lesson1" + 'e',
+                "lessonId",
+                "courseId",
+                "classId",
+                "schoolId",
+                "assignmentId",
+                "chapterId",
+                15,
+                4,
+                6
+
+        );
+
 
         // call xapi Retrieve data
-        xapiManager.retrieveXAPIStatements();
+        xapiManager.retrieveXAPIStatements("test01@gmail.com");
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);

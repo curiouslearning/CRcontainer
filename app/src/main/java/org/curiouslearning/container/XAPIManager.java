@@ -5,10 +5,11 @@ import com.rusticisoftware.tincan.lrsresponses.*;
 import com.rusticisoftware.tincan.v10x.StatementsQuery;
 import com.rusticisoftware.tincan.lrsresponses.StatementsResultLRSResponse;
 import android.util.Log;
-import org.joda.time.DateTime;
-import java.net.URISyntaxException;
-import java.net.URI;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 
 public class XAPIManager {
@@ -36,68 +37,238 @@ public class XAPIManager {
     /**
      * Send xAPI Statement
      */
-    public void sendXAPIStatement() {
-        
+    public void sendXAPIStatement(
+            String userEmail,
+            String userName,
+            String verbId,
+            String verbDisplay,
+            String activityId,
+            String activityName,
+            String lessonId,
+            String courseId,
+            String classId,
+            String schoolId,
+            String assignmentId,
+            String chapterId,
+            int score,
+            int correctMoves,
+            int wrongMoves
+
+    )
+    {
         try {
-            // Define Actor
-            Agent agent  = new Agent();
-            agent.setMbox("mailto:info@tincanapi.com");
-            agent.setName("CR");
+            // Create Actor
+            Agent actor = new Agent();
+            actor.setMbox("mailto:" + userEmail);
+            actor.setName(userName);
 
-            Verb verb = new Verb("http://adlnet.gov/expapi/verbs/attempted");
+            // Create Verb
+            Verb verb = new Verb(verbId);
             verb.setDisplay(new LanguageMap());
-            verb.getDisplay().put("en-US", "Completed");
+            verb.getDisplay().put("en-US", verbDisplay);
 
-            Activity activity = new Activity();
-            activity.setId(new URI("http://tincanapi.com/TinCanJava/Test/Unit/0"));
+            // Create Activity
+            Activity activity = new Activity(activityId);
             activity.setDefinition(new ActivityDefinition());
-            activity.getDefinition().setType(new URI("http://id.tincanapi.com/activitytype/unit-test"));
             activity.getDefinition().setName(new LanguageMap());
-            activity.getDefinition().getName().put("en-US", "TinCanJava Tests: Unit 0");
+            activity.getDefinition().getName().put("en-US", activityName);
 
+            // Create Result
+            Result result = new Result();
+            Score scoreObj = new Score();
+            scoreObj.setRaw((double)score);
+            result.setScore(scoreObj);
+            result.setSuccess(score > 35);
+            result.setCompletion(true);
+            result.setResponse("Correct: " + correctMoves + ", Wrong: " + wrongMoves);
+
+            // Create Context
             Context context = new Context();
-            context.setRegistration(UUID.randomUUID());
+            ContextActivities contextActivities = new ContextActivities();
 
-            // Create Statement
-            Statement st = new Statement();
-            st.setActor(agent);
-            st.setVerb(verb);
-            st.setObject(activity);
-            st.setContext(context);
-            st.setTimestamp(new DateTime());
+            List<Activity> groupingActivities = new ArrayList<>();
 
-            // Send Statement to LRS
-            StatementLRSResponse lrsRes = lrs.saveStatement(st);
-            // Check Response
-            if (lrsRes != null && lrsRes.getSuccess()) {
-                Log.d(TAG, "xAPI Statement sent successfully!" + lrsRes.getContent().getId());
+            // Add each grouping activity directly
+            groupingActivities.add(new Activity("http://example.com/course/" + courseId));
+            groupingActivities.add(new Activity("http://example.com/class/" + classId));
+            groupingActivities.add(new Activity("http://example.com/math-lesson-1/" + lessonId));
+            groupingActivities.add(new Activity("http://example.com/school/" + schoolId));
+            groupingActivities.add(new Activity("http://example.com/assignment/" + assignmentId));
+            groupingActivities.add(new Activity("http://example.com/chapter/" + chapterId));
+
+            contextActivities.setGrouping(groupingActivities);
+            context.setContextActivities(contextActivities);
+
+            Statement statement = new Statement();
+            statement.setActor(actor);
+            statement.setVerb(verb);
+            statement.setObject(activity);
+            statement.setResult(result);
+            statement.setContext(context);
+
+            // Send Statement
+            StatementLRSResponse response = lrs.saveStatement(statement);
+
+            if (response.getSuccess()) {
+                Log.d(TAG, "xAPI Statement sent successfully!");
             } else {
-                Log.e(TAG, "Failed to send xAPI Statement: " + lrsRes.getErrMsg());
+                Log.e(TAG, "Failed to send xAPI Statement: " + response.getErrMsg());
             }
-        } catch (URISyntaxException e) {
-            Log.e(TAG, "URI Syntax Exception: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending xAPI statement: " + e.getMessage());
         }
     }
 
     /**
      * Retrieve xAPI Statements
      */
-    public void retrieveXAPIStatements() {
+    public void retrieveXAPIStatements(String agentEmail) {
         try {
+            // Create query with agent filter
             StatementsQuery query = new StatementsQuery();
-            query.setLimit(10);  // Set query limit to 5
+            Agent agent = new Agent();
+            agent.setMbox("mailto:" + agentEmail);
+            query.setAgent(agent);
+            query.setLimit(15);
+
+            // Execute query
             StatementsResultLRSResponse response = lrs.queryStatements(query);
 
-            if (response.getSuccess()) {
-                Log.d(TAG, "Retrieved Statements: " + response.getContent().getStatements().size());
-                for (Statement statement : response.getContent().getStatements()) {
-                    Log.d(TAG, "Statement: " + statement.toJSON());
+            if (response.getSuccess() && response.getContent() != null) {
+                List<Statement> statements = response.getContent().getStatements();
+
+                if (statements != null && !statements.isEmpty()) {
+                    for (Statement statement : statements) {
+                        try {
+                            // Parse statement data
+                            Map<String, Object> parsedStatement = new LinkedHashMap<>();
+
+                            // Basic statement info
+                            parsedStatement.put("id", statement.getId());
+
+                            // Actor info
+                            if (statement.getActor() instanceof Agent) {
+                                Agent statementAgent = (Agent) statement.getActor();
+                                Map<String, Object> actorMap = new HashMap<>();
+                                actorMap.put("mbox", statementAgent.getMbox());
+                                actorMap.put("name", statementAgent.getName());
+                                parsedStatement.put("actor", actorMap);
+                            }
+
+                            // Verb info
+                            Verb verb = statement.getVerb();
+                            if (verb != null) {
+                                Map<String, Object> verbMap = new HashMap<>();
+                                verbMap.put("id", verb.getId());
+                                verbMap.put("display", verb.getDisplay());
+                                parsedStatement.put("verb", verbMap);
+                            }
+
+                            // Object/Activity info
+                            if (statement.getObject() instanceof Activity) {
+                                Activity activity = (Activity) statement.getObject();
+                                Map<String, Object> activityMap = new HashMap<>();
+                                activityMap.put("id", activity.getId());
+
+                                ActivityDefinition definition = activity.getDefinition();
+                                if (definition != null) {
+                                    Map<String, Object> definitionMap = new HashMap<>();
+                                    definitionMap.put("name", definition.getName());
+
+                                    // Activity extensions
+                                    if (definition.getExtensions() != null) {
+                                        definitionMap.put("courseId",
+                                                definition.getExtensions().get("http://example.com/xapi/courseId"));
+                                        definitionMap.put("lessonId",
+                                                definition.getExtensions().get("http://example.com/xapi/lessonId"));
+                                    }
+
+                                    activityMap.put("definition", definitionMap);
+                                }
+
+                                parsedStatement.put("object", activityMap);
+                            }
+
+                            // Result info
+                            Result result = statement.getResult();
+                            if (result != null) {
+                                Map<String, Object> resultMap = new HashMap<>();
+
+                                // Score
+                                Score score = result.getScore();
+                                if (score != null) {
+                                    Map<String, Object> scoreMap = new HashMap<>();
+                                    scoreMap.put("raw", score.getRaw());
+                                    resultMap.put("score", scoreMap);
+                                }
+
+                                // Basic result fields
+                                resultMap.put("success", result.getSuccess());
+                                resultMap.put("completion", result.getCompletion());
+                                resultMap.put("response", result.getResponse());
+                                resultMap.put("duration", result.getDuration());
+
+                                // Result extensions
+                                if (result.getExtensions() != null) {
+                                    resultMap.put("correctMoves",
+                                            result.getExtensions().get("http://example.com/xapi/correctMoves"));
+                                    resultMap.put("wrongMoves",
+                                            result.getExtensions().get("http://example.com/xapi/wrongMoves"));
+                                    resultMap.put("assignmentId",
+                                            result.getExtensions().get("http://example.com/xapi/assignmentId"));
+                                }
+
+                                parsedStatement.put("result", resultMap);
+                            }
+
+                            // Context info
+                            Context context = statement.getContext();
+                            if (context != null) {
+                                Map<String, Object> contextMap = new HashMap<>();
+
+                                // Context extensions
+                                if (context.getExtensions() != null) {
+                                    contextMap.put("studentId",
+                                            context.getExtensions().get("http://example.com/xapi/studentId"));
+                                    contextMap.put("chapterId",
+                                            context.getExtensions().get("http://example.com/xapi/chapterId"));
+                                    contextMap.put("lessonId",
+                                            context.getExtensions().get("http://example.com/xapi/lessonId"));
+                                    contextMap.put("schoolId",
+                                            context.getExtensions().get("http://example.com/xapi/schoolId"));
+                                    contextMap.put("isDeleted",
+                                            context.getExtensions().get("http://example.com/xapi/isDeleted"));
+                                    contextMap.put("createdAt",
+                                            context.getExtensions().get("http://example.com/xapi/createdAt"));
+                                    contextMap.put("updatedAt",
+                                            context.getExtensions().get("http://example.com/xapi/updatedAt"));
+                                }
+
+                                parsedStatement.put("context", contextMap);
+                            }
+
+                            // Timestamp
+                            parsedStatement.put("timestamp", statement.getTimestamp());
+
+                            // Log successful parsing
+                            Log.d(TAG, "Successfully processed statement: " + parsedStatement);
+
+                        } catch (Exception parseError) {
+                            Log.e(TAG, "Error parsing individual statement: " +
+                                    (parseError.getMessage() != null ? parseError.getMessage() : "Unknown parse error"));
+                        }
+                    }
+                } else {
+                    Log.w(TAG, "No statements found for agent: " + agentEmail);
                 }
             } else {
-                Log.e(TAG, "Failed to retrieve statements: " + response.getErrMsg());
+                String errorMsg = response.getErrMsg() != null ?
+                        response.getErrMsg() : "Unknown query error";
+                Log.e(TAG, "Query failed: " + errorMsg);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Exception retrieving xAPI statements: " + e.getMessage());
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Unknown exception";
+            Log.e(TAG, "Error retrieving statements: " + errorMsg);
         }
     }
 }
