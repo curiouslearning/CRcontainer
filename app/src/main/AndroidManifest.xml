@@ -52,7 +52,7 @@
                 <data
                     android:scheme="curiousreader"
                     android:host="app"
-                />
+                    />
             </intent-filter>
 
             <intent-filter android:autoVerify="true">
@@ -79,6 +79,16 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+        <!--        <service-->
+        <!--            android:name="world.respect.librespect.clientdownloadservice"-->
+        <!--            android:enabled="true"-->
+        <!--            android:exported="true">-->
+
+        <!--            <intent-filter>-->
+        <!--                <action android:name="respect.world.librespect.ACTION_CLIENT_LU_DOWNLOAD" />-->
+        <!--                <action android:name="respect.world.librespect.ACTION_CLIENT_LU_RELEASE" />-->
+        <!--            </intent-filter>-->
+        <!--        </service>-->
     </application>
 
 
