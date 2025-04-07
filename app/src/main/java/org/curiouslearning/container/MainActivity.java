@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import android.util.Log;
 import android.content.Intent;
@@ -77,12 +78,47 @@ public class MainActivity extends BaseActivity {
     private boolean isReferrerHandled;
     private long initialSlackAlertTime;
 
+    private XAPIManager xapiManager;
+    //  private RespectClientManager respectClientManager = new RespectClientManager();
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        xapiManager = new XAPIManager();
+
+        // Send xAPI statement with required parameters
+        xapiManager.sendXAPIStatement(
+                "test01@gmail.com",
+                "test",
+                "http://adlnet.gov/expapi/verbs/completed",
+                "completed",
+                "http://example.com/activity/" + "l2",
+                "Lesson1" + 'e',
+                "lessonId",
+                "courseId",
+                "classId",
+                "schoolId",
+                "assignmentId",
+                "chapterId",
+                15,
+                4,
+                6
+
+        );
+
+
+        // call xapi Retrieve data
+        xapiManager.retrieveXAPIStatements("test01@gmail.com");
+//      respectClientManager.bindService(this)
+
+
 //  private RespectClientManager respectClientManager = new RespectClientManager();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //      respectClientManager.bindService(this);
+
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);

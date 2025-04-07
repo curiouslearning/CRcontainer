@@ -76,4 +76,6 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
 
     implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
+
+    implementation 'com.github.RusticiSoftware:TinCanJava:tincan-1.1.2'
 }
