@@ -10,7 +10,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' } //JitPack GitHub Dependencies
     }
 }
 rootProject.name = "FTM"
