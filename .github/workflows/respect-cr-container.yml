@@ -36,19 +36,12 @@ jobs:
 
       - name: Push APK to GitHub Branch
         run: |
+          cd app/build/outputs/apk/debug/
+          git init
           git config --global user.email "skanda@sutara.org"
           git config --global user.name "kvskandakumar"
-
-          # Create a temporary branch
-          git checkout --orphan respect-apk
-
-          # Clear all files
-          git rm -rf .
-
-          # Copy APK into root for easy access
-          cp app/build/outputs/apk/debug/app-debug.apk .
-
-          # Commit and push
+          git remote add origin https://${{ secrets.ACCESS_TOKEN }}@github.com/chimple/cuba.git
+          git checkout -b respect-apk
           git add app-debug.apk
-          git commit -m "Add built APK"
-          git push -f https://${{ secrets.ACCESS_TOKEN }}@github.com/chimple/cuba.git respect-apk
+          git commit -m "created apk"
+          git push origin respect-apk -f
