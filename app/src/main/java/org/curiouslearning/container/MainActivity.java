@@ -80,10 +80,11 @@ public class MainActivity extends BaseActivity {
 
     private XAPIManager xapiManager;
     //  private RespectClientManager respectClientManager = new RespectClientManager();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        //      respectClientManager.bindService(this);
         xapiManager = new XAPIManager();
 
         // Send xAPI statement with required parameters
@@ -109,16 +110,6 @@ public class MainActivity extends BaseActivity {
 
         // call xapi Retrieve data
         xapiManager.retrieveXAPIStatements("test01@gmail.com");
-//      respectClientManager.bindService(this)
-    }
-
-
-//  private RespectClientManager respectClientManager = new RespectClientManager();
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        //      respectClientManager.bindService(this);
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
