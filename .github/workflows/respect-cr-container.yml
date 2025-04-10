@@ -23,10 +23,9 @@ jobs:
         uses: android-actions/setup-android@v2
 
       - name: Make gradlew executable
-        run: chmod +x ./android/gradlew
+        run: chmod +x ./gradlew
 
       - name: Build Debug APK
-        working-directory: ./android
         run: ./gradlew assembleDebug
 
       - name: Upload APK to GitHub Releases (Optional)
