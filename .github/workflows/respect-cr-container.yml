@@ -34,7 +34,7 @@ jobs:
           name: app-debug.apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-            - name: Push APK to GitHub Branch
+      - name: Push APK to GitHub Branch
         run: |
           git config --global user.email "skanda@sutara.org"
           git config --global user.name "kvskandakumar"
