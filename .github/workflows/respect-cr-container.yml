@@ -36,7 +36,7 @@ jobs:
 
       - name: Push APK to GitHub Branch
         run: |
-          cd android/app/build/outputs/apk/debug/
+          cd app/build/outputs/apk/debug/
           git init
           git config user.email "prakash@sutara.org"
           git config user.name "bhanugummana"
