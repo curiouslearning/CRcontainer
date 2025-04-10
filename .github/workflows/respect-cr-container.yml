@@ -38,8 +38,8 @@ jobs:
         run: |
           cd app/build/outputs/apk/debug/
           git init
-          git config user.email "prakash@sutara.org"
-          git config user.name "bhanugummana"
+          git config user.email "skanda@sutara.org"
+          git config user.name "kvskandakumar"
           git checkout -b respect-apk
           git add app-debug.apk
           git commit -m "created apk"
