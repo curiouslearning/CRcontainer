@@ -40,7 +40,7 @@ jobs:
           git init
           git config --global user.email "skanda@sutara.org"
           git config --global user.name "kvskandakumar"
-          git remote add origin https://${{ secrets.ACCESS_TOKEN }}@github.com/chimple/cuba.git
+          git remote add origin https://${{ secrets.ACCESS_TOKEN }}@github.com/chimple/CRcontainer.git
           git checkout -b respect-apk
           git add app-debug.apk
           git commit -m "created apk"
