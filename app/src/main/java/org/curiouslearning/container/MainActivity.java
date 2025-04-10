@@ -110,6 +110,7 @@ public class MainActivity extends BaseActivity {
         // call xapi Retrieve data
         xapiManager.retrieveXAPIStatements("test01@gmail.com");
 //      respectClientManager.bindService(this)
+    }
 
 
 //  private RespectClientManager respectClientManager = new RespectClientManager();
@@ -117,7 +118,7 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//      respectClientManager.bindService(this);
+        //      respectClientManager.bindService(this);
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
