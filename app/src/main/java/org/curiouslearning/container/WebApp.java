@@ -109,6 +109,19 @@ public class WebApp extends BaseActivity {
                 appUrl = addCampaignIdToUrl(appUrl);
             }
         }
+
+        SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+        String lessonId = prefs.getString("lessonId", "");
+
+        if (lessonId != null && !lessonId.isEmpty()) {
+            if (appUrl.contains("?")) {
+                appUrl += "&lessonId=" + lessonId;
+            } else {
+                appUrl += "?lessonId=" + lessonId;
+            }
+        }
+        Log.d("AppUrl-",appUrl);
+//        webView.loadUrl("http://192.168.0.101:8080"); for running localhost
         webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
@@ -185,6 +198,13 @@ public class WebApp extends BaseActivity {
                 Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
             }
         }
+
+        @JavascriptInterface
+        public String getLessonId() {
+            SharedPreferences prefs = mContext.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+            return prefs.getString("lessonId", "");
+        }
+
     }
 
     public void setAppOrientation(String orientationType) {
