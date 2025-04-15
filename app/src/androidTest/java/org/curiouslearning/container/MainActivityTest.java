@@ -11,9 +11,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
+import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.matcher.ViewMatchers.*;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static org.hamcrest.Matchers.anything;
 
 @RunWith(AndroidJUnit4.class)
 public class MainActivityTest {
@@ -24,8 +28,23 @@ public class MainActivityTest {
 
     @Test
     public void test_languagePopupIsShown_andLanguagesDisplayed() {
-        SystemClock.sleep(2000);
         onView(withId(R.id.autoComplete))
+                .check(matches(isDisplayed()));
+
+    }
+
+    @Test
+    public void test_clickDropdown_showsMenu() {
+        onView(withId(R.id.dropdown_menu)).perform(click());
+
+    }
+
+    @Test
+    public void test_dropdownIsScrollable() {
+        onView(withId(R.id.dropdown_menu)).perform(click());
+        onData(anything())
+                .inRoot(RootMatchers.isPlatformPopup())
+                .atPosition(50)
                 .check(matches(isDisplayed()));
     }
 }
