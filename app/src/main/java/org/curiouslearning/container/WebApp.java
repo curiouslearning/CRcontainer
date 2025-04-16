@@ -24,11 +24,14 @@ import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class WebApp extends BaseActivity {
 
     private String title;
     private String appUrl;
-
     private WebView webView;
     private SharedPreferences sharedPref;
     private SharedPreferences utmPrefs;
@@ -60,7 +63,7 @@ public class WebApp extends BaseActivity {
         if (intent != null) {
             urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
-            appUrl = intent.getStringExtra("appUrl");
+            appUrl = "https://ibiza-stage-ftm-respect.firebaseapp.com/";
             language = intent.getStringExtra("language");
             languageInEnglishName = intent.getStringExtra("languageInEnglishName");
         }
@@ -157,6 +160,32 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
+    public void sendDataToJS(String type) {
+        try {
+            JSONObject response = new JSONObject();
+            response.put("type", type);
+
+                switch (type) {
+                    case "score":
+                        response.put("value", sharedPref.getInt("score", 0));
+                        break;
+                    case "starCount":
+                        response.put("value", sharedPref.getInt("stars", 0));
+                        break;
+                    case "lessonProgress":
+                        response.put("lesson", sharedPref.getInt("lesson", 0));
+                        response.put("progress", sharedPref.getInt("progress", 0));
+                        break;
+                }
+
+            final String jsCode = "window.onDataFromAndroid(" + JSONObject.quote(response.toString()) + ")";
+            webView.post(() -> webView.evaluateJavascript(jsCode, null));
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
     public class WebAppInterface {
         private Context mContext;
 
@@ -184,6 +213,48 @@ public class WebApp extends BaseActivity {
             } else {
                 Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
             }
+        }
+
+        @JavascriptInterface
+        public void sendDataToContainer(String gamePlayData) {
+            Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + gamePlayData);
+
+            try {
+                JSONObject gameData = new JSONObject(gamePlayData);
+                Log.d("WebView", "JSON GAME DATA" + appUrl + "--->" + gameData);
+                String type = gameData.optString("type");
+
+//                SharedPreferences sharedPref = context.getSharedPreferences("game_data", Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sharedPref.edit();
+
+                switch (type) {
+                    case "score":
+                        int score = gameData.optInt("value");
+                        editor.putInt("score", score);
+                        break;
+                    case "starCount":
+                        int stars = gameData.optInt("value");
+                        editor.putInt("stars", stars);
+                        break;
+                    case "lessonProgress":
+                        int lesson = gameData.optInt("lesson");
+                        int progress = gameData.optInt("progress");
+                        editor.putInt("lesson", lesson);
+                        editor.putInt("progress", progress);
+                        break;
+                    default:
+                        Log.w("WebView", "Unknown data type received: " + type);
+                }
+
+                editor.apply();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @JavascriptInterface
+        public void requestDataFromContainer(String type) {
+            ((WebApp) mContext).sendDataToJS(type);
         }
     }
 
