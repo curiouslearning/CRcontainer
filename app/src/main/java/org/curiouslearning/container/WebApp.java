@@ -17,6 +17,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -27,6 +28,8 @@ import org.curiouslearning.container.utilities.AudioPlayer;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Iterator;
 
 public class WebApp extends BaseActivity {
 
@@ -160,28 +163,22 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
-    public void sendDataToJS(String type) {
+    public void sendDataToJS(String key, @Nullable JSONObject tempData) {
         try {
-            JSONObject response = new JSONObject();
-            response.put("type", type);
+            String jsonString;
 
-                switch (type) {
-                    case "score":
-                        response.put("value", sharedPref.getInt("score", 0));
-                        break;
-                    case "starCount":
-                        response.put("value", sharedPref.getInt("stars", 0));
-                        break;
-                    case "lessonProgress":
-                        response.put("lesson", sharedPref.getInt("lesson", 0));
-                        response.put("progress", sharedPref.getInt("progress", 0));
-                        break;
-                }
+            if (tempData != null) {
+                // tempData is basically to send normal data from java to javascript
+                jsonString = tempData.toString();
+            } else {
+                // otherwise fallback to SharedPreferences if no tempData provided
+                jsonString = sharedPref.getString(key, "{}");
+            }
 
-            final String jsCode = "window.onDataFromAndroid(" + JSONObject.quote(response.toString()) + ")";
+            final String jsCode = "window.onDataFromAndroid(" + JSONObject.quote(jsonString) + ")";
             webView.post(() -> webView.evaluateJavascript(jsCode, null));
 
-        } catch (JSONException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -216,45 +213,26 @@ public class WebApp extends BaseActivity {
         }
 
         @JavascriptInterface
-        public void sendDataToContainer(String gamePlayData) {
-            Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + gamePlayData);
+        public void sendDataToContainer(String key, String payload) {
+            Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + payload);
 
             try {
-                JSONObject gameData = new JSONObject(gamePlayData);
-                Log.d("WebView", "JSON GAME DATA" + appUrl + "--->" + gameData);
-                String type = gameData.optString("type");
+                JSONObject gameData = new JSONObject(payload);
+                Log.d("WebView", "JSON GAME DATA " + appUrl + "---> " + gameData);
 
-//                SharedPreferences sharedPref = context.getSharedPreferences("game_data", Context.MODE_PRIVATE);
+                // now we are getting data from js as a json basically in string format, and saving entire data into sharedPref
                 SharedPreferences.Editor editor = sharedPref.edit();
-
-                switch (type) {
-                    case "score":
-                        int score = gameData.optInt("value");
-                        editor.putInt("score", score);
-                        break;
-                    case "starCount":
-                        int stars = gameData.optInt("value");
-                        editor.putInt("stars", stars);
-                        break;
-                    case "lessonProgress":
-                        int lesson = gameData.optInt("lesson");
-                        int progress = gameData.optInt("progress");
-                        editor.putInt("lesson", lesson);
-                        editor.putInt("progress", progress);
-                        break;
-                    default:
-                        Log.w("WebView", "Unknown data type received: " + type);
-                }
-
+                editor.putString(key, gameData.toString());
                 editor.apply();
+
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
 
         @JavascriptInterface
-        public void requestDataFromContainer(String type) {
-            ((WebApp) mContext).sendDataToJS(type);
+        public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
+            ((WebApp) mContext).sendDataToJS(key, tempData);
         }
     }
 
