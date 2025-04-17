@@ -6,8 +6,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
+import android.os.RemoteException;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -19,11 +18,18 @@ import android.widget.ProgressBar;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.appcompat.app.AppCompatActivity;
+import com.android.installreferrer.api.InstallReferrerClient;
+import com.android.installreferrer.api.InstallReferrerStateListener;
+import com.android.installreferrer.api.ReferrerDetails;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
+import com.facebook.appevents.iap.InAppPurchaseUtils;
 import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
+
+import org.curiouslearning.container.data.database.WebAppDao;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -34,10 +40,12 @@ import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
 import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
+import org.curiouslearning.container.utilities.DeepLinkHelper;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import org.curiouslearning.container.utilities.SlackUtils;
 
 import java.math.BigInteger;
+import java.net.URLDecoder;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -46,16 +54,14 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 import android.util.Log;
 import android.content.Intent;
-import android.widget.TextView;
-import androidx.core.view.GestureDetectorCompat;
 
 public class MainActivity extends BaseActivity {
 
@@ -67,10 +73,10 @@ public class MainActivity extends BaseActivity {
     private Button settingsButton;
     private Dialog dialog;
     private ProgressBar loadingIndicator;
+
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String REFERRER_HANDLED_KEY = "isReferrerHandled";
     private static final String UTM_PREFS_NAME = "utmPrefs";
-    private final String isValidLanguage = "notValidLanguage";
     private SharedPreferences utmPrefs;
     private SharedPreferences prefs;
     private String selectedLanguage;
@@ -78,58 +84,62 @@ public class MainActivity extends BaseActivity {
     private static final String TAG = "MainActivity";
     private AudioPlayer audioPlayer;
     private String appVersion;
+    private InstallReferrerClient referrerClient;
     private boolean isReferrerHandled;
+    private boolean isDataReceived;
+    private boolean langCheck;
+    private boolean isDebugApk;
+    private Uri deepLinkUri;
+    private String deferredURL;
     private long initialSlackAlertTime;
-    private GestureDetectorCompat gestureDetector;
-    private TextView textView;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Turn this back to BuildConfig.DEBUG just in case if you want to have 
+        // language selection button in debug only
+        isDebugApk = true; //BuildConfig.DEBUG;
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
+        langCheck = true;
+        isDataReceived = false;
         initialSlackAlertTime= AnalyticsUtils.getCurrentEpochTime();
-        homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
-        cachePseudoId();
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
-            public void onReferrerReceived(String deferredLang, String fullURL) {
-                String language = deferredLang.trim();
+            public void onReferrerReceived(String language, String fullURL) {
+                // Handle referrer language received
 
                 if (!isReferrerHandled ) {
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putBoolean(REFERRER_HANDLED_KEY, true);
-                    editor.apply();
-                    if((language!=null && language.length()>0) || fullURL.contains("curiousreader://app")) {
-                        validLanguage(language, "google", fullURL.replace("deferred_deeplink=",""));
-                        String pseudoId = prefs.getString("pseudoId", "");
-                        String manifestVrsn = prefs.getString("manifestVersion", "");
-                        String lang ="";
-                        if(language!=null && language.length()>0)
-                            lang =  Character.toUpperCase(language.charAt(0))
-                                    + language.substring(1).toLowerCase();
-                        selectedLanguage = lang;
-                        storeSelectLanguage(lang);
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
-                                manifestVrsn, "true");
-                        Log.d(TAG, "Referrer language received: " + language + " " + lang);
-                    }else{
-                        fetchFacebookDeferredData();
+                    if (isDataReceived == true ) {
+                        System.out.println("return from playstore");
+                        return;
                     }
-                }else {
+                    if(language == null || language.length() ==0){
+                        String pseudoId = prefs.getString("pseudoId", "");
+                        long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
+                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for google defeered deep link URL: "+fullURL+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
+                        return;
+                    }
+                    String lang = Character.toUpperCase(language.charAt(0))
+                            + language.substring(1).toLowerCase();
+                    isDataReceived=true;
+                    deferredURL = fullURL;
+                    selectedLanguage = lang;
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (selectedLanguage.equals("")) {
-                                showLanguagePopup();
-                            } else {
-                                loadApps(selectedLanguage);
-                            }
+                            // if(!isDebugApk)
+                                // settingsButton.setVisibility(View.GONE);
+                            loadApps(lang);
                         }
                     });
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putBoolean(REFERRER_HANDLED_KEY, true);
+                    editor.apply();
+                    Log.d(TAG, "Referrer language received: " + language + " " + lang);
                 }
+
             }
         };
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(getApplicationContext(), referrerCallback);
@@ -149,10 +159,13 @@ public class MainActivity extends BaseActivity {
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
+        cachePseudoId();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         appVersion = AppUtils.getAppVersionName(this);
         manifestVersion = prefs.getString("manifestVersion", "");
+
+        homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         dialog = new Dialog(this);
         initRecyclerView();
         loadingIndicator = findViewById(R.id.loadingIndicator);
@@ -163,44 +176,42 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
         settingsButton = findViewById(R.id.settings);
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                AnimationUtil.scaleButton(view, new Runnable() {
-                    @Override
-                    public void run() {
-                        showLanguagePopup();
-                    }
-                });
-            }
-        });
-    }
+        // if( isDebugApk || selectedLanguage.length() == 0 || selectedLanguage ==null){
+            settingsButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    AnimationUtil.scaleButton(view, new Runnable() {
+                        @Override
+                        public void run() {
 
-    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
-        @Override
-        public boolean onDoubleTap(MotionEvent e) {
-            android.util.Log.d("MainActivity", " Double tapped on settings_box");
+                            showLanguagePopup();
+                        }
+                    });
+                }
+            });
+        // }
+        // else{
+        //     settingsButton.setVisibility(View.GONE);
+        // }
 
-            String pseudoId = prefs.getString("pseudoId", "");
-            textView.setText("cr_user_id_"+pseudoId);
-            textView.setVisibility(View.VISIBLE);
-            return true;
-        }
-    }
 
-    private void fetchFacebookDeferredData(){
         AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
             @Override
             public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                if (isDataReceived == true) {
+                    System.out.println("return from facebook");
+                    return;
+                }
                 String pseudoId = prefs.getString("pseudoId", "");
                 String manifestVrsn = prefs.getString("manifestVersion", "");
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
                 }
-                Log.d(TAG, "onDeferredAppLinkDataFetched:Facebook AppLinkData: " + appLinkData);
+                Log.d(TAG, "onDeferredAppLinkDataFetched: AppLinkData: " + appLinkData);
                 if (appLinkData != null) {
-                    Uri deepLinkUri = appLinkData.getTargetUri();
+                    isDataReceived = true;
+                    deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     String source = ((Uri) deepLinkUri).getQueryParameter("source");
@@ -209,14 +220,33 @@ public class MainActivity extends BaseActivity {
                     editor.putString("source", source);
                     editor.putString("campaign_id", campaign_id);
                     editor.apply();
-                    validLanguage(language,"facebook", String.valueOf(deepLinkUri));
-                    String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
-                    selectedLanguage = lang;
-                    storeSelectLanguage(lang);
-                    AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
-                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                            manifestVrsn, "true");
+                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language Source CampaignId: " + language + " " + source
+                            + " " + campaign_id +" "+isDebugApk);
+
+                    if (language != null) {
+
+                        deferredURL = String.valueOf(deepLinkUri);
+                        String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                        Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
+                        selectedLanguage = lang;
+                        storeSelectLanguage(lang);
+                        AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
+                                manifestVrsn, "true");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // if(isDebugApk == false){
+                                //     settingsButton = findViewById(R.id.settings);
+                                //     settingsButton.setVisibility(View.GONE);
+                                // }
+                                loadApps(lang);
+                            }
+                        });
+                    }else{
+                        long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
+                        SlackUtils.sendMessageToSlack(MainActivity.this,"Language is null for Facebook defereed deep link URL: "+deepLinkUri+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
+                    }
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -232,6 +262,25 @@ public class MainActivity extends BaseActivity {
                 }
             }
         });
+
+        // settingsButton = findViewById(R.id.settings);
+        // if(selectedLanguage ==null){
+        //     settingsButton.setOnClickListener(new View.OnClickListener() {
+        //         @Override
+        //         public void onClick(View view) {
+        //             audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
+        //             AnimationUtil.scaleButton(view, new Runnable() {
+        //                 @Override
+        //                 public void run() {
+
+        //                     showLanguagePopup();
+        //                 }
+        //             });
+        //         }
+        //     });
+        // }else{
+        //     settingsButton.setVisibility(View.GONE);
+        // }
     }
 
     protected void initRecyclerView() {
@@ -259,7 +308,7 @@ public class MainActivity extends BaseActivity {
     public static String convertEpochToDate(long epochTimeMillis) {
         Instant instant = Instant.ofEpochMilli(epochTimeMillis);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy hh:mm a")
-                .withZone(ZoneId.systemDefault());
+                                                       .withZone(ZoneId.systemDefault());
         return formatter.format(instant);
     }
 
@@ -275,60 +324,13 @@ public class MainActivity extends BaseActivity {
         System.out.println(pseudoId);
         return pseudoId;
     }
-    private void validLanguage(String deferredLang, String source, String deepLinkUri) {
-        String language = deferredLang.trim();
-        long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
-        String pseudoId = prefs.getString("pseudoId", "");
-        String[] uriParts = deepLinkUri.split("(?=[?&])");
-        StringBuilder message = new StringBuilder();
-        message.append("An incorrect or null language value was detected in a ")
-                .append(source)
-                .append(" campaign’s deferred deep link with the following details:\n\n");
-        for (String part : uriParts) {
-            message.append(part).append("\n");
-        }
-        message.append("\n");
-        message.append("User affected:: ").append(pseudoId).append("\n")
-                .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
-                .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
-        if( language == null || language.length()==0 ){
-            SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-            showLanguagePopup();
-            return;
-        }
-        homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
-            List<String> lowerCaseLanguages = validLanguages.stream()
-                    .map(String::toLowerCase)
-                    .collect(Collectors.toList());
-            if (lowerCaseLanguages!=null && lowerCaseLanguages.size() > 0 &&!lowerCaseLanguages.contains(language.toLowerCase().trim())) {
-                SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-                showLanguagePopup();
-                loadingIndicator.setVisibility(View.GONE);
-                selectedLanguage="";
-                storeSelectLanguage("");
-                return;
-            }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
-                String lang =  Character.toUpperCase(language.charAt(0))
-                        + language.substring(1).toLowerCase();
-                loadApps(lang);
-            }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
-                loadApps(isValidLanguage);
-            }
-        });
-    }
-
 
     private void showLanguagePopup() {
         if (!dialog.isShowing()) {
             dialog.setContentView(R.layout.language_popup);
 
-
             dialog.setCanceledOnTouchOutside(false);
             dialog.getWindow().setBackgroundDrawable(null);
-
-            ImageView invisibleBox = dialog.findViewById(R.id.invisible_box);
-            textView = dialog.findViewById(R.id.pseudo_id_text);
-
             ImageView closeButton = dialog.findViewById(R.id.setting_close);
             TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
             AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
@@ -375,6 +377,8 @@ public class MainActivity extends BaseActivity {
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                         selectedLanguage, manifestVrsn, "false");
                                 dialog.dismiss();
+                                // if(!isDebugApk)
+                                //     settingsButton.setVisibility(View.GONE);
                                 loadApps(selectedLanguage);
                             }
                         });
@@ -382,21 +386,12 @@ public class MainActivity extends BaseActivity {
                 }
             });
 
-            gestureDetector = new GestureDetectorCompat(this, new GestureListener());
-            if(invisibleBox!=null){
-                invisibleBox.setOnTouchListener((v, event) -> {
-                    gestureDetector.onTouchEvent(event); // Process the touch events with GestureDetector
-                    return true;
-                });
-            }
-
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
                     AnimationUtil.scaleButton(v, new Runnable() {
                         @Override
                         public void run() {
-                            textView.setVisibility(View.GONE);
                             dialog.dismiss();
                         }
                     });
@@ -430,7 +425,7 @@ public class MainActivity extends BaseActivity {
             languages.put(languageInEnglishName, languageInLocaName);
         }
         for (WebApp webApp : webApps) {
-            String languageInEnglishName = webApp.getLanguageInEnglishName();
+            String languageInEnglishName = webApp.getLanguageInEnglishName(); 
             String languageInLocalName = webApp.getLanguage();
             String[] parts = extractBaseLanguageAndDialect(languageInLocalName, languageInEnglishName);
             String baseLanguage = parts[0];  // The root language (e.g., "English", "Portuguese")
@@ -465,13 +460,13 @@ public class MainActivity extends BaseActivity {
     }
 
     private String[] extractBaseLanguageAndDialect(String languageInLocalName, String languageInEnglishName) {
-        String baseLanguage = languageInEnglishName;
+        String baseLanguage = languageInEnglishName;  
         String dialect = "";
 
         if (languageInLocalName.contains(" - ")) {
             String[] parts = languageInLocalName.split(" - ");
-            baseLanguage = parts[0].trim();
-            dialect = parts[1].trim();
+            baseLanguage = parts[0].trim();  
+            dialect = parts[1].trim();    
         } else {
             baseLanguage = languageInEnglishName;
             dialect = languageInLocalName;
@@ -489,18 +484,28 @@ public class MainActivity extends BaseActivity {
             public void onChanged(List<WebApp> webApps) {
                 loadingIndicator.setVisibility(View.GONE);
                 if (!webApps.isEmpty()) {
+                    langCheck = true;
                     apps.webApps = webApps;
                     apps.notifyDataSetChanged();
                     storeSelectLanguage(language);
                 } else {
                     if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
+                        // settingsButton.setVisibility(View.VISIBLE);
+                        showLanguagePopup();
+                    } else if (manifestVersion.equals("") && langCheck) {
+                        langCheck = false;
+                        loadingIndicator.setVisibility(View.VISIBLE);
+                        homeViewModal.getAllWebApps();
+                    } else {
+                        if(deferredURL!=null){
+                            String pseudoId = prefs.getString("pseudoId", "");
+                            long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
+                            SlackUtils.sendMessageToSlack(MainActivity.this,"Language is not correct for defeered deep link URL: "+deferredURL+" , cr_user_id: "+pseudoId +" , currentTimestamp: "+convertEpochToDate(currentEpochTime)+ " , initialSlackAlertTime: "+convertEpochToDate(initialSlackAlertTime));
+                        }
+                        // settingsButton.setVisibility(View.VISIBLE);
                         showLanguagePopup();
                     }
-                    if (manifestVersion.equals("")) {
-                        if(!selectedlanguage.equals(isValidLanguage))
-                            loadingIndicator.setVisibility(View.VISIBLE);
-                        homeViewModal.getAllWebApps();
-                    }
+
                 }
             }
         });
@@ -521,4 +526,40 @@ public class MainActivity extends BaseActivity {
             Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
         }
     }
+
+    // private void loadFallbackWebApps() {
+    // homeViewModal.getSelectedlanguageWebApps("English").observe(this, new
+    // Observer<List<WebApp>>() {
+    // @Override
+    // public void onChanged(List<WebApp> fallbackWebApps) {
+    // loadingIndicator.setVisibility(View.GONE);
+    // apps.webApps = fallbackWebApps;
+    // apps.notifyDataSetChanged();
+    // storeSelectLanguage("English");
+    // // Remove the observer after receiving the initial fallback web apps
+    // homeViewModal.getSelectedlanguageWebApps("English").removeObserver(this);
+    // }
+    // });
+    // }
+
+    // private void showPrompt(String message) {
+    // if (!isFinishing()) {
+    // AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    // builder.setMessage(message)
+    // .setCancelable(false)
+    // .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+    // public void onClick(DialogInterface dialog, int id) {
+    // finish();
+    // if (prefs.getString("selectedLanguage", "").equals("")) {
+    // showLanguagePopup();
+    // } else {
+    // loadApps("English");
+    // }
+    // }
+    // });
+    // AlertDialog alert = builder.create();
+    // alert.show();
+    // }
+    // }
+
 }
