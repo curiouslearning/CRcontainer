@@ -116,7 +116,49 @@ public class MainActivity extends BaseActivity {
                                 manifestVrsn, "true");
                         Log.d(TAG, "Referrer language received: " + language + " " + lang);
                     }else{
-                        fetchFacebookDeferredData();
+                        AppLinkData.fetchDeferredAppLinkData(MainActivity.this, new AppLinkData.CompletionHandler() {
+                            @Override
+                            public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
+                                String pseudoId = prefs.getString("pseudoId", "");
+                                String manifestVrsn = prefs.getString("manifestVersion", "");
+                                if (dialog != null && dialog.isShowing()) {
+                                    dialog.dismiss();
+                                    Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
+                                }
+                                Log.d(TAG, "onDeferredAppLinkDataFetched:Facebook AppLinkData: " + appLinkData);
+                                if (appLinkData != null) {
+                                    Uri deepLinkUri = appLinkData.getTargetUri();
+                                    Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
+                                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
+                                    String source = ((Uri) deepLinkUri).getQueryParameter("source");
+                                    String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
+                                    SharedPreferences.Editor editor = utmPrefs.edit();
+                                    editor.putString("source", source);
+                                    editor.putString("campaign_id", campaign_id);
+                                    editor.apply();
+                                    validLanguage(language,"facebook", String.valueOf(deepLinkUri));
+                                    String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
+                                    selectedLanguage = lang;
+                                    storeSelectLanguage(lang);
+                                    AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
+                                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
+                                            manifestVrsn, "true");
+                                } else {
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            if (selectedLanguage.equals("")) {
+                                                showLanguagePopup();
+                                            } else {
+                                                loadApps(selectedLanguage);
+                                            }
+
+                                        }
+                                    });
+                                }
+                            }
+                        });
                     }
                 }else {
                     runOnUiThread(new Runnable() {
@@ -186,52 +228,6 @@ public class MainActivity extends BaseActivity {
             textView.setVisibility(View.VISIBLE);
             return true;
         }
-    }
-
-    private void fetchFacebookDeferredData(){
-        AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
-            @Override
-            public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
-                String pseudoId = prefs.getString("pseudoId", "");
-                String manifestVrsn = prefs.getString("manifestVersion", "");
-                if (dialog != null && dialog.isShowing()) {
-                    dialog.dismiss();
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
-                }
-                Log.d(TAG, "onDeferredAppLinkDataFetched:Facebook AppLinkData: " + appLinkData);
-                if (appLinkData != null) {
-                    Uri deepLinkUri = appLinkData.getTargetUri();
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
-                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
-                    String source = ((Uri) deepLinkUri).getQueryParameter("source");
-                    String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
-                    SharedPreferences.Editor editor = utmPrefs.edit();
-                    editor.putString("source", source);
-                    editor.putString("campaign_id", campaign_id);
-                    editor.apply();
-                    validLanguage(language,"facebook", String.valueOf(deepLinkUri));
-                    String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
-                    selectedLanguage = lang;
-                    storeSelectLanguage(lang);
-                    AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
-                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                            manifestVrsn, "true");
-                } else {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (selectedLanguage.equals("")) {
-                                showLanguagePopup();
-                            } else {
-                                loadApps(selectedLanguage);
-                            }
-
-                        }
-                    });
-                }
-            }
-        });
     }
 
     protected void initRecyclerView() {
