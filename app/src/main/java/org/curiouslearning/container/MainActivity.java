@@ -80,7 +80,8 @@ public class MainActivity extends BaseActivity {
 
     private XAPIManager xapiManager;
     //  private RespectClientManager respectClientManager = new RespectClientManager();
-    static String activity_id = "";
+    public static String activity_id = "";
+    public static boolean isDeepLink = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,13 +163,17 @@ public class MainActivity extends BaseActivity {
         installReferrerManager.checkPlayStoreAvailability();
         Intent intent = getIntent();
         if (intent.getData() != null) {
+            Log.d(TAG, "deepLink Data : " + intent.getData());
+
             String language = intent.getData().getQueryParameter("language");
-            String lessonId = intent.getData().getQueryParameter("lessonId");
-            Log.d(TAG, "Lesson id : " + lessonId);
-            activity_id = lessonId;
+            activity_id = intent.getData().getQueryParameter("activity_id");
+            Log.d(TAG, "Lesson id : " + activity_id);
             if (language != null) {
                 selectedLanguage = Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
+            }
+            if(activity_id != "") {
+                isDeepLink = true;
             }
         }
         audioPlayer = new AudioPlayer();

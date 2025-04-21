@@ -204,8 +204,10 @@ public class WebApp extends BaseActivity {
         @JavascriptInterface
         public String getLessonId() {
             Log.d("getlessonID", activity_id);
+            String lesson_id = activity_id;
+            activity_id = "";
             SharedPreferences prefs = mContext.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-            return activity_id;
+            return lesson_id;
         }
 
     }

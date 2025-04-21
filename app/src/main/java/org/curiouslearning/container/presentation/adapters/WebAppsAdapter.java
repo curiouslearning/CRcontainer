@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +22,8 @@ import org.curiouslearning.container.utilities.AudioPlayer;
 import org.curiouslearning.container.utilities.PulsingView;
 
 import java.util.List;
+import static org.curiouslearning.container.MainActivity.activity_id;
+import static org.curiouslearning.container.MainActivity.isDeepLink;
 
 public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHolder> {
 
@@ -106,7 +109,10 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 });
             }
         });
-        holder.itemView.post(() -> holder.itemView.performClick());
+        if(activity_id != "" && isDeepLink) {
+            isDeepLink = false;
+            holder.itemView.post(() -> holder.itemView.performClick());
+        }
     }
 
     @Override
