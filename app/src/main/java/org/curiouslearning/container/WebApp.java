@@ -1,5 +1,7 @@
 package org.curiouslearning.container;
 
+import static org.curiouslearning.container.MainActivity.activity_id;
+
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -121,8 +123,8 @@ public class WebApp extends BaseActivity {
             }
         }
         Log.d("AppUrl-",appUrl);
-//        webView.loadUrl("http://192.168.0.101:8080"); for running localhost
-        webView.loadUrl(addCrUserIdToUrl(appUrl));
+        webView.loadUrl("https://ibiza-stage-ftm-respect-dev.firebaseapp.com/"); //for running localhost
+//        webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
@@ -201,8 +203,9 @@ public class WebApp extends BaseActivity {
 
         @JavascriptInterface
         public String getLessonId() {
+            Log.d("getlessonID", activity_id);
             SharedPreferences prefs = mContext.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-            return prefs.getString("lessonId", "");
+            return activity_id;
         }
 
     }

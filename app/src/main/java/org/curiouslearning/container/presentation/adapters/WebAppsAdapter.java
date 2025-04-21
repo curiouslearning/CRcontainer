@@ -106,6 +106,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 });
             }
         });
+        holder.itemView.post(() -> holder.itemView.performClick());
     }
 
     @Override

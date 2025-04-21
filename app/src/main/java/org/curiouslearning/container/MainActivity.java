@@ -80,6 +80,7 @@ public class MainActivity extends BaseActivity {
 
     private XAPIManager xapiManager;
     //  private RespectClientManager respectClientManager = new RespectClientManager();
+    static String activity_id = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,17 +164,11 @@ public class MainActivity extends BaseActivity {
         if (intent.getData() != null) {
             String language = intent.getData().getQueryParameter("language");
             String lessonId = intent.getData().getQueryParameter("lessonId");
-            Log.d(TAG, "Lesson id" + lessonId);
+            Log.d(TAG, "Lesson id : " + lessonId);
+            activity_id = lessonId;
             if (language != null) {
                 selectedLanguage = Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
-            }
-            if (lessonId != null) {
-                Log.d(TAG, "Deep link lessonId: " + lessonId);
-                // Save to SharedPreferences or directly pass it later
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putString("lessonId", lessonId);
-                editor.apply();
             }
         }
         audioPlayer = new AudioPlayer();
