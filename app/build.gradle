@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
+    id 'jacoco'
 }
 
 android {
@@ -30,6 +31,7 @@ android {
 
     buildTypes {
         debug{
+            testCoverageEnabled true
             buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/dev/\""
         }
         release {
@@ -72,8 +74,67 @@ dependencies {
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+
 
     implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
+}
+jacoco {
+    toolVersion = "0.8.10" // or latest stable version
+}
+
+def coverageSourceDirs = [
+        "src/main/java"
+]
+
+task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports after running tests."
+
+    reports {
+        xml.required = true
+        html.required = true
+    }
+
+    classDirectories.setFrom(fileTree(
+            dir: "$buildDir/intermediates/classes/debug",
+            excludes: [
+                    '**/R.class',
+                    '**/R$*.class',
+                    '**/BuildConfig.*',
+                    '**/Manifest*.*',
+                    '**/*Test*.*',
+                    '**/databinding/*',
+                    '**/android/databinding/*',
+                    '**/androidx/**',
+                    '**/*$ViewInjector*.*',
+                    '**/*$ViewBinder*.*'
+            ]
+    ))
+
+    sourceDirectories.setFrom(files(coverageSourceDirs))
+    executionData.setFrom(fileTree(dir: "$buildDir", includes: [
+            "jacoco/testDebugUnitTest.exec",
+            "outputs/code-coverage/connected/*coverage.ec"
+    ]))
+
+    doFirst {
+        classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, excludes: [
+                            '**/R.class',
+                            '**/R$*.class',
+                            '**/BuildConfig.*',
+                            '**/Manifest*.*',
+                            '**/*Test*.*',
+                            '**/databinding/*',
+                            '**/android/databinding/*',
+                            '**/androidx/**'
+                    ])
+                })
+        )
+    }
 }
