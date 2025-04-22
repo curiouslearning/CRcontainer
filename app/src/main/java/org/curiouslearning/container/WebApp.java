@@ -19,6 +19,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -26,11 +27,16 @@ import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Iterator;
+
 public class WebApp extends BaseActivity {
 
     private String title;
     private String appUrl;
-
     private WebView webView;
     private SharedPreferences sharedPref;
     private SharedPreferences utmPrefs;
@@ -62,7 +68,7 @@ public class WebApp extends BaseActivity {
         if (intent != null) {
             urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
-            appUrl = intent.getStringExtra("appUrl");
+            appUrl = "https://ibiza-stage-ftm-respect.firebaseapp.com/";
             language = intent.getStringExtra("language");
             languageInEnglishName = intent.getStringExtra("languageInEnglishName");
         }
@@ -161,6 +167,26 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
+    public void sendDataToJS(String key, @Nullable JSONObject tempData) {
+        try {
+            String jsonString;
+
+            if (tempData != null) {
+                // tempData is basically to send normal data from java to javascript
+                jsonString = tempData.toString();
+            } else {
+                // otherwise fallback to SharedPreferences if no tempData provided
+                jsonString = sharedPref.getString(key, "{}");
+            }
+
+            final String jsCode = "window.onDataFromAndroid(" + JSONObject.quote(jsonString) + ")";
+            webView.post(() -> webView.evaluateJavascript(jsCode, null));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public class WebAppInterface {
         private Context mContext;
 
@@ -198,6 +224,27 @@ public class WebApp extends BaseActivity {
             return lesson_id;
         }
 
+        public void sendDataToContainer(String key, String payload) {
+            Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + payload);
+
+            try {
+                JSONObject gameData = new JSONObject(payload);
+                Log.d("WebView", "JSON GAME DATA " + appUrl + "---> " + gameData);
+
+                // now we are getting data from js as a json basically in string format, and saving entire data into sharedPref
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putString(key, gameData.toString());
+                editor.apply();
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @JavascriptInterface
+        public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
+            ((WebApp) mContext).sendDataToJS(key, tempData);
+        }
     }
 
     public void setAppOrientation(String orientationType) {
