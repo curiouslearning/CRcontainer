@@ -79,7 +79,7 @@ public class XAPIManager {
             scoreObj.setRaw((double)score);
             result.setScore(scoreObj);
             result.setSuccess(score > 35);
-            result.setCompletion(true);
+            result.setCompletion(true); // always setting true??
             result.setResponse("Correct: " + correctMoves + ", Wrong: " + wrongMoves);
 
             // Create Context
@@ -110,8 +110,10 @@ public class XAPIManager {
             StatementLRSResponse response = lrs.saveStatement(statement);
 
             if (response.getSuccess()) {
+                Log.d(TAG, "statement success data : " + statement);
                 Log.d(TAG, "xAPI Statement sent successfully!");
             } else {
+                Log.d(TAG, "statement failure data : " + statement);
                 Log.e(TAG, "Failed to send xAPI Statement: " + response.getErrMsg());
             }
         } catch (Exception e) {

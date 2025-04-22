@@ -51,6 +51,8 @@ public class WebApp extends BaseActivity {
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private AudioPlayer audioPlayer;
+    private static final String TAG = "WebApp";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,7 +70,7 @@ public class WebApp extends BaseActivity {
         if (intent != null) {
             urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
-            appUrl = "https://ibiza-stage-ftm-respect.firebaseapp.com/";
+            appUrl = "https://ibiza-stage-ftm-respect-dev.firebaseapp.com/";
             language = intent.getStringExtra("language");
             languageInEnglishName = intent.getStringExtra("languageInEnglishName");
         }
@@ -223,6 +225,7 @@ public class WebApp extends BaseActivity {
             return lesson_id;
         }
 
+        @JavascriptInterface
         public void sendDataToContainer(String key, String payload) {
             Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + payload);
 
@@ -230,16 +233,52 @@ public class WebApp extends BaseActivity {
                 JSONObject gameData = new JSONObject(payload);
                 Log.d("WebView", "JSON GAME DATA " + appUrl + "---> " + gameData);
 
-                // now we are getting data from js as a json basically in string format, and saving entire data into sharedPref
-                SharedPreferences.Editor editor = sharedPref.edit();
-                editor.putString(key, gameData.toString());
-                editor.apply();
+                // Check if this is gameData and process it
+                if(key.equals("gameData")) {  // Use equals() instead of == for string comparison
+                    XAPIManager xs = new XAPIManager();
+
+                    // Extract values from the JSONObject
+                    String crUserId = gameData.optString("cr_user_id", "");
+                    String ftmLanguage = gameData.optString("ftm_language", "");
+                    String successOrFailure = gameData.optString("success_or_failure", "");
+                    int rightMoves = gameData.optInt("right_moves", 0);
+                    int wrongMoves = gameData.optInt("wrong_moves", 0);
+                    String levelNumber = String.valueOf(gameData.optInt("level_number", 0));
+                    double duration = gameData.optDouble("duration", 0.0);
+
+                    // Now use these extracted values
+                     xs.sendXAPIStatement(
+                            "johndoe01@example.com",
+                            "John Doe 01",
+                            "http://adlnet.gov/expapi/verbs/completed",
+                            successOrFailure,
+                            levelNumber,
+                            "Lesson " + levelNumber,
+                            levelNumber,
+                            "course-456",
+                            "class-789",
+                            "school-101",
+                            "assignment-202",
+                            "chapter-303",
+                            (int)(rightMoves * 100.0 / (rightMoves + wrongMoves)),  // Calculate score percentage
+                            rightMoves,
+                            wrongMoves
+                    );
+                    
+                }
+
+                //just for testing, to check the incoming statements
+//                else if(true) {
+                    XAPIManager xs = new XAPIManager();
+                    xs.retrieveXAPIStatements("johndoe01@example.com");
+                    Log.d(TAG, "Successfully get the statements");
+//                }
+
 
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
-
         @JavascriptInterface
         public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
             ((WebApp) mContext).sendDataToJS(key, tempData);
