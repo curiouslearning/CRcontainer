@@ -296,24 +296,26 @@ public class MainActivity extends BaseActivity {
             showLanguagePopup();
             return;
         }
-        homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
-            List<String> lowerCaseLanguages = validLanguages.stream()
-                    .map(String::toLowerCase)
-                    .collect(Collectors.toList());
-            if (lowerCaseLanguages!=null && lowerCaseLanguages.size() > 0 &&!lowerCaseLanguages.contains(language.toLowerCase().trim())) {
-                SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-                showLanguagePopup();
-                loadingIndicator.setVisibility(View.GONE);
-                selectedLanguage="";
-                storeSelectLanguage("");
-                return;
-            }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
-                String lang =  Character.toUpperCase(language.charAt(0))
-                        + language.substring(1).toLowerCase();
-                loadApps(lang);
-            }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
-                loadApps(isValidLanguage);
-            }
+        runOnUiThread(() -> {
+            homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
+                List<String> lowerCaseLanguages = validLanguages.stream()
+                        .map(String::toLowerCase)
+                        .collect(Collectors.toList());
+                if (lowerCaseLanguages!=null && lowerCaseLanguages.size() > 0 &&!lowerCaseLanguages.contains(language.toLowerCase().trim())) {
+                    SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+                    showLanguagePopup();
+                    loadingIndicator.setVisibility(View.GONE);
+                    selectedLanguage="";
+                    storeSelectLanguage("");
+                    return;
+                }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
+                    String lang =  Character.toUpperCase(language.charAt(0))
+                            + language.substring(1).toLowerCase();
+                    loadApps(lang);
+                }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
+                    loadApps(isValidLanguage);
+                }
+            });
         });
     }
 
