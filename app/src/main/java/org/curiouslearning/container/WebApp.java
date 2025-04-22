@@ -112,17 +112,6 @@ public class WebApp extends BaseActivity {
             }
         }
 
-        SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-        String lessonId = prefs.getString("lessonId", "");
-
-        if (lessonId != null && !lessonId.isEmpty()) {
-            if (appUrl.contains("?")) {
-                appUrl += "&lessonId=" + lessonId;
-            } else {
-                appUrl += "?lessonId=" + lessonId;
-            }
-        }
-        Log.d("AppUrl-",appUrl);
         webView.loadUrl("https://ibiza-stage-ftm-respect-dev.firebaseapp.com/"); //for running localhost
 //        webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
@@ -206,7 +195,6 @@ public class WebApp extends BaseActivity {
             Log.d("getlessonID", activity_id);
             String lesson_id = activity_id;
             activity_id = "";
-            SharedPreferences prefs = mContext.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
             return lesson_id;
         }
 
