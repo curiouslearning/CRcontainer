@@ -118,8 +118,7 @@ public class WebApp extends BaseActivity {
             }
         }
 
-        webView.loadUrl("https://ibiza-stage-ftm-respect-dev.firebaseapp.com/"); //for running localhost
-//        webView.loadUrl(addCrUserIdToUrl(appUrl));
+       webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
