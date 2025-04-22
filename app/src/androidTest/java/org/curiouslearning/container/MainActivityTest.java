@@ -64,4 +64,11 @@ public class MainActivityTest {
                 .inRoot(RootMatchers.isPlatformPopup())
                 .check(matches(isDisplayed()));
     }
+
+    @Test
+    public void test_closeButton() {
+        SystemClock.sleep(2000);
+        onView(withId(R.id.setting_close)).perform(click());
+
+    }
 }
