@@ -5,8 +5,11 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.ConsoleMessage;
@@ -29,7 +32,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public class WebApp extends BaseActivity {
 
@@ -163,15 +172,43 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
-    public void sendDataToJS(String key, @Nullable JSONObject tempData) {
+
+    private String encodeFileToBase64(File file) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] bytes = new byte[(int) file.length()];
+            int read = fis.read(bytes);
+            if (read != bytes.length) {
+                throw new IOException("Could not read entire file");
+            }
+            return Base64.encodeToString(bytes, Base64.NO_WRAP);
+        }
+    }
+
+    public JSONObject convertMapToJson(Map<String, Object> tempMap) throws JSONException, IOException {
+        JSONObject tempData = new JSONObject();
+
+        for (Map.Entry<String, Object> entry : tempMap.entrySet()) {
+            Object value = entry.getValue();
+
+            if (value instanceof File) {
+                File file = (File) value;
+                String base64Data = encodeFileToBase64(file);
+                tempData.put(entry.getKey(), base64Data);
+            } else {
+                tempData.put(entry.getKey(), value);
+            }
+        }
+
+        return tempData;
+    }
+    public void sendDataToJS(String key, @Nullable Map<String, Object> tempMap) {
         try {
             String jsonString;
 
-            if (tempData != null) {
-                // tempData is basically to send normal data from java to javascript
+            if (tempMap != null) {
+                JSONObject tempData = convertMapToJson(tempMap);
                 jsonString = tempData.toString();
             } else {
-                // otherwise fallback to SharedPreferences if no tempData provided
                 jsonString = sharedPref.getString(key, "{}");
             }
 
@@ -231,8 +268,29 @@ public class WebApp extends BaseActivity {
         }
 
         @JavascriptInterface
-        public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
-            ((WebApp) mContext).sendDataToJS(key, tempData);
+        public void requestDataFromContainer(String key) {
+            Map<String, Object> tempTestData = new HashMap<>();
+            tempTestData.put("type", key); // This is critical
+            tempTestData.put("message", "Here's a test red dot image");
+
+            try {
+                // Generate a 2x2 red dot PNG
+                Bitmap bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888);
+                bitmap.eraseColor(Color.RED);
+
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+                byte[] imageBytes = outputStream.toByteArray();
+
+                String base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP);
+                tempTestData.put("image", base64Image);
+
+                // Send to JS
+                ((WebApp) mContext).sendDataToJS(key, tempTestData);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
