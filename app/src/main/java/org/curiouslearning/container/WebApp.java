@@ -1,5 +1,7 @@
 package org.curiouslearning.container;
 
+import static org.curiouslearning.container.MainActivity.activity_id;
+
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -115,7 +117,8 @@ public class WebApp extends BaseActivity {
                 appUrl = addCampaignIdToUrl(appUrl);
             }
         }
-        webView.loadUrl(addCrUserIdToUrl(appUrl));
+
+       webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
@@ -213,6 +216,13 @@ public class WebApp extends BaseActivity {
         }
 
         @JavascriptInterface
+        public String getLessonId() {
+            Log.d("getlessonID", activity_id);
+            String lesson_id = activity_id;
+            activity_id = "";
+            return lesson_id;
+        }
+
         public void sendDataToContainer(String key, String payload) {
             Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + payload);
 
