@@ -284,6 +284,50 @@ public class WebApp extends BaseActivity {
         public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
             ((WebApp) mContext).sendDataToJS(key, tempData);
         }
+
+        @JavascriptInterface
+        public void sendGameLevelInfoToJS() {
+            try {
+                // Create sample game level data (you would load this from your database or preference)
+                JSONArray levelInfoArray = new JSONArray();
+
+                // Get data from SharedPreferences if available
+                String savedGameData = sharedPref.getString(language + "gamePlayedInfo", null);
+
+                if (savedGameData != null) {
+                    // Use existing data if available
+                    levelInfoArray = new JSONArray(savedGameData);
+                } else {
+                    // Sample data in case nothing exists yet
+                    JSONObject level1 = new JSONObject();
+                    level1.put("levelName", "LetterOnly");
+                    level1.put("levelNumber", 0);
+                    level1.put("score", 100);
+                    level1.put("starCount", 3);
+
+                    JSONObject level2 = new JSONObject();
+                    level2.put("levelName", "LetterOnly");
+                    level2.put("levelNumber", 0);
+                    level2.put("score", 80);
+                    level2.put("starCount", 3);
+
+                    levelInfoArray.put(level1);
+                    levelInfoArray.put(level2);
+                }
+
+                // Create a wrapper JSON object with type information
+                JSONObject dataToSend = new JSONObject();
+                dataToSend.put("type", "gameLevelInfo");
+                dataToSend.put("data", levelInfoArray);
+
+                // Send to JavaScript
+                ((WebApp) mContext).sendDataToJS("gameLevelInfo", dataToSend);
+
+                Log.d(TAG, "Sent game level info to JS: " + dataToSend.toString());
+            } catch (JSONException e) {
+                Log.e(TAG, "Error creating game level info", e);
+            }
+        }
     }
 
     public void setAppOrientation(String orientationType) {
