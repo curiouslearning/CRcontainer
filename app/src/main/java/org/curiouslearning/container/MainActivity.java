@@ -13,6 +13,16 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.webkit.WebView;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -86,6 +96,9 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        loadOPDSCatalog();
+
         //      respectClientManager.bindService(this);
         xapiManager = new XAPIManager();
 
@@ -516,4 +529,71 @@ public class MainActivity extends BaseActivity {
             Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
         }
     }
+
+    private void loadOPDSCatalog() {
+        new Thread(() -> {
+            try {
+                Log.d("OPDS", "Starting OPDS fetch from server...");
+
+                URL url = new URL("https://feedthemonster.curiouscontent.org/lang/english/feed_the_monster_en.opds.json");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+
+                Log.d("OPDS", "Connection established, reading input stream...");
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder jsonBuilder = new StringBuilder();
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    jsonBuilder.append(line);
+                }
+
+                reader.close();
+                conn.disconnect();
+
+                Log.d("OPDS", "OPDS JSON fetched successfully.");
+                Log.d("OPDS", "Raw JSON: " + jsonBuilder.toString());
+
+                // Parse the OPDS JSON
+                JSONObject catalog = new JSONObject(jsonBuilder.toString());
+                JSONArray groups = catalog.getJSONArray("groups");
+                JSONObject group = groups.getJSONObject(0);
+                JSONArray publications = group.getJSONArray("publications");
+                JSONObject publication = publications.getJSONObject(0);
+                JSONArray links = publication.getJSONArray("links");
+                String courseUrl = links.getJSONObject(0).getString("href");
+
+                Log.d("OPDS", "Parsed OPDS - course URL: " + courseUrl);
+
+                // Now load the WebView with the game
+                runOnUiThread(() -> {
+                    // Find the WebView using findViewById
+                    WebView webView = findViewById(R.id.web_app);
+
+                    if (webView != null) {
+                        // Enable JavaScript
+                        webView.getSettings().setJavaScriptEnabled(true);
+
+                        // Set the URL to load in the WebView
+                        webView.loadUrl("https://feedthemonster.curiouscontent.org/lang/english/feed_the_monster_en.opds.json");
+                        String finalUrl = "file:///android_asset/www/index.html?config=" + courseUrl;
+                        Log.d("OPDS", "Loading game with config URL: " + finalUrl);
+
+                        webView.loadUrl(finalUrl);
+                    } else {
+                        Log.e(TAG, "WebView is null. Make sure it is defined correctly in the XML layout.");
+                    }
+
+
+                });
+
+            } catch (Exception e) {
+                Log.e("OPDS", "Error while loading OPDS catalog", e);
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+
 }
