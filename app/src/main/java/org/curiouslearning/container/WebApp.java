@@ -252,7 +252,6 @@ public class WebApp extends BaseActivity {
         @JavascriptInterface
         public void sendDataToContainer(String key, String payload) {
             Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + payload);
-
             try {
                 JSONObject gameData = new JSONObject(payload);
                 Log.d("WebView", "JSON GAME DATA " + appUrl + "---> " + gameData);
@@ -269,25 +268,8 @@ public class WebApp extends BaseActivity {
 
         @JavascriptInterface
         public void requestDataFromContainer(String key) {
-            Map<String, Object> tempTestData = new HashMap<>();
-            tempTestData.put("type", key); // This is critical
-            tempTestData.put("message", "Here's a test red dot image");
-
             try {
-                // Generate a 2x2 red dot PNG
-                Bitmap bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888);
-                bitmap.eraseColor(Color.RED);
-
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
-                byte[] imageBytes = outputStream.toByteArray();
-
-                String base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP);
-                tempTestData.put("image", base64Image);
-
-                // Send to JS
-                ((WebApp) mContext).sendDataToJS(key, tempTestData);
-
+                ((WebApp) mContext).sendDataToJS(key, null);
             } catch (Exception e) {
                 e.printStackTrace();
             }
