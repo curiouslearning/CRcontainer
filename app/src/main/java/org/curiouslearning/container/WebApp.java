@@ -32,6 +32,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public class WebApp extends BaseActivity {
 
@@ -268,13 +270,6 @@ public class WebApp extends BaseActivity {
                     
                 }
 
-                //just for testing, to check the incoming statements
-//                else if(true) {
-                    XAPIManager xs = new XAPIManager();
-                    xs.retrieveXAPIStatements("johndoe01@example.com");
-                    Log.d(TAG, "Successfully get the statements");
-//                }
-
 
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -288,46 +283,84 @@ public class WebApp extends BaseActivity {
         @JavascriptInterface
         public void sendGameLevelInfoToJS() {
             try {
-                // Create sample game level data (you would load this from your database or preference)
                 JSONArray levelInfoArray = new JSONArray();
 
-                // Get data from SharedPreferences if available
-                String savedGameData = sharedPref.getString(language + "gamePlayedInfo", null);
+                // Retrieve xAPI statements
+                XAPIManager xs = new XAPIManager();
+                List<Map<String, Object>> statements = xs.retrieveXAPIStatements("johndoe01@example.com");
+                Log.d(TAG, "Successfully retrieved xAPI statements");
 
-                if (savedGameData != null) {
-                    // Use existing data if available
-                    levelInfoArray = new JSONArray(savedGameData);
-                } else {
-                    // Sample data in case nothing exists yet
-                    JSONObject level1 = new JSONObject();
-                    level1.put("levelName", "LetterOnly");
-                    level1.put("levelNumber", 0);
-                    level1.put("score", 100);
-                    level1.put("starCount", 3);
+                for (Map<String, Object> statement : statements) {
+                    try {
+                        JSONObject levelData = new JSONObject();
 
-                    JSONObject level2 = new JSONObject();
-                    level2.put("levelName", "LetterOnly");
-                    level2.put("levelNumber", 0);
-                    level2.put("score", 80);
-                    level2.put("starCount", 3);
+                        // Extract level number from object.id
+                        int levelNumber = -1;
+                        Map<String, Object> object = (Map<String, Object>) statement.get("object");
+                        if (object != null) {
+                            Object idObj = object.get("id");
+                            String objectId = null;
+                            
+                            if (idObj instanceof java.net.URI) {
+                                objectId = idObj.toString();
+                            } else if (idObj instanceof String) {
+                                objectId = (String) idObj;
+                            } else if (idObj != null) {
+                                objectId = idObj.toString();
+                            }
+                            
+                            if (objectId != null && objectId.contains("activities:")) {
+                                String[] parts = objectId.split("activities:");
+                                if (parts.length > 1) {
+                                    try {
+                                        levelNumber = Integer.parseInt(parts[1]);
+                                    } catch (NumberFormatException e) {
+                                        Log.w(TAG, "Failed to parse level number: " + parts[1], e);
+                                    }
+                                }
+                            }
+                        }
 
-                    levelInfoArray.put(level1);
-                    levelInfoArray.put(level2);
+                        // Extract score from result
+                        double rawScore = 0;
+                        Map<String, Object> result = (Map<String, Object>) statement.get("result");
+                        if (result != null) {
+                            Map<String, Object> score = (Map<String, Object>) result.get("score");
+                            if (score != null && score.get("raw") != null) {
+                                rawScore = ((Number) score.get("raw")).doubleValue();
+                            }
+                        }
+
+                        // Calculate star count
+                        int starCount = calculateStarCount((int) rawScore);
+
+                        // Populate level data with only essential fields
+                        levelData.put("levelName", "Level " + levelNumber); // Adjust as needed
+                        levelData.put("levelNumber", levelNumber);
+                        levelData.put("score", (int) rawScore);
+                        levelData.put("starCount", starCount);
+
+                        // Add to the array
+                        levelInfoArray.put(levelData);
+
+                    } catch (Exception e) {
+                        Log.w(TAG, "Error processing statement", e);
+                    }
                 }
 
-                // Create a wrapper JSON object with type information
+                // Package and send to JS
                 JSONObject dataToSend = new JSONObject();
                 dataToSend.put("type", "gameLevelInfo");
                 dataToSend.put("data", levelInfoArray);
 
-                // Send to JavaScript
                 ((WebApp) mContext).sendDataToJS("gameLevelInfo", dataToSend);
-
                 Log.d(TAG, "Sent game level info to JS: " + dataToSend.toString());
+
             } catch (JSONException e) {
                 Log.e(TAG, "Error creating game level info", e);
             }
         }
+
     }
 
     public void setAppOrientation(String orientationType) {
@@ -351,5 +384,17 @@ public class WebApp extends BaseActivity {
 
     public void logAppExitEvent() {
         AnalyticsUtils.logEvent(this, "app_exit", title, appUrl, pseudoId, languageInEnglishName);
+    }
+
+    public static int calculateStarCount(int score) {
+        if (score >= 25 && score <= 50) {
+            return 1;
+        } else if (score > 50 && score <= 75) {
+            return 2;
+        } else if (score > 75 && score <= 100) {
+            return 3;
+        } else {
+            return 0;
+        }
     }
 }

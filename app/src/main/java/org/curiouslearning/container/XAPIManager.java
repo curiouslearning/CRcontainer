@@ -124,7 +124,8 @@ public class XAPIManager {
     /**
      * Retrieve xAPI Statements
      */
-    public void retrieveXAPIStatements(String agentEmail) {
+    public List<Map<String, Object>> retrieveXAPIStatements(String agentEmail) {
+        List<Map<String, Object>> parsedStatements = new ArrayList<>();
         try {
             // Create query with agent filter
             StatementsQuery query = new StatementsQuery();
@@ -252,6 +253,9 @@ public class XAPIManager {
                             // Timestamp
                             parsedStatement.put("timestamp", statement.getTimestamp());
 
+                            // Add to list
+                            parsedStatements.add(parsedStatement);
+
                             // Log successful parsing
                             Log.d(TAG, "Successfully processed statement: " + parsedStatement);
 
@@ -272,5 +276,7 @@ public class XAPIManager {
             String errorMsg = e.getMessage() != null ? e.getMessage() : "Unknown exception";
             Log.e(TAG, "Error retrieving statements: " + errorMsg);
         }
+        
+        return parsedStatements;
     }
 }
