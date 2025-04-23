@@ -79,7 +79,7 @@ public class XAPIManager {
             scoreObj.setRaw((double)score);
             result.setScore(scoreObj);
             result.setSuccess(score > 35);
-            result.setCompletion(true); // always setting true??
+            result.setCompletion(verbDisplay == "completed");
             result.setResponse("Correct: " + correctMoves + ", Wrong: " + wrongMoves);
 
             // Create Context

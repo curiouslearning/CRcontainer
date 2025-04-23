@@ -245,22 +245,23 @@ public class WebApp extends BaseActivity {
                     int wrongMoves = gameData.optInt("wrong_moves", 0);
                     String levelNumber = String.valueOf(gameData.optInt("level_number", 0));
                     double duration = gameData.optDouble("duration", 0.0);
+                    int score = gameData.optInt("score", 0);
 
                     // Now use these extracted values
                      xs.sendXAPIStatement(
                             "johndoe01@example.com",
                             "John Doe 01",
                             "http://adlnet.gov/expapi/verbs/completed",
-                            successOrFailure,
+                            (successOrFailure.equals("success")) ? "completed" : successOrFailure,
                             levelNumber,
-                            "Lesson " + levelNumber,
+                            levelNumber,
                             levelNumber,
                             "course-456",
                             "class-789",
                             "school-101",
                             "assignment-202",
                             "chapter-303",
-                            (int)(rightMoves * 100.0 / (rightMoves + wrongMoves)),  // Calculate score percentage
+                             score,
                             rightMoves,
                             wrongMoves
                     );
