@@ -534,28 +534,21 @@ public class MainActivity extends BaseActivity {
         new Thread(() -> {
             try {
                 Log.d("OPDS", "Starting OPDS fetch from server...");
-
+    
                 URL url = new URL("https://feedthemonster.curiouscontent.org/lang/english/feed_the_monster_en.opds.json");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
-
-                Log.d("OPDS", "Connection established, reading input stream...");
-
+    
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 StringBuilder jsonBuilder = new StringBuilder();
                 String line;
-
                 while ((line = reader.readLine()) != null) {
                     jsonBuilder.append(line);
                 }
-
+    
                 reader.close();
                 conn.disconnect();
-
-                Log.d("OPDS", "OPDS JSON fetched successfully.");
-                Log.d("OPDS", "Raw JSON: " + jsonBuilder.toString());
-
-                // Parse the OPDS JSON
+    
                 JSONObject catalog = new JSONObject(jsonBuilder.toString());
                 JSONArray groups = catalog.getJSONArray("groups");
                 JSONObject group = groups.getJSONObject(0);
@@ -563,37 +556,45 @@ public class MainActivity extends BaseActivity {
                 JSONObject publication = publications.getJSONObject(0);
                 JSONArray links = publication.getJSONArray("links");
                 String courseUrl = links.getJSONObject(0).getString("href");
-
-                Log.d("OPDS", "Parsed OPDS - course URL: " + courseUrl);
-
-                // Now load the WebView with the game
+    
+                Log.d("OPDS", "Parsed course URL: " + courseUrl);
+    
                 runOnUiThread(() -> {
-                    // Find the WebView using findViewById
                     WebView webView = findViewById(R.id.web_app);
-
+    
                     if (webView != null) {
-                        // Enable JavaScript
-                        webView.getSettings().setJavaScriptEnabled(true);
-
-                        // Set the URL to load in the WebView
-                        webView.loadUrl("https://feedthemonster.curiouscontent.org/lang/english/feed_the_monster_en.opds.json");
+                        WebSettings settings = webView.getSettings();
+                        settings.setJavaScriptEnabled(true);
+                        settings.setDomStorageEnabled(true);
+                        settings.setAllowFileAccess(true);
+                        settings.setAllowContentAccess(true);
+                        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+    
+                        webView.setWebViewClient(new WebViewClient() {
+                            @Override
+                            public void onPageFinished(WebView view, String url) {
+                                Log.d("WebView", "Page finished loading: " + url);
+                            }
+    
+                            @Override
+                            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                                Log.e("WebView", "Error loading page: " + error.getDescription());
+                            }
+                        });
+    
                         String finalUrl = "file:///android_asset/www/index.html?config=" + courseUrl;
                         Log.d("OPDS", "Loading game with config URL: " + finalUrl);
-
                         webView.loadUrl(finalUrl);
                     } else {
-                        Log.e(TAG, "WebView is null. Make sure it is defined correctly in the XML layout.");
+                        Log.e("WebView", "WebView is null. Check layout XML.");
                     }
-
-
                 });
-
+    
             } catch (Exception e) {
                 Log.e("OPDS", "Error while loading OPDS catalog", e);
-                e.printStackTrace();
             }
         }).start();
     }
-
+    
 
 }
