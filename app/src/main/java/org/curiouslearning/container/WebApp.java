@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.ConsoleMessage;
@@ -27,11 +28,13 @@ import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Iterator;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Map;
 
 public class WebApp extends BaseActivity {
 
@@ -166,15 +169,43 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
-    public void sendDataToJS(String key, @Nullable JSONObject tempData) {
+
+    private String encodeFileToBase64(File file) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] bytes = new byte[(int) file.length()];
+            int read = fis.read(bytes);
+            if (read != bytes.length) {
+                throw new IOException("Could not read entire file");
+            }
+            return Base64.encodeToString(bytes, Base64.NO_WRAP);
+        }
+    }
+
+    public JSONObject convertMapToJson(Map<String, Object> tempMap) throws JSONException, IOException {
+        JSONObject tempData = new JSONObject();
+
+        for (Map.Entry<String, Object> entry : tempMap.entrySet()) {
+            Object value = entry.getValue();
+
+            if (value instanceof File) {
+                File file = (File) value;
+                String base64Data = encodeFileToBase64(file);
+                tempData.put(entry.getKey(), base64Data);
+            } else {
+                tempData.put(entry.getKey(), value);
+            }
+        }
+
+        return tempData;
+    }
+    public void sendDataToJS(String key, @Nullable Map<String, Object> tempMap) {
         try {
             String jsonString;
 
-            if (tempData != null) {
-                // tempData is basically to send normal data from java to javascript
+            if (tempMap != null) {
+                JSONObject tempData = convertMapToJson(tempMap);
                 jsonString = tempData.toString();
             } else {
-                // otherwise fallback to SharedPreferences if no tempData provided
                 jsonString = sharedPref.getString(key, "{}");
             }
 
@@ -225,7 +256,6 @@ public class WebApp extends BaseActivity {
 
         public void sendDataToContainer(String key, String payload) {
             Log.d("WebView", "Received gamePlayData from webapp " + appUrl + "--->" + payload);
-
             try {
                 JSONObject gameData = new JSONObject(payload);
                 Log.d("WebView", "JSON GAME DATA " + appUrl + "---> " + gameData);
@@ -241,8 +271,12 @@ public class WebApp extends BaseActivity {
         }
 
         @JavascriptInterface
-        public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
-            ((WebApp) mContext).sendDataToJS(key, tempData);
+        public void requestDataFromContainer(String key) {
+            try {
+                ((WebApp) mContext).sendDataToJS(key, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
