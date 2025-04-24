@@ -72,7 +72,7 @@ public class WebApp extends BaseActivity {
         if (intent != null) {
             urlIndex = intent.getStringExtra("appId");
             title = intent.getStringExtra("title");
-            appUrl = "https://ibiza-stage-ftm-respect-dev.firebaseapp.com/";
+            appUrl = getString(R.string.app_url);
             language = intent.getStringExtra("language");
             languageInEnglishName = intent.getStringExtra("languageInEnglishName");
         }
