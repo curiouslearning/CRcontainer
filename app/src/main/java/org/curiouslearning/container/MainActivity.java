@@ -574,6 +574,7 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onPageFinished(WebView view, String url) {
                                 Log.d("WebView", "Page finished loading: " + url);
+                                loadFtmDataToWebView();
                             }
     
                             @Override
@@ -594,6 +595,60 @@ public class MainActivity extends BaseActivity {
                 Log.e("OPDS", "Error while loading OPDS catalog", e);
             }
         }).start();
+    }
+    
+    private String readRawResource(@RawRes int resId) {
+        try (InputStream is = getResources().openRawResource(resId);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{}";
+        }
+    }
+
+    public void loadFtmDataToWebView() {
+        try {
+            String opdsJsonStr = readRawResource(R.raw.feed_the_monster_english);
+            JSONObject opdsJson = new JSONObject(opdsJsonStr);
+    
+            JSONArray publications = opdsJson.getJSONArray("groups")
+                .getJSONObject(0)
+                .getJSONArray("publications");
+    
+            JSONObject metadata = publications.getJSONObject(0).getJSONObject("metadata");
+            String lessonFilename = publications.getJSONObject(0)
+                .getJSONArray("links")
+                .getJSONObject(0)
+                .getString("href")
+                .replace("lang/english/", "") 
+                .replace(".json", "");        
+    
+            int lessonResId = getResources().getIdentifier(lessonFilename, "raw", getPackageName());
+            String lessonJsonStr = readRawResource(lessonResId);
+            JSONObject lessonJson = new JSONObject(lessonJsonStr);
+    
+            lessonJson.put("title", metadata.optString("title"));
+            lessonJson.put("identifier", metadata.optString("identifier"));
+            lessonJson.put("language", metadata.optString("language"));
+            lessonJson.put("RightToLeft", metadata.optBoolean("RightToLeft"));
+            lessonJson.put("FeedbackTexts", metadata.optJSONArray("feedbackTexts"));
+            lessonJson.put("FeedbackAudios", metadata.optJSONArray("feedbackAudios"));
+            lessonJson.put("OtherAudios", metadata.optJSONObject("otherAudios"));
+            lessonJson.put("majversion", metadata.optInt("majversion"));
+            lessonJson.put("minversion", metadata.optInt("minversion"));
+            lessonJson.put("langname", metadata.optString("langname"));
+    
+            requestDataFromContainer("ftm_lesson_data", lessonJson);
+    
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
 
