@@ -291,12 +291,12 @@ public class MainActivity extends BaseActivity {
         message.append("User affected:: ").append(pseudoId).append("\n")
                 .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
                 .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
+        runOnUiThread(() -> {
         if( language == null || language.length()==0 ){
             SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
             showLanguagePopup();
             return;
         }
-        runOnUiThread(() -> {
             homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
                 List<String> lowerCaseLanguages = validLanguages.stream()
                         .map(String::toLowerCase)
