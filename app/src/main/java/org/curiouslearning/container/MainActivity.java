@@ -14,6 +14,14 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -77,6 +85,7 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private boolean isReferrerHandled;
     private long initialSlackAlertTime;
+    private static final String BASE_ASSET_URL = "file:///android_asset/www/index.html?config=";
 
     private XAPIManager xapiManager;
     //  private RespectClientManager respectClientManager = new RespectClientManager();
@@ -86,6 +95,8 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        loadOPDSCatalog("https://feedthemonster.curiouscontent.org/lang/english/feed_the_monster_en.opds.json");
         //      respectClientManager.bindService(this);
         xapiManager = new XAPIManager();
 
@@ -516,4 +527,147 @@ public class MainActivity extends BaseActivity {
             Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
         }
     }
+
+    
+    private void loadOPDSCatalog(String opdsUrl) {
+        new Thread(() -> {
+            try {
+                Log.d("OPDS", "Starting OPDS fetch...");
+    
+                JSONObject catalogJson;
+                if (opdsUrl.startsWith("http") || opdsUrl.startsWith("https")) {
+                    Log.d("OPDS", "Fetching OPDS catalog from URL: " + opdsUrl);
+                    catalogJson = readJsonFromHttp(opdsUrl);
+                } else {
+                    int resId = getResources().getIdentifier(opdsUrl, "raw", getPackageName());
+                    String rawJsonStr = readRawResource(resId);
+                    catalogJson = new JSONObject(rawJsonStr);
+                }
+    
+                JSONArray groups = catalogJson.getJSONArray("groups");
+                JSONObject group = groups.getJSONObject(0);
+                JSONArray publications = group.getJSONArray("publications");
+                JSONObject publication = publications.getJSONObject(0);
+                JSONArray links = publication.getJSONArray("links");
+                String courseUrl = links.getJSONObject(0).getString("href");
+    
+                Log.d("OPDS", "Parsed course URL: " + courseUrl);
+    
+                runOnUiThread(() -> {
+                    WebView webView = findViewById(R.id.web_app);
+                    if (webView != null) {
+                        String finalUrl = BASE_ASSET_URL + courseUrl;
+                        Log.d("OPDS", "Loading game with config URL: " + finalUrl);
+    
+                        webView.setWebViewClient(new WebViewClient() {
+                            private boolean isDataLoaded = false;
+    
+                            @Override
+                            public void onPageFinished(WebView view, String url) {
+                                Log.d("WebView", "Page finished loading: " + url);
+                                if (!isDataLoaded) {
+                                    isDataLoaded = true;
+                                    loadFtmDataToWebView();
+                                }
+                            }
+    
+                            @Override
+                            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                                Log.e("WebView", "Error loading page: " + error.getDescription());
+                            }
+                        });
+    
+                        webView.loadUrl(finalUrl);
+                    } else {
+                        Log.e("WebView", "WebView is null. Check layout XML.");
+                    }
+                });
+    
+            } catch (Exception e) {
+                Log.e("OPDS", "Error while loading OPDS catalog", e);
+            }
+        }).start();
+    }
+    
+    private String readRawResource(@RawRes int resId) {
+        try (InputStream is = getResources().openRawResource(resId);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{}";
+        }
+    }
+    
+    private JSONObject readJsonFromHttp(String urlString) throws IOException, JSONException {
+        URL url = new URL(urlString);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+    
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            return new JSONObject(builder.toString());
+        } finally {
+            conn.disconnect();
+        }
+    }    
+
+    public void loadFtmDataToWebView() {
+        try {
+            // Read OPDS Catalog JSON from raw
+            String opdsJsonStr = readRawResource(R.raw.feed_the_monster_english);
+            JSONObject opdsJson = new JSONObject(opdsJsonStr);
+    
+            JSONArray publications = opdsJson.getJSONArray("groups")
+                .getJSONObject(0)
+                .getJSONArray("publications");
+    
+            JSONObject publication = publications.getJSONObject(0);
+            JSONObject metadata = publication.getJSONObject("metadata");
+    
+            // Extract lesson filename from link
+            String lessonFilename = publication
+                .getJSONArray("links")
+                .getJSONObject(0)
+                .getString("href")
+                .replace("lang/english/", "")
+                .replace(".json", "");
+    
+            int lessonResId = getResources().getIdentifier(lessonFilename, "raw", getPackageName());
+            String lessonJsonStr = readRawResource(lessonResId);
+            JSONObject lessonJson = new JSONObject(lessonJsonStr);
+    
+            // Merge metadata fields into lesson JSON
+            lessonJson.put("title", metadata.optString("title"));
+            lessonJson.put("identifier", metadata.optString("identifier"));
+            lessonJson.put("Language", metadata.optString("language"));
+            lessonJson.put("RightToLeft", metadata.optBoolean("RightToLeft"));
+            lessonJson.put("FeedbackTexts", metadata.optJSONArray("feedbackTexts"));
+            lessonJson.put("FeedbackAudios", metadata.optJSONArray("feedbackAudios"));
+            lessonJson.put("OtherAudios", metadata.optJSONObject("otherAudios"));
+            lessonJson.put("majversion", metadata.optInt("majversion"));
+            lessonJson.put("minversion", metadata.optInt("minversion"));
+            lessonJson.put("langname", metadata.optString("langname"));
+    
+            publication.getJSONArray("links")
+                .getJSONObject(0)
+                .put("lessonData", lessonJson);
+    
+            // Now send the full OPDS JSON (modified) to Web App
+            requestDataFromContainer("FTM_OPDS_DATA", opdsJson);
+    
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
