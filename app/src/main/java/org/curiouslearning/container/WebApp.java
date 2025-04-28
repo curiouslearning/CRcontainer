@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.ConsoleMessage;
@@ -31,6 +32,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -171,6 +175,35 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
+    
+    private String encodeFileToBase64(File file) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] bytes = new byte[(int) file.length()];
+            int read = fis.read(bytes);
+            if (read != bytes.length) {
+                throw new IOException("Could not read entire file");
+            }
+            return Base64.encodeToString(bytes, Base64.NO_WRAP);
+        }
+    }
+
+    public JSONObject convertMapToJson(Map<String, Object> tempMap) throws JSONException, IOException {
+        JSONObject tempData = new JSONObject();
+
+        for (Map.Entry<String, Object> entry : tempMap.entrySet()) {
+            Object value = entry.getValue();
+
+            if (value instanceof File) {
+                File file = (File) value;
+                String base64Data = encodeFileToBase64(file);
+                tempData.put(entry.getKey(), base64Data);
+            } else {
+                tempData.put(entry.getKey(), value);
+            }
+        }
+
+        return tempData;
+    }
     public void sendDataToJS(String key, @Nullable JSONObject tempData) {
         try {
             String jsonString;
