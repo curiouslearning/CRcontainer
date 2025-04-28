@@ -13,7 +13,6 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.webkit.WebView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -22,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-
 
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -98,7 +96,6 @@ public class MainActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         loadOPDSCatalog();
-
         //      respectClientManager.bindService(this);
         xapiManager = new XAPIManager();
 
@@ -563,18 +560,19 @@ public class MainActivity extends BaseActivity {
                     WebView webView = findViewById(R.id.web_app);
     
                     if (webView != null) {
-                        WebSettings settings = webView.getSettings();
-                        settings.setJavaScriptEnabled(true);
-                        settings.setDomStorageEnabled(true);
-                        settings.setAllowFileAccess(true);
-                        settings.setAllowContentAccess(true);
-                        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                        String finalUrl = "file:///android_asset/www/index.html?config=" + courseUrl;
+                        Log.d("OPDS", "Loading game with config URL: " + finalUrl);
     
                         webView.setWebViewClient(new WebViewClient() {
+                            private boolean isDataLoaded = false; // prevent multiple triggers
+    
                             @Override
                             public void onPageFinished(WebView view, String url) {
                                 Log.d("WebView", "Page finished loading: " + url);
-                                loadFtmDataToWebView();
+                                if (!isDataLoaded) {
+                                    isDataLoaded = true;
+                                    loadFtmDataToWebView();
+                                }
                             }
     
                             @Override
@@ -583,8 +581,6 @@ public class MainActivity extends BaseActivity {
                             }
                         });
     
-                        String finalUrl = "file:///android_asset/www/index.html?config=" + courseUrl;
-                        Log.d("OPDS", "Loading game with config URL: " + finalUrl);
                         webView.loadUrl(finalUrl);
                     } else {
                         Log.e("WebView", "WebView is null. Check layout XML.");
@@ -614,6 +610,7 @@ public class MainActivity extends BaseActivity {
 
     public void loadFtmDataToWebView() {
         try {
+            // Read OPDS Catalog JSON from raw
             String opdsJsonStr = readRawResource(R.raw.feed_the_monster_english);
             JSONObject opdsJson = new JSONObject(opdsJsonStr);
     
@@ -621,21 +618,25 @@ public class MainActivity extends BaseActivity {
                 .getJSONObject(0)
                 .getJSONArray("publications");
     
-            JSONObject metadata = publications.getJSONObject(0).getJSONObject("metadata");
-            String lessonFilename = publications.getJSONObject(0)
+            JSONObject publication = publications.getJSONObject(0);
+            JSONObject metadata = publication.getJSONObject("metadata");
+    
+            // Extract lesson filename from link
+            String lessonFilename = publication
                 .getJSONArray("links")
                 .getJSONObject(0)
                 .getString("href")
-                .replace("lang/english/", "") 
-                .replace(".json", "");        
+                .replace("lang/english/", "")
+                .replace(".json", "");
     
             int lessonResId = getResources().getIdentifier(lessonFilename, "raw", getPackageName());
             String lessonJsonStr = readRawResource(lessonResId);
             JSONObject lessonJson = new JSONObject(lessonJsonStr);
     
+            // Merge metadata fields into lesson JSON
             lessonJson.put("title", metadata.optString("title"));
             lessonJson.put("identifier", metadata.optString("identifier"));
-            lessonJson.put("language", metadata.optString("language"));
+            lessonJson.put("Language", metadata.optString("language"));
             lessonJson.put("RightToLeft", metadata.optBoolean("RightToLeft"));
             lessonJson.put("FeedbackTexts", metadata.optJSONArray("feedbackTexts"));
             lessonJson.put("FeedbackAudios", metadata.optJSONArray("feedbackAudios"));
@@ -644,12 +645,16 @@ public class MainActivity extends BaseActivity {
             lessonJson.put("minversion", metadata.optInt("minversion"));
             lessonJson.put("langname", metadata.optString("langname"));
     
-            requestDataFromContainer("ftm_lesson_data", lessonJson);
+            publication.getJSONArray("links")
+                .getJSONObject(0)
+                .put("lessonData", lessonJson);
+    
+            // Now send the full OPDS JSON (modified) to Web App
+            requestDataFromContainer("FTM_OPDS_DATA", opdsJson);
     
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    
 
 }
