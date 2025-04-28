@@ -94,9 +94,9 @@ public class WebApp extends BaseActivity {
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                logAppExitEvent();
-                audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
-                finish();
+            logAppExitEvent();
+            audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
+            finish();
             }
         });
     }
@@ -127,7 +127,7 @@ public class WebApp extends BaseActivity {
             }
         }
 
-       webView.loadUrl(addCrUserIdToUrl(appUrl));
+        webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
@@ -175,35 +175,11 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
-    
-    private String encodeFileToBase64(File file) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] bytes = new byte[(int) file.length()];
-            int read = fis.read(bytes);
-            if (read != bytes.length) {
-                throw new IOException("Could not read entire file");
-            }
-            return Base64.encodeToString(bytes, Base64.NO_WRAP);
-        }
+    // 🚀 Added this method to allow direct calling from MainActivity
+    public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
+        sendDataToJS(key, tempData);
     }
 
-    public JSONObject convertMapToJson(Map<String, Object> tempMap) throws JSONException, IOException {
-        JSONObject tempData = new JSONObject();
-
-        for (Map.Entry<String, Object> entry : tempMap.entrySet()) {
-            Object value = entry.getValue();
-
-            if (value instanceof File) {
-                File file = (File) value;
-                String base64Data = encodeFileToBase64(file);
-                tempData.put(entry.getKey(), base64Data);
-            } else {
-                tempData.put(entry.getKey(), value);
-            }
-        }
-
-        return tempData;
-    }
     public void sendDataToJS(String key, @Nullable JSONObject tempData) {
         try {
             String jsonString;
