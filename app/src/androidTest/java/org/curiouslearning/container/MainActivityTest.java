@@ -7,9 +7,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.espresso.matcher.RootMatchers;
 
+import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.MethodSorters;
 
 import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
@@ -22,6 +24,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.object.HasToString.hasToString;
 
 @RunWith(AndroidJUnit4.class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MainActivityTest {
 
     @Rule
@@ -29,14 +32,14 @@ public class MainActivityTest {
             new ActivityScenarioRule<>(MainActivity.class);
 
     @Test
-    public void test_languagePopupIsShown_andLanguagesDisplayed() {
+    public void test01_languagePopupIsShown_andLanguagesDisplayed() {
         onView(withId(R.id.autoComplete))
                 .check(matches(isDisplayed()));
 
     }
 
     @Test
-    public void test_clickDropdown_showsMenu() {
+    public void test02_clickDropdown_showsMenu() {
         onView(withId(R.id.dropdown_menu)).perform(click());
 
     }
@@ -52,7 +55,7 @@ public class MainActivityTest {
 //                .check(matches(isDisplayed()));
 //    }
     @Test
-    public void test_dropdownIsScrollableToZulu() {
+    public void test03_dropdownIsScrollableToZulu() {
         SystemClock.sleep(2000);
 
         // Open the dropdown
@@ -66,9 +69,34 @@ public class MainActivityTest {
     }
 
     @Test
-    public void test_closeButton() {
+    public void test04_closeButton() {
         SystemClock.sleep(2000);
         onView(withId(R.id.setting_close)).perform(click());
+
+    }
+    @Test
+    public void test05_languageChangeViaSettingsButton() {
+        SystemClock.sleep(2000);
+
+        // Open the dropdown
+        onView(withId(R.id.dropdown_menu)).perform(click());
+        SystemClock.sleep(1000);
+
+        // Scroll and verify that the item with "Zulu" is displayed
+        onData(hasToString(startsWith("Isizulu")))
+                .inRoot(RootMatchers.isPlatformPopup())
+                .check(matches(isDisplayed())).perform(click());
+
+        SystemClock.sleep(3000);
+        onView(withId(R.id.settings)).perform(click());
+        SystemClock.sleep(1000);
+        onView(withId(R.id.dropdown_menu)).perform(click());
+        SystemClock.sleep(1000);
+
+        // Scroll and verify that the item with "Zulu" is displayed
+        onData(hasToString(startsWith("हिन्दी")))
+                .inRoot(RootMatchers.isPlatformPopup())
+                .check(matches(isDisplayed())).perform(click());
 
     }
 }
