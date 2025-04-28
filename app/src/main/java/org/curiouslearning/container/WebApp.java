@@ -1,7 +1,6 @@
 package org.curiouslearning.container;
 
 import static org.curiouslearning.container.MainActivity.activity_id;
-import static org.curiouslearning.container.MainActivity.isDeepLink;
 
 import android.content.Context;
 import android.content.DialogInterface;
@@ -10,7 +9,6 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.ConsoleMessage;
@@ -35,9 +33,6 @@ import org.json.JSONObject;
 
 import java.util.Iterator;
 import java.util.List;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.Map;
 
 public class WebApp extends BaseActivity {
@@ -92,11 +87,6 @@ public class WebApp extends BaseActivity {
         source = utmPrefs.getString("source", "");
         campaignId = utmPrefs.getString("campaign_id", "");
         ImageView goBack = findViewById(R.id.button2);
-
-        // Show/hide button based on isDeepLink value
-        Log.d(TAG, "isDeeplink : " + isDeepLink);
-        goBack.setVisibility(isDeepLink ? View.GONE : View.VISIBLE);
-
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -181,36 +171,7 @@ public class WebApp extends BaseActivity {
         alert.show();
     }
 
-
-    private String encodeFileToBase64(File file) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] bytes = new byte[(int) file.length()];
-            int read = fis.read(bytes);
-            if (read != bytes.length) {
-                throw new IOException("Could not read entire file");
-            }
-            return Base64.encodeToString(bytes, Base64.NO_WRAP);
-        }
-    }
-
-    public JSONObject convertMapToJson(Map<String, Object> tempMap) throws JSONException, IOException {
-        JSONObject tempData = new JSONObject();
-
-        for (Map.Entry<String, Object> entry : tempMap.entrySet()) {
-            Object value = entry.getValue();
-
-            if (value instanceof File) {
-                File file = (File) value;
-                String base64Data = encodeFileToBase64(file);
-                tempData.put(entry.getKey(), base64Data);
-            } else {
-                tempData.put(entry.getKey(), value);
-            }
-        }
-
-        return tempData;
-    }
-    public void sendDataToJS(String key, @Nullable Map<String, Object> tempMap) {
+    public void sendDataToJS(String key, @Nullable JSONObject tempData) {
         try {
             String jsonString;
 
@@ -314,11 +275,6 @@ public class WebApp extends BaseActivity {
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            if (key.equals("onBackButton")) {
-                Log.d(TAG, "indise the OnBackButton");
-                closeIconVisiblity();
-            }
-            Log.d(TAG, "outside the OnBackButton");
         }
         @JavascriptInterface
         public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
@@ -441,10 +397,5 @@ public class WebApp extends BaseActivity {
         } else {
             return 0;
         }
-    }
-
-    private void closeIconVisiblity() {
-        isDeepLink = false;
-        initViews();
     }
 }
