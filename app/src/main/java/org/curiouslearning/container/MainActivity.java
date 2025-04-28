@@ -85,6 +85,7 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private boolean isReferrerHandled;
     private long initialSlackAlertTime;
+    private static final String BASE_ASSET_URL = "file:///android_asset/www/index.html?config=";
 
     private XAPIManager xapiManager;
     //  private RespectClientManager respectClientManager = new RespectClientManager();
@@ -95,7 +96,7 @@ public class MainActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        loadOPDSCatalog();
+        loadOPDSCatalog("https://feedthemonster.curiouscontent.org/lang/english/feed_the_monster_en.opds.json");
         //      respectClientManager.bindService(this);
         xapiManager = new XAPIManager();
 
@@ -527,27 +528,23 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    private void loadOPDSCatalog() {
+    
+    private void loadOPDSCatalog(String opdsUrl) {
         new Thread(() -> {
             try {
-                Log.d("OPDS", "Starting OPDS fetch from server...");
+                Log.d("OPDS", "Starting OPDS fetch...");
     
-                URL url = new URL("https://feedthemonster.curiouscontent.org/lang/english/feed_the_monster_en.opds.json");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-    
-                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder jsonBuilder = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    jsonBuilder.append(line);
+                JSONObject catalogJson;
+                if (opdsUrl.startsWith("http") || opdsUrl.startsWith("https")) {
+                    Log.d("OPDS", "Fetching OPDS catalog from URL: " + opdsUrl);
+                    catalogJson = readJsonFromHttp(opdsUrl);
+                } else {
+                    int resId = getResources().getIdentifier(opdsUrl, "raw", getPackageName());
+                    String rawJsonStr = readRawResource(resId);
+                    catalogJson = new JSONObject(rawJsonStr);
                 }
     
-                reader.close();
-                conn.disconnect();
-    
-                JSONObject catalog = new JSONObject(jsonBuilder.toString());
-                JSONArray groups = catalog.getJSONArray("groups");
+                JSONArray groups = catalogJson.getJSONArray("groups");
                 JSONObject group = groups.getJSONObject(0);
                 JSONArray publications = group.getJSONArray("publications");
                 JSONObject publication = publications.getJSONObject(0);
@@ -558,13 +555,12 @@ public class MainActivity extends BaseActivity {
     
                 runOnUiThread(() -> {
                     WebView webView = findViewById(R.id.web_app);
-    
                     if (webView != null) {
-                        String finalUrl = "file:///android_asset/www/index.html?config=" + courseUrl;
+                        String finalUrl = BASE_ASSET_URL + courseUrl;
                         Log.d("OPDS", "Loading game with config URL: " + finalUrl);
     
                         webView.setWebViewClient(new WebViewClient() {
-                            private boolean isDataLoaded = false; // prevent multiple triggers
+                            private boolean isDataLoaded = false;
     
                             @Override
                             public void onPageFinished(WebView view, String url) {
@@ -607,6 +603,23 @@ public class MainActivity extends BaseActivity {
             return "{}";
         }
     }
+    
+    private JSONObject readJsonFromHttp(String urlString) throws IOException, JSONException {
+        URL url = new URL(urlString);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+    
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            return new JSONObject(builder.toString());
+        } finally {
+            conn.disconnect();
+        }
+    }    
 
     public void loadFtmDataToWebView() {
         try {
