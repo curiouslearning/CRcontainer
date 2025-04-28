@@ -79,7 +79,7 @@ public class XAPIManager {
             scoreObj.setRaw((double)score);
             result.setScore(scoreObj);
             result.setSuccess(score > 35);
-            result.setCompletion(true);
+            result.setCompletion(verbDisplay == "completed");
             result.setResponse("Correct: " + correctMoves + ", Wrong: " + wrongMoves);
 
             // Create Context
@@ -110,8 +110,10 @@ public class XAPIManager {
             StatementLRSResponse response = lrs.saveStatement(statement);
 
             if (response.getSuccess()) {
+                Log.d(TAG, "statement success data : " + statement);
                 Log.d(TAG, "xAPI Statement sent successfully!");
             } else {
+                Log.d(TAG, "statement failure data : " + statement);
                 Log.e(TAG, "Failed to send xAPI Statement: " + response.getErrMsg());
             }
         } catch (Exception e) {
@@ -122,7 +124,8 @@ public class XAPIManager {
     /**
      * Retrieve xAPI Statements
      */
-    public void retrieveXAPIStatements(String agentEmail) {
+    public List<Map<String, Object>> retrieveXAPIStatements(String agentEmail) {
+        List<Map<String, Object>> parsedStatements = new ArrayList<>();
         try {
             // Create query with agent filter
             StatementsQuery query = new StatementsQuery();
@@ -250,6 +253,9 @@ public class XAPIManager {
                             // Timestamp
                             parsedStatement.put("timestamp", statement.getTimestamp());
 
+                            // Add to list
+                            parsedStatements.add(parsedStatement);
+
                             // Log successful parsing
                             Log.d(TAG, "Successfully processed statement: " + parsedStatement);
 
@@ -270,5 +276,7 @@ public class XAPIManager {
             String errorMsg = e.getMessage() != null ? e.getMessage() : "Unknown exception";
             Log.e(TAG, "Error retrieving statements: " + errorMsg);
         }
+        
+        return parsedStatements;
     }
 }
