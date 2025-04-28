@@ -7,6 +7,10 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -15,13 +19,17 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import androidx.annotation.RawRes;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -91,6 +99,7 @@ public class MainActivity extends BaseActivity {
     //  private RespectClientManager respectClientManager = new RespectClientManager();
     public static String activity_id = "";
     public static boolean isDeepLink = false;
+    private org.curiouslearning.container.WebApp webAppBridge; // WebAppBridge is a custom class that you need to implement to handle the communication between the WebView and your app.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -571,7 +580,6 @@ public class MainActivity extends BaseActivity {
                                 }
                             }
     
-                            @Override
                             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                                 Log.e("WebView", "Error loading page: " + error.getDescription());
                             }
@@ -616,6 +624,8 @@ public class MainActivity extends BaseActivity {
                 builder.append(line);
             }
             return new JSONObject(builder.toString());
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
         } finally {
             conn.disconnect();
         }
@@ -624,7 +634,7 @@ public class MainActivity extends BaseActivity {
     public void loadFtmDataToWebView() {
         try {
             // Read OPDS Catalog JSON from raw
-            String opdsJsonStr = readRawResource(R.raw.feed_the_monster_english);
+            String opdsJsonStr = readRawResource(R.raw.feed_the_monster_english_opds);
             JSONObject opdsJson = new JSONObject(opdsJsonStr);
     
             JSONArray publications = opdsJson.getJSONArray("groups")
@@ -663,7 +673,7 @@ public class MainActivity extends BaseActivity {
                 .put("lessonData", lessonJson);
     
             // Now send the full OPDS JSON (modified) to Web App
-            requestDataFromContainer("FTM_OPDS_DATA", opdsJson);
+            webAppBridge.requestDataFromContainer("FTM_OPDS_DATA", opdsJson);
     
         } catch (Exception e) {
             e.printStackTrace();

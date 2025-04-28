@@ -85,9 +85,9 @@ public class WebApp extends BaseActivity {
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                logAppExitEvent();
-                audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
-                finish();
+            logAppExitEvent();
+            audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
+            finish();
             }
         });
     }
@@ -118,7 +118,7 @@ public class WebApp extends BaseActivity {
             }
         }
 
-       webView.loadUrl(addCrUserIdToUrl(appUrl));
+        webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
@@ -164,6 +164,11 @@ public class WebApp extends BaseActivity {
                 });
         AlertDialog alert = builder.create();
         alert.show();
+    }
+
+    // 🚀 Added this method to allow direct calling from MainActivity
+    public void requestDataFromContainer(String key, @Nullable JSONObject tempData) {
+        sendDataToJS(key, tempData);
     }
 
     public void sendDataToJS(String key, @Nullable JSONObject tempData) {
