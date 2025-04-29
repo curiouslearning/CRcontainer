@@ -109,7 +109,11 @@ public class WebApp extends BaseActivity {
                 appUrl = addCampaignIdToUrl(appUrl);
             }
         }
-        webView.loadUrl(addCrUserIdToUrl(appUrl));
+        if(appUrl.contains("docs.google.com/forms")){
+            webView.loadUrl(addCrUserIdToFormUrl(appUrl));
+        }else{
+            webView.loadUrl(addCrUserIdToUrl(appUrl));
+        }
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
