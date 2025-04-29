@@ -126,6 +126,12 @@ public class WebApp extends BaseActivity {
         return modifiedUrl;
     }
 
+    private String addCrUserIdToFormUrl(String appUrl) {
+        Uri originalUri = Uri.parse(appUrl);
+        String separator = (originalUri.getQuery() == null) ? "?" : "&";
+        String modifiedUrl = originalUri.toString() + pseudoId+ separator + "cr_user_id=" + pseudoId;
+        return modifiedUrl;
+
     private String addSourceToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
