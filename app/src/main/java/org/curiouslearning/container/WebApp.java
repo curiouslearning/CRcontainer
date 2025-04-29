@@ -109,11 +109,7 @@ public class WebApp extends BaseActivity {
                 appUrl = addCampaignIdToUrl(appUrl);
             }
         }
-        if(appUrl.contains("docs.google.com/forms")){
-            webView.loadUrl(addCrUserIdToFormUrl(appUrl));
-        }else{
-            webView.loadUrl(addCrUserIdToUrl(appUrl));
-        }
+        webView.loadUrl(addCrUserIdToUrl(appUrl));
         System.out.println("subapp url : " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
@@ -127,13 +123,6 @@ public class WebApp extends BaseActivity {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
         String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" + pseudoId;
-        return modifiedUrl;
-    }
-
-    private String addCrUserIdToFormUrl(String appUrl) {
-        Uri originalUri = Uri.parse(appUrl);
-        String separator = (originalUri.getQuery() == null) ? "?" : "&";
-        String modifiedUrl = originalUri.toString() + pseudoId+ separator + "cr_user_id=" + pseudoId;
         return modifiedUrl;
     }
 
