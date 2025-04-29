@@ -78,11 +78,9 @@ public class MainActivityTest {
     public void test05_languageChangeViaSettingsButton() {
         SystemClock.sleep(2000);
 
-        // Open the dropdown
         onView(withId(R.id.dropdown_menu)).perform(click());
         SystemClock.sleep(1000);
 
-        // Scroll and verify that the item with "Zulu" is displayed
         onData(hasToString(startsWith("Isizulu")))
                 .inRoot(RootMatchers.isPlatformPopup())
                 .check(matches(isDisplayed())).perform(click());
@@ -93,7 +91,6 @@ public class MainActivityTest {
         onView(withId(R.id.dropdown_menu)).perform(click());
         SystemClock.sleep(1000);
 
-        // Scroll and verify that the item with "Zulu" is displayed
         onData(hasToString(startsWith("हिन्दी")))
                 .inRoot(RootMatchers.isPlatformPopup())
                 .check(matches(isDisplayed())).perform(click());
