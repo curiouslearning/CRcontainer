@@ -96,4 +96,12 @@ public class MainActivityTest {
                 .check(matches(isDisplayed())).perform(click());
 
     }
+
+    @Test
+    public void test06_clickSettingButton() {
+        SystemClock.sleep(1000);
+        onView(withId(R.id.settings)).perform(click());
+        SystemClock.sleep(1000);
+        onView(withId(R.id.dropdown_menu)).perform(click());
+    }
 }
