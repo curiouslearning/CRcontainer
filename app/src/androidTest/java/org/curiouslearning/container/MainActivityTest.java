@@ -106,7 +106,6 @@ public class MainActivityTest {
         onView(withId(R.id.recycleView))
                 .perform(RecyclerViewActions.scrollToPosition(0));
     }
-
     @Test
     public void test07_clickSettingButton() {
         SystemClock.sleep(1000);
