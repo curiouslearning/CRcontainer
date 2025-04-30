@@ -291,29 +291,31 @@ public class MainActivity extends BaseActivity {
         message.append("User affected:: ").append(pseudoId).append("\n")
                 .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
                 .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
+        runOnUiThread(() -> {
         if( language == null || language.length()==0 ){
             SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
             showLanguagePopup();
             return;
         }
-        homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
-            List<String> lowerCaseLanguages = validLanguages.stream()
-                    .map(String::toLowerCase)
-                    .collect(Collectors.toList());
-            if (lowerCaseLanguages!=null && lowerCaseLanguages.size() > 0 &&!lowerCaseLanguages.contains(language.toLowerCase().trim())) {
-                SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-                showLanguagePopup();
-                loadingIndicator.setVisibility(View.GONE);
-                selectedLanguage="";
-                storeSelectLanguage("");
-                return;
-            }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
-                String lang =  Character.toUpperCase(language.charAt(0))
-                        + language.substring(1).toLowerCase();
-                loadApps(lang);
-            }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
-                loadApps(isValidLanguage);
-            }
+            homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
+                List<String> lowerCaseLanguages = validLanguages.stream()
+                        .map(String::toLowerCase)
+                        .collect(Collectors.toList());
+                if (lowerCaseLanguages!=null && lowerCaseLanguages.size() > 0 &&!lowerCaseLanguages.contains(language.toLowerCase().trim())) {
+                    SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+                    showLanguagePopup();
+                    loadingIndicator.setVisibility(View.GONE);
+                    selectedLanguage="";
+                    storeSelectLanguage("");
+                    return;
+                }else if(lowerCaseLanguages !=null && lowerCaseLanguages.size() > 0){
+                    String lang =  Character.toUpperCase(language.charAt(0))
+                            + language.substring(1).toLowerCase();
+                    loadApps(lang);
+                }else if(lowerCaseLanguages ==null || lowerCaseLanguages.size() == 0){
+                    loadApps(isValidLanguage);
+                }
+            });
         });
     }
 
