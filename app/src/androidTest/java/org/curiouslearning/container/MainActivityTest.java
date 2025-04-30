@@ -6,6 +6,7 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.espresso.matcher.RootMatchers;
+import androidx.test.espresso.contrib.RecyclerViewActions;
 
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
@@ -95,5 +96,14 @@ public class MainActivityTest {
                 .inRoot(RootMatchers.isPlatformPopup())
                 .check(matches(isDisplayed())).perform(click());
 
+    }
+    @Test
+    public void test06_webappScreenIsScrollable(){
+        SystemClock.sleep(2000);
+        onView(withId(R.id.recycleView))
+                .perform(RecyclerViewActions.scrollToPosition(15));
+        SystemClock.sleep(2000);
+        onView(withId(R.id.recycleView))
+                .perform(RecyclerViewActions.scrollToPosition(0));
     }
 }
