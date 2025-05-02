@@ -276,7 +276,7 @@ public class MainActivity extends BaseActivity {
         return pseudoId;
     }
     private void validLanguage(String deferredLang, String source, String deepLinkUri) {
-        String language = deferredLang.trim();
+        String language = deferredLang== null ? null : deferredLang.trim();
         long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
         String pseudoId = prefs.getString("pseudoId", "");
         String[] uriParts = deepLinkUri.split("(?=[?&])");
