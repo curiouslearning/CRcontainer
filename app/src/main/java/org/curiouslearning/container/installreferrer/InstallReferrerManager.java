@@ -53,9 +53,11 @@ public class InstallReferrerManager {
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
                         Log.d("referrer", "install referrer not supported");
+                        callback.onReferrerReceived("", "");
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
                         Log.d("referrer", "install referrer service unavailable");
+                        callback.onReferrerReceived("", "");
                         break;
                 }
             }
