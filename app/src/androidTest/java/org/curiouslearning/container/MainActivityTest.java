@@ -95,7 +95,11 @@ public class MainActivityTest {
         onData(hasToString(startsWith("हिन्दी")))
                 .inRoot(RootMatchers.isPlatformPopup())
                 .check(matches(isDisplayed())).perform(click());
-
+        SystemClock.sleep(2000);
+        onView(withId(R.id.recycleView))
+                .perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
+        SystemClock.sleep(5000);
+        onView(withId(R.id.button2)).perform(click());
     }
     @Test
     public void test06_webappScreenIsScrollable(){
