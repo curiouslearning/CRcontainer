@@ -46,11 +46,12 @@ public class AnalyticsUtils {
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
-    public static void logStartedInOfflineModeEvent(Context context, String eventName) {
+    public static void logStartedInOfflineModeEvent(Context context, String eventName, String pseudoId) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME,
                 Context.MODE_PRIVATE);
         Bundle bundle = new Bundle();
+        bundle.putString("cr_user_id", pseudoId);
         String source = prefs.getString(SOURCE, "");
         String campaign_id = prefs.getString(CAMPAIGN_ID, "");
         firebaseAnalytics.setUserProperty("source", source);

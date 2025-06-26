@@ -536,7 +536,7 @@ public class MainActivity extends BaseActivity {
     private void logStartedInOfflineMode() {
 
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
-                "started_in_offline_mode");
+                "started_in_offline_mode", prefs.getString("pseudoId", ""));
     }
 
 }
