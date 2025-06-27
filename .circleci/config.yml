@@ -24,7 +24,7 @@ jobs:
       - run:
           name: Decode Keystore
           command: |
-            echo $KEYSTORE_BASE64 | base64 --decode > app/keystore.jks
+            echo $KEYSTORE_BASE64 | base64 --decode > app/keystore/my-release-key.jks
 
       - run:
           name: Decode Service Account JSON
