@@ -5,9 +5,8 @@ platform :android do
 
   lane :deploy do
     gradle(
-      task: "bundleRelease",    # This will build the .aab (Android App Bundle)
-      project_dir: ".",         # Use current directory if Fastfile is inside the `app/` folder
-      # Optional: Specify gradle properties or flags here, if needed
+      task: "bundleRelease", 
+      project_dir: "../",     
     )
   end
 end
