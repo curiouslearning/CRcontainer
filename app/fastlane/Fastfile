@@ -3,7 +3,7 @@ default_platform(:android)
 platform :android do
   desc "Build the Android app (Generate .aab)"
 
-  lane :build do
+  lane :deploy do
     gradle(
       task: "bundleRelease",    # This will build the .aab (Android App Bundle)
       project_dir: ".",         # Use current directory if Fastfile is inside the `app/` folder
