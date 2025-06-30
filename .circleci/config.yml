@@ -13,9 +13,11 @@ jobs:
       - checkout
 
       - run:
-          name: Install Fastlane
+          name: Install Fastlane and Plugins
           command: |
             sudo gem install fastlane
+            cd app
+            fastlane install_plugins
 
       - run:
           name: Make gradlew executable
