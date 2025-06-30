@@ -13,11 +13,11 @@ jobs:
       - checkout
 
       - run:
-          name: Install Fastlane and Plugins
+          name: Install Bundler & Fastlane plugins
           command: |
-            sudo gem install fastlane
+            sudo gem install bundler
             cd app
-            fastlane install_plugins
+            bundle install --path vendor/bundle
 
       - run:
           name: Make gradlew executable
@@ -37,7 +37,7 @@ jobs:
           name: Run Fastlane
           command: |
             cd app
-            fastlane deploy
+            bundle exec fastlane deploy
 
 workflows:
   deploy_on_develop:
