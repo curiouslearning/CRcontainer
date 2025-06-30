@@ -1,12 +1,38 @@
 default_platform(:android)
 
 platform :android do
-  desc "Build the Android app (Generate .aab)"
+  desc "Build and deploy the app if PR contains 'release'"
 
   lane :deploy do
+    last_commit = sh("git log -1 --pretty=%B").strip
+    unless last_commit.downcase.include?("release")
+      UI.message("No 'release' keyword in commit message. Skipping version bump and deploy.")
+      next
+    end
+
+    increment_version_code(
+      gradle_file_path: "../app/build.gradle"
+    )
+
+    version_name = Time.now.strftime("%Y.%m.%d.%H%M")
+    increment_version_name(
+      version_name: version_name,
+      gradle_file_path: "../app/build.gradle"
+    )
+
     gradle(
-      task: "bundleRelease", 
-      project_dir: "../",     
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "../"
+    )
+
+    changelog = sh("git log -5 --pretty=format:'- %s'").strip
+    File.write("changelog.txt", changelog)
+
+    slack(
+      message: ":rocket: *App successfully deployed to Play Store (Internal Track)*\n\n*Changelog:*\n#{changelog}",
+      success: true,
+      default_payloads: []
     )
   end
 end
