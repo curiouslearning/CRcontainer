@@ -30,7 +30,7 @@ platform :android do
     File.write("changelog.txt", changelog)
 
     slack(
-      message: ":rocket: *App successfully deployed to Play Store (Internal Track)*\n\n*Changelog:*\n#{changelog}",
+      message: ":rocket: * Test App successfully deployed to Play Store (Internal Track)*\n\n*Changelog:*\n#{changelog}",
       success: true,
       default_payloads: []
     )
