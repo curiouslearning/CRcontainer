@@ -45,6 +45,18 @@ public class AnalyticsUtils {
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
+    public static void logStartedInOfflineModeEvent(Context context, String eventName, String pseudoId) {
+        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME,
+                Context.MODE_PRIVATE);
+        Bundle bundle = new Bundle();
+        bundle.putString("cr_user_id", pseudoId);
+        String source = prefs.getString(SOURCE, "");
+        String campaign_id = prefs.getString(CAMPAIGN_ID, "");
+        firebaseAnalytics.setUserProperty("source", source);
+        firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
+        firebaseAnalytics.logEvent(eventName, bundle);
+    }
     public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language, String manifestVersion, String autoSelected) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -73,7 +85,7 @@ public class AnalyticsUtils {
             bundle.putString("referrer_url", referrerUrl);
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
             bundle.putLong("app_install_time", response.getInstallBeginTimestampSeconds());
-            
+
             Map<String, String> extractedParams = extractReferrerParameters(referrerUrl);
             if (extractedParams != null) {
                 String source = extractedParams.get("source");

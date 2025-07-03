@@ -35,6 +35,7 @@ import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.SlackUtils;
 
 import java.math.BigInteger;
@@ -93,6 +94,9 @@ public class MainActivity extends BaseActivity {
         initialSlackAlertTime= AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
+        if (!isInternetConnected(getApplicationContext())) {
+            logStartedInOfflineMode();
+        }
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
             public void onReferrerReceived(String deferredLang, String fullURL) {
@@ -292,11 +296,11 @@ public class MainActivity extends BaseActivity {
                 .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
                 .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
         runOnUiThread(() -> {
-        if( language == null || language.length()==0 ){
-            SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-            showLanguagePopup();
-            return;
-        }
+            if( language == null || language.length()==0 ){
+                SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+                showLanguagePopup();
+                return;
+            }
             homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
                 List<String> lowerCaseLanguages = validLanguages.stream()
                         .map(String::toLowerCase)
@@ -523,4 +527,15 @@ public class MainActivity extends BaseActivity {
             Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
         }
     }
+
+    private boolean isInternetConnected(Context context) {
+        return ConnectionUtils.getInstance().isInternetConnected(context);
+    }
+
+    private void logStartedInOfflineMode() {
+
+        AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
+                "started_in_offline_mode", prefs.getString("pseudoId", ""));
+    }
+
 }
