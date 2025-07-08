@@ -24,6 +24,9 @@ import com.facebook.appevents.AppEventsLogger;
 import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
+
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -296,8 +299,27 @@ public class MainActivity extends BaseActivity {
                 .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
                 .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
         runOnUiThread(() -> {
-            if( language == null || language.length()==0 ){
+            if (language == null || language.length()==0 ) {
+                String errorMsg = "[AttributionError] Null or empty 'language' received from " + source
+                        + " referrer. PseudoId: " + pseudoId;
+
+                // Firebase Analytics custom event
+                Bundle errorBundle = new Bundle();
+                errorBundle.putString("error_type", "invalid_payload");
+                errorBundle.putString("source", source);
+                errorBundle.putString("missing_key", "language");
+                errorBundle.putString("deep_link_uri", deepLinkUri);
+                errorBundle.putString("cr_user_id", pseudoId);
+                FirebaseAnalytics.getInstance(this).logEvent("attribution_error", errorBundle);
+
+                // Firebase Crashlytics non-fatal error
+                FirebaseCrashlytics.getInstance().log(errorMsg);
+                FirebaseCrashlytics.getInstance().recordException(
+                        new IllegalArgumentException(errorMsg)
+                );
+                // Slack alert
                 SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+
                 showLanguagePopup();
                 return;
             }
