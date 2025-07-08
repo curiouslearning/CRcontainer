@@ -299,7 +299,7 @@ public class MainActivity extends BaseActivity {
                 .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
                 .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
         runOnUiThread(() -> {
-            if (language == null || language.trim().isEmpty()) {
+            if (language == null || language.length()>0) {
                 String errorMsg = "[AttributionError] Null or empty 'language' received from " + source
                         + " referrer. PseudoId: " + pseudoId;
 
