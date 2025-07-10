@@ -512,7 +512,6 @@ public class MainActivity extends BaseActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
-        Log.d(TAG, "storeSelectLanguage: Stored selected language:  " + language);
     }
 
     private void cacheManifestVersion(String versionNumber) {
