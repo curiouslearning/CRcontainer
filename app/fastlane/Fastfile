@@ -32,12 +32,9 @@ platform :android do
           build_type: "Debug",
           project_dir: "../"
         )
-        sh("ls -lah ../app/build/outputs/apk/debug/")
-        # Step 2: Define paths
-        apk_source = "../app/build/outputs/apk/debug/app-debug.apk"
+        sh("ls -lah build/outputs/apk/debug/")
+        apk_source = "build/outputs/apk/debug/app-debug.apk"
         apk_target = "fastlane/app-debug.apk"
-
-        # Step 3: Copy to fastlane folder
         sh("cp #{apk_source} #{apk_target}")
 
         # Step 4: Git setup
