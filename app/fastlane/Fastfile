@@ -73,12 +73,12 @@ platform :android do
       # Commit only if file actually added (to avoid failure)
       diff_exit_code = sh("git diff --cached --quiet || echo $?").strip
 
-      if diff_exit_code != "0"
-        sh("git commit -m \"Add debug APK from CI build at #{timestamp}\"")
-      end
-      remote_url = "https://#{ENV['GITHUB_TOKEN']}@github.com/curiouslearning/CRcontainer.git"
-      sh("git remote set-url origin #{remote_url}")
-      sh("git push origin develop")
+#       if diff_exit_code != "0"
+#         sh("git commit -m \"Add debug APK from CI build at #{timestamp}\"")
+#       end
+#       remote_url = "https://#{ENV['GITHUB_TOKEN']}@github.com/curiouslearning/CRcontainer.git"
+#       sh("git remote set-url origin #{remote_url}")
+#       sh("git push origin develop")
     end
   end
 end
