@@ -45,12 +45,18 @@ platform :android do
 
     else
       UI.message("No 'release' keyword in commit message. Building Debug APK...")
+      if last_commit.include?("Add debug APK from CI build at")
+        UI.important("Detected auto-generated debug APK commit. Skipping build and push to prevent CI loop.")
+        next
+      end
 
+      UI.message("Building Debug APK...")
       gradle(
         task: "assemble",
         build_type: "Debug",
         project_dir: "../"
       )
+
 
       require 'fileutils'
 
@@ -65,20 +71,18 @@ platform :android do
       FileUtils.cp(apk_path, destination_path)
       UI.success("Debug APK saved to #{destination_path}")
 
-      # GitHub Commit + Push (Make sure GITHUB_TOKEN is set in CI environment)
       sh("git config user.email 'nikhilchoudhary@sutara.org'")
       sh("git config user.name 'CLAuto'")
       sh("git add #{destination_path}")
 
-      # Commit only if file actually added (to avoid failure)
       diff_exit_code = sh("git diff --cached --quiet || echo $?").strip
 
-#       if diff_exit_code != "0"
-#         sh("git commit -m \"Add debug APK from CI build at #{timestamp}\"")
-#       end
-#       remote_url = "https://#{ENV['GITHUB_TOKEN']}@github.com/curiouslearning/CRcontainer.git"
-#       sh("git remote set-url origin #{remote_url}")
-#       sh("git push origin develop")
+      if diff_exit_code != "0"
+        sh("git commit -m \"Add debug APK from CI build at #{timestamp}\"")
+      end
+      remote_url = "https://#{ENV['GITHUB_TOKEN']}@github.com/curiouslearning/CRcontainer.git"
+      sh("git remote set-url origin #{remote_url}")
+      sh("git push origin develop")
     end
   end
 end
