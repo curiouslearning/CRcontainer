@@ -1,14 +1,24 @@
 default_platform(:android)
 
 platform :android do
-  desc "Build and deploy the app if PR contains 'release'"
+  desc "Build and deploy the app if commit message contains 'release', else build debug APK and upload to GitHub"
 
   lane :deploy do
     last_commit = sh("git log -1 --pretty=%B").strip
-    UI.message("🔍 Last commit message: #{last_commit}")
 
     if last_commit.downcase.include?("release")
-      UI.message("🚀 'release' keyword found in commit. Proceeding with Play Store deploy...")
+      UI.message("Release commit detected. Building AAB and uploading to Play Store...")
+
+      # Optional version bump
+      # increment_version_code(
+      #   gradle_file_path: "../app/build.gradle"
+      # )
+
+      # version_name = Time.now.strftime("%Y.%m.%d.%H%M")
+      # increment_version_name(
+      #   version_name: version_name,
+      #   gradle_file_path: "../app/build.gradle"
+      # )
 
       gradle(
         task: "bundle",
@@ -18,45 +28,57 @@ platform :android do
 
       changelog = sh("git log -5 --pretty=format:'- %s'").strip
 
+      # Uncomment to enable actual Play Store upload
+      # upload_to_play_store(
+      #   track: "internal",
+      #   skip_upload_metadata: true,
+      #   skip_upload_images: true,
+      #   skip_upload_screenshots: true,
+      #   json_key: "fastlane/service-account.json"
+      # )
+
       slack(
         message: ":rocket: *Test App successfully deployed to Play Store (Internal Track)*\n\n*Changelog:*\n#{changelog}",
         success: true,
         default_payloads: []
       )
+
     else
-      UI.message("🧪 No 'release' in commit message. Uploading *debug* APK to GitHub...")
+      UI.message("No 'release' keyword in commit message. Building Debug APK...")
 
-        # Step 1: Build Debug APK
-        gradle(
-          task: "assemble",
-          build_type: "Debug",
-          project_dir: "../"
-        )
-        apk_source = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
-        apk_target = "fastlane/app-debug.apk"
+      gradle(
+        task: "assemble",
+        build_type: "Debug",
+        project_dir: "../"
+      )
 
-        UI.message("✅ APK built at: #{apk_source}")
+      require 'fileutils'
 
-        # Copy to fastlane folder
-        sh("cp #{apk_source} #{apk_target}")
+      app_dir = File.expand_path("..", __dir__)
+      apk_path = File.join(app_dir, "build/outputs/apk/debug/app-debug.apk")
+      UI.message("Resolved APK path: #{apk_path}")
+      destination_dir = "fastlane/debug_apks"
+      timestamp = Time.now.strftime("%Y%m%d-%H%M%S")
+      destination_path = File.join(destination_dir, "app-debug-#{timestamp}.apk")
 
+      FileUtils.mkdir_p(destination_dir)
+      FileUtils.cp(apk_path, destination_path)
+      UI.success("Debug APK saved to #{destination_path}")
 
-        # Step 4: Git setup
-        sh("git config user.email 'nikhil77@sutara.org'")
-        sh("git config user.name 'CLAutomated'")
+      # GitHub Commit + Push (Make sure GITHUB_TOKEN is set in CI environment)
+      sh("git config user.email 'nikhilchoudhary@sutara.org'")
+      sh("git config user.name 'CLAuto'")
+      sh("git add #{destination_path}")
 
-        # Step 5: Checkout or create a branch
-        sh("git checkout -B clautoTest")
+      # Commit only if file actually added (to avoid failure)
+      diff_exit_code = sh("git diff --cached --quiet || echo $?").strip
 
-        # Step 6: Force add the APK even if it's in .gitignore
-        sh("git add -f #{apk_target}")
-
-        # Step 7: Commit and push
-        timestamp = Time.now.strftime("%Y-%m-%d %H:%M")
-        sh("git commit -m '📦 Debug APK pushed on #{timestamp}'")
-        sh("git push origin develop-artifacts --force")
-
-        UI.success("✅ Debug APK pushed to 'develop-artifacts' branch inside 'fastlane/' folder.")
+      if diff_exit_code != "0"
+        sh("git commit -m \"Add debug APK from CI build at #{timestamp}\"")
       end
+      remote_url = "https://#{ENV['GITHUB_TOKEN']}@github.com/curiouslearning/CRcontainer.git"
+      sh("git remote set-url origin #{remote_url}")
+      sh("git push origin develop")
+    end
   end
-end  # ✅ This was missing!
+end
