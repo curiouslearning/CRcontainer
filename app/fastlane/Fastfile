@@ -32,10 +32,14 @@ platform :android do
           build_type: "Debug",
           project_dir: "../"
         )
-        sh("ls -lah build/outputs/apk/debug/")
-        apk_source = "build/outputs/apk/debug/app-debug.apk"
+        apk_source = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
         apk_target = "fastlane/app-debug.apk"
+
+        UI.message("✅ APK built at: #{apk_source}")
+
+        # Copy to fastlane folder
         sh("cp #{apk_source} #{apk_target}")
+
 
         # Step 4: Git setup
         sh("git config user.email 'nikhil77@sutara.org'")
