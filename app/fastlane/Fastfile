@@ -32,25 +32,29 @@ platform :android do
           build_type: "Debug",
           project_dir: "../"
         )
-        apk_source = lane_context[:GRADLE_APK_OUTPUT_PATH] # safest way
-        apk_target = "../app/fastlane/app-debug.apk"
-        FileUtils.mkdir_p(File.dirname(apk_target))
-        FileUtils.cp(apk_source, apk_target)
+        apk_source = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+        apk_target = "fastlane/app-debug.apk"
+
+        UI.message("✅ APK built at: #{apk_source}")
+
+        # Copy to fastlane folder
+        sh("cp #{apk_source} #{apk_target}")
+
 
         # Step 4: Git setup
-        sh("git config user.email 'nikhilchoudhary@sutara.org'")
-        sh("git config user.name 'nikhil77sutara'")
+        sh("git config user.email 'nikhil77@sutara.org'")
+        sh("git config user.name 'CLAutomated'")
 
         # Step 5: Checkout or create a branch
-        sh("git checkout develop")
+        sh("git checkout -B clautoTest")
 
         # Step 6: Force add the APK even if it's in .gitignore
         sh("git add -f #{apk_target}")
 
         # Step 7: Commit and push
         timestamp = Time.now.strftime("%Y-%m-%d %H:%M")
-        sh("git commit -m \"📦 Debug APK pushed on #{timestamp}\"")
-        sh("git push origin develop --force")
+        sh("git commit -m '📦 Debug APK pushed on #{timestamp}'")
+        sh("git push origin develop-artifacts --force")
 
         UI.success("✅ Debug APK pushed to 'develop-artifacts' branch inside 'fastlane/' folder.")
       end
