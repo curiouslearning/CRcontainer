@@ -57,9 +57,9 @@ platform :android do
       app_dir = File.expand_path("..", __dir__)
       apk_path = File.join(app_dir, "build/outputs/apk/debug/app-debug.apk")
       UI.message("Resolved APK path: #{apk_path}")
-      destination_dir = "fastlane/debug_apks"
+      destination_dir = "debug_apks"
       timestamp = Time.now.strftime("%Y%m%d-%H%M%S")
-      destination_path = File.join(destination_dir, "app-debug-#{timestamp}.apk")
+      destination_path = File.join(destination_dir, "app-debug.apk")
 
       FileUtils.mkdir_p(destination_dir)
       FileUtils.cp(apk_path, destination_path)
