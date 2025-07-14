@@ -17,14 +17,13 @@ platform :android do
 
       changelog = sh("git log -5 --pretty=format:'- %s'").strip
 
-      # Uncomment to enable actual Play Store upload
-      # upload_to_play_store(
-      #   track: "internal",
-      #   skip_upload_metadata: true,
-      #   skip_upload_images: true,
-      #   skip_upload_screenshots: true,
-      #   json_key: "fastlane/service-account.json"
-      # )
+      upload_to_play_store(
+        track: "internal",
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_screenshots: true,
+        json_key: "fastlane/service-account.json"
+      )
 
       slack(
         message: ":rocket: *Test App successfully deployed to Play Store (Internal Track)*\n\n*Changelog:*\n#{changelog}",
