@@ -9,17 +9,6 @@ platform :android do
     if last_commit.downcase.include?("release")
       UI.message("Release commit detected. Building AAB and uploading to Play Store...")
 
-      # Optional version bump
-      # increment_version_code(
-      #   gradle_file_path: "../app/build.gradle"
-      # )
-
-      # version_name = Time.now.strftime("%Y.%m.%d.%H%M")
-      # increment_version_name(
-      #   version_name: version_name,
-      #   gradle_file_path: "../app/build.gradle"
-      # )
-
       gradle(
         task: "bundle",
         build_type: "Release",
