@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
     id 'jacoco'
 }
 
@@ -62,6 +63,7 @@ dependencies {
     //firebase
     implementation platform('com.google.firebase:firebase-bom:31.2.3')
     implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-crashlytics:18.6.1'
     implementation 'com.google.firebase:firebase-core:17.5.0'
 
     //picasso (image caching)
