@@ -44,6 +44,20 @@ public class AnalyticsUtils {
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
     }
+    public static void logAttributionErrorEvent(Context context, String eventName, String appUrl, String pseudoId) {
+        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        Bundle bundle = new Bundle();
+        String source = prefs.getString(SOURCE, "");
+        String campaign_id = prefs.getString(CAMPAIGN_ID, "");
+        bundle.putString("error_type", "invalid_payload");
+        bundle.putString("deep_link_uri", appUrl);
+        bundle.putString("missing_key", "language");
+        bundle.putString("cr_user_id", pseudoId);
+        firebaseAnalytics.setUserProperty("source", source);
+        firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
+        firebaseAnalytics.logEvent(eventName, bundle);
+    }
 
     public static void logStartedInOfflineModeEvent(Context context, String eventName, String pseudoId) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);

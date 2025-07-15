@@ -24,7 +24,6 @@ import com.facebook.appevents.AppEventsLogger;
 import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.curiouslearning.container.data.model.WebApp;
@@ -83,6 +82,7 @@ public class MainActivity extends BaseActivity {
     private AudioPlayer audioPlayer;
     private String appVersion;
     private boolean isReferrerHandled;
+    private boolean isAttributionComplete = false;
     private long initialSlackAlertTime;
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
@@ -104,6 +104,7 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onReferrerReceived(String deferredLang, String fullURL) {
                 String language = deferredLang.trim();
+                isAttributionComplete = true;
 
                 if (!isReferrerHandled ) {
                     SharedPreferences.Editor editor = prefs.edit();
@@ -119,8 +120,13 @@ public class MainActivity extends BaseActivity {
                                     + language.substring(1).toLowerCase();
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
-                                manifestVrsn, "true");
+
+                        if (isAttributionComplete) {
+                            AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
+                                    manifestVrsn, "true");
+                        } else {
+                            Log.d(TAG, "Attribution not complete. Skipping event log.");
+                        }
                         Log.d(TAG, "Referrer language received: " + language + " " + lang);
                     }else{
                         fetchFacebookDeferredData();
@@ -221,9 +227,16 @@ public class MainActivity extends BaseActivity {
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                     selectedLanguage = lang;
                     storeSelectLanguage(lang);
+                    isAttributionComplete = true;
                     AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
-                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                            manifestVrsn, "true");
+
+                    if (isAttributionComplete) {
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
+                                manifestVrsn, "true");
+                    } else {
+                        Log.d(TAG, "Attribution not complete. Skipping event log.");
+                    }
+
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -302,15 +315,7 @@ public class MainActivity extends BaseActivity {
             if (language == null || language.length()==0 ) {
                 String errorMsg = "[AttributionError] Null or empty 'language' received from " + source
                         + " referrer. PseudoId: " + pseudoId;
-
-                // Firebase Analytics custom event
-                Bundle errorBundle = new Bundle();
-                errorBundle.putString("error_type", "invalid_payload");
-                errorBundle.putString("source", source);
-                errorBundle.putString("missing_key", "language");
-                errorBundle.putString("deep_link_uri", deepLinkUri);
-                errorBundle.putString("cr_user_id", pseudoId);
-                FirebaseAnalytics.getInstance(this).logEvent("attribution_error", errorBundle);
+                AnalyticsUtils.logAttributionErrorEvent(MainActivity.this,"attribution_error", deepLinkUri,pseudoId);
 
                 // Firebase Crashlytics non-fatal error
                 FirebaseCrashlytics.getInstance().log(errorMsg);
@@ -388,6 +393,7 @@ public class MainActivity extends BaseActivity {
                         autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
 
                         selectedLanguage = prefs.getString("selectedLanguage", "");
+                        isAttributionComplete = true;
                         if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
                             textBox.setHint(languagesEnglishNameMap.get(selectedLanguage));
                         }
@@ -400,8 +406,13 @@ public class MainActivity extends BaseActivity {
                                         .get((String) parent.getItemAtPosition(position));
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
-                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
-                                        selectedLanguage, manifestVrsn, "false");
+                                if (isAttributionComplete) {
+                                    AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
+                                            selectedLanguage, manifestVrsn, "false");
+                                } else {
+                                    Log.d(TAG, "Attribution not complete. Skipping event log.");
+                                }
+
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }
