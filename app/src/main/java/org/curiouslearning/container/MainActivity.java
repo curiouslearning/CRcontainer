@@ -161,13 +161,9 @@ public class MainActivity extends BaseActivity {
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
-
         appVersion = AppUtils.getAppVersionName(this);
         manifestVersion = prefs.getString("manifestVersion", "");
-
         initRecyclerView();
-
-
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
         if (manifestVersion != null && manifestVersion != "") {
