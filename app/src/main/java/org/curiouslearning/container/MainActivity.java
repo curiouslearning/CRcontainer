@@ -104,13 +104,13 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onReferrerReceived(String deferredLang, String fullURL) {
                 String language = deferredLang.trim();
-                isAttributionComplete = true;
 
                 if (!isReferrerHandled ) {
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putBoolean(REFERRER_HANDLED_KEY, true);
                     editor.apply();
                     if((language!=null && language.length()>0) || fullURL.contains("curiousreader://app")) {
+                        isAttributionComplete = true;
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=",""));
                         String pseudoId = prefs.getString("pseudoId", "");
                         String manifestVrsn = prefs.getString("manifestVersion", "");
@@ -393,7 +393,6 @@ public class MainActivity extends BaseActivity {
                         autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
 
                         selectedLanguage = prefs.getString("selectedLanguage", "");
-                        isAttributionComplete = true;
                         if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
                             textBox.setHint(languagesEnglishNameMap.get(selectedLanguage));
                         }
@@ -406,12 +405,8 @@ public class MainActivity extends BaseActivity {
                                         .get((String) parent.getItemAtPosition(position));
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
-                                if (isAttributionComplete) {
-                                    AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
+                                AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                             selectedLanguage, manifestVrsn, "false");
-                                } else {
-                                    Log.d(TAG, "Attribution not complete. Skipping event log.");
-                                }
 
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
