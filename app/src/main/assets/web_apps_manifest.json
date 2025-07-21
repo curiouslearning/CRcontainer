@@ -1,27 +1,93 @@
 {
-  "version": 1.0,
+  "version": "1.95",
   "web_apps": [
     {
       "appId": 0,
-      "appIconUrl": "https://devcuriousreader.wpcomstaging.com/container_app_manifest/icons/ftm_english_dev.png",
-      "title": "Feed The Monster US English",
-      "appUrl": "https://feedthemonsterdev.curiouscontent.org/?cr_lang=english",
-      "language": "English"
+      "appIconUrl": "ftm_hausa_prod.png",
+      "title": "Feed The Monster Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/FeedTheMonsterJs/index.html?cr_lang=hausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
     },
     {
       "appId": 1,
-      "appIconUrl": "https://devcuriousreader.wpcomstaging.com/container_app_manifest/icons/lets_fly_dev.png",
-      "title": "Lets fly",
-      "appUrl": "https://curiousreaderdev.curiouscontent.org/",
-      "language": "English"
+      "appIconUrl": "assessment_icon_prod.png",
+      "title": "Assessment Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/Assessment?data=hausa-lettersounds",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
     },
     {
       "appId": 2,
-      "appIconUrl": "https://devcuriousreader.wpcomstaging.com/container_app_manifest/icons/ftm_hindi_dev.png",
-      "title": "Feed The Monster Hindi",
-      "appUrl": "https://feedthemonsterdev.curiouscontent.org/?cr_lang=hindi",
-      "language": "Hindi"
+      "appIconUrl": "assessment_icon_sight_word.png",
+      "title": "Assessment Hausa Sight Words",
+      "appUrl": "https://appassets.androidplatform.net/assets/Assessment?data=hausa-sightwords",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 3,
+      "appIconUrl": "ftm_tallandshort_prod.png",
+      "title": "Curious Reader Tall And Short Hausa Level 4",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=TallAndShortHausaLv4",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 4,
+      "appIconUrl": "who_Can_Help_Me.png",
+      "title": "Curious Reader Who Can Help Me Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=WhoCanHelpMeHausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 5,
+      "appIconUrl": "playground.png",
+      "title": "Curious Reader Playground Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=PlaygroundHausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 6,
+      "appIconUrl": "frogs_starry_wish.png",
+      "title": "Curious Reader Frog's Starry Wish Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=FrogsStarryWishHausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 7,
+      "appIconUrl": "friends.png",
+      "title": "Curious Reader Friends Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=FriendsHausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 8,
+      "appIconUrl": "dads_boots.png",
+      "title": "Curious Reader Dad's Boots Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=DadsBootsHausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 9,
+      "appIconUrl": "chakus_cycle.png",
+      "title": "Curious Reader Chaku's Cycle Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=ChakusCycleHausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
+    },
+    {
+      "appId": 10,
+      "appIconUrl": "the_lion_runs.png",
+      "title": "Curious Reader The Lion Runs Hausa And The Cow Walks Hausa",
+      "appUrl": "https://appassets.androidplatform.net/assets/CRWebPlayerJs?book=TheLionRunsAndTheCowWalksHausa",
+      "language": "Hausa",
+      "languageInEnglishName": "Hausa"
     }
-
   ]
 }

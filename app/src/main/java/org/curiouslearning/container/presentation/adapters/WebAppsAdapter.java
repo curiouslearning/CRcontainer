@@ -1,6 +1,5 @@
 package org.curiouslearning.container.presentation.adapters;
 
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -12,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.webkit.WebViewAssetLoader;
 
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
@@ -33,13 +33,14 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     private static final String PULSE_ANIMATION_KEY = "pulse_animaton";
     private SharedPreferences prefs;
     private boolean isAnimated;
+
     public WebAppsAdapter(Context context, List<WebApp> webApps) {
         this.ctx = context;
         this.webApps = webApps;
         this.inflater = LayoutInflater.from(ctx);
         this.audioPlayer = new AudioPlayer();
         prefs = ctx.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
-        isAnimated = prefs.getBoolean(PULSE_ANIMATION_KEY,false);
+        isAnimated = prefs.getBoolean(PULSE_ANIMATION_KEY, false);
     }
 
     @NonNull
@@ -55,35 +56,36 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
         holder.pulsatorLayout.stopAnimation();
-        if ( webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
-            if(!isAnimated){
+        if (webApps.get(position).getTitle().contains("Feed The Monster")
+                && !isAppCached(webApps.get(position).getAppId())) {
+            if (!isAnimated) {
                 holder.pulsatorLayout.startAnimation();
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putBoolean(PULSE_ANIMATION_KEY, true);
                 editor.apply();
-            }else{
+            } else {
                 holder.itemView.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        if( webApps.get(position).getTitle().contains("Feed The Monster") && holder.getLayoutPosition() == position)
+                        if (webApps.get(position).getTitle().contains("Feed The Monster")
+                                && holder.getLayoutPosition() == position)
                             holder.pulsatorLayout.startAnimation();
                     }
                 }, 5000);
             }
 
-
-        }else{
+        } else {
             holder.pulsatorLayout.stopAnimation();
         }
 
         // if (!isAppCached(webApps.get(position).getAppId())) {
-        //     ColorMatrix matrix = new ColorMatrix();
-        //     matrix.setSaturation(0);
-        //     ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
-        //     // holder.downloadIconImage.setImageResource(R.drawable.download_image);
-        //     holder.appIconImage.setColorFilter(filter);
+        // ColorMatrix matrix = new ColorMatrix();
+        // matrix.setSaturation(0);
+        // ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+        // // holder.downloadIconImage.setImageResource(R.drawable.download_image);
+        // holder.appIconImage.setColorFilter(filter);
         // } else {
-            holder.downloadIconImage.setImageResource(0);
+        holder.downloadIconImage.setImageResource(0);
         // }
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {

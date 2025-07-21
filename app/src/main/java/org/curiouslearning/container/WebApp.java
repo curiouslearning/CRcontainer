@@ -14,6 +14,10 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewClientCompat;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
@@ -85,10 +89,6 @@ public class WebApp extends BaseActivity {
     }
 
     private void loadWebView() {
-        if (!isInternetConnected(getApplicationContext()) && !isDataCached) {
-            showPrompt("Please Connect to the Network");
-            return;
-        }
 
         webView = findViewById(R.id.web_app);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -98,29 +98,20 @@ public class WebApp extends BaseActivity {
         webView.getSettings().getDomStorageEnabled();
         webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
-        if (appUrl.contains("feedthemonster")) {
-            System.out
-                    .println(">> url source and campaign params added to the subapp url " + source + " " + campaignId);
-            if (source != null && !source.isEmpty()) {
-                appUrl = addSourceToUrl(appUrl);
-            }
-            if (campaignId != null && !campaignId.isEmpty()) {
-                appUrl = addCampaignIdToUrl(appUrl);
-            }
-        }
-        if(appUrl.contains("docs.google.com/forms")){
-            webView.loadUrl(addCrUserIdToFormUrl(appUrl));
-        }else{
-            webView.loadUrl(addCrUserIdToUrl(appUrl));
-        }
-        System.out.println("subapp url : " + appUrl);
-        webView.setWebChromeClient(new WebChromeClient() {
-            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-                Log.d("WebView", consoleMessage.message());
-                return true;
+        WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
             }
         });
+        webView.loadUrl(appUrl);
+
     }
 
     private String addCrUserIdToUrl(String appUrl) {
@@ -136,6 +127,7 @@ public class WebApp extends BaseActivity {
         String modifiedUrl = originalUri.toString() + pseudoId + separator + "cr_user_id=" + pseudoId;
         return modifiedUrl;
     }
+
     private String addSourceToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";

@@ -19,8 +19,6 @@ public class WebApp {
 
     private String languageInEnglishName;
 
-
-
     public int getAppId() {
         return appId;
     }
@@ -38,7 +36,7 @@ public class WebApp {
     }
 
     public String getAppIconUrl() {
-        return appIconUrl;
+        return (appIconUrl);
     }
 
     public void setAppIconUrl(String appIconUrl) {

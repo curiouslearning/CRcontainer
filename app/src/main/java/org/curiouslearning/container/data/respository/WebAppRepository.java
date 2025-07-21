@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import org.curiouslearning.container.data.database.WebAppDatabase;
+import org.curiouslearning.container.data.local.ManifestLoader;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.remote.RetrofitInstance;
 import org.curiouslearning.container.utilities.ConnectionUtils;
@@ -29,9 +30,8 @@ public class WebAppRepository {
     }
 
     public void fetchWebApp() {
-        if (ConnectionUtils.getInstance().isInternetConnected(application)) {
-            retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
-        }
+        ManifestLoader.getInstance().loadLocalManifest(application.getApplicationContext(), webAppDatabase);
+
     }
 
     public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage, LifecycleOwner lifecycleOwner) {
@@ -44,7 +44,7 @@ public class WebAppRepository {
                     selectedLanguageWebApps.setValue(webApps);
                 } else {
                     selectedLanguageWebApps.setValue(Collections.emptyList());
-//                   fetchWebApp();
+                    // fetchWebApp();
                 }
             }
         });
@@ -67,6 +67,7 @@ public class WebAppRepository {
         });
         return newWebApps;
     }
+
     public LiveData<List<String>> getAllLanguagesInEnglish() {
         return webAppDatabase.getAllLanguagesInEnglish();
     }
