@@ -488,7 +488,7 @@
       var e = document.getElementById(
         "star" + l.getInstance().stars[l.getInstance().qAnsNum]
       );
-      (e.src = "../../AssessmentJs/animation/Star.gif"),
+      (e.src = "animation/Star.gif"),
         e.classList.add("topstarv"),
         e.classList.remove("topstarh"),
         (e.style.position = "absolute");
@@ -538,7 +538,7 @@
     static ChangeStarImageAfterAnimation() {
       document.getElementById(
         "star" + l.getInstance().stars[l.getInstance().qAnsNum - 1]
-      ).src = "../../AssessmentJs/img/star_after_animation.gif";
+      ).src = "img/star_after_animation.gif";
     }
     answerButtonPress(e) {
       const t = this.buttons.every((e) => "visible" === e.style.visibility);
