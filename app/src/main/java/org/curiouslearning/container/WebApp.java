@@ -103,14 +103,27 @@ public class WebApp extends BaseActivity {
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
-
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return assetLoader.shouldInterceptRequest(request.getUrl());
             }
         });
-        webView.loadUrl(appUrl);
+        if (appUrl.contains("FeedTheMonsterJs")) {
+            System.out
+                    .println(">> url source and campaign params added to the subapp url " + source + " " + campaignId);
+            if (source != null && !source.isEmpty()) {
+                appUrl = addSourceToUrl(appUrl);
+            }
+            if (campaignId != null && !campaignId.isEmpty()) {
+                appUrl = addCampaignIdToUrl(appUrl);
+            }
+        }
+        if(appUrl.contains("docs.google.com/forms")){
+            webView.loadUrl(addCrUserIdToFormUrl(appUrl));
+        }else {
+            webView.loadUrl(addCrUserIdToUrl(appUrl));
+        }
 
     }
 
