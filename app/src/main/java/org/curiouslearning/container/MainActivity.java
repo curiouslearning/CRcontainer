@@ -38,6 +38,7 @@ import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import org.curiouslearning.container.utilities.ConnectionUtils;
+import org.curiouslearning.container.utilities.LanguageHelper;
 import org.curiouslearning.container.utilities.SlackUtils;
 
 import java.math.BigInteger;
@@ -49,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -477,23 +479,36 @@ public class MainActivity extends BaseActivity {
                 dialectGroups.get(baseLanguage).add(dialect);
             }
         }
+// Prioritize baseLanguages using regional logic
+        List<String> baseLanguageOrder = LanguageHelper.getSortedLanguageListForUserRegion(new ArrayList<>(dialectGroups.keySet()));
 
+// Rebuild dialectGroups in the prioritized order
+        LinkedHashMap<String, List<String>> orderedDialectGroups = new LinkedHashMap<>();
+        for (String lang : baseLanguageOrder) {
+            if (dialectGroups.containsKey(lang)) {
+                orderedDialectGroups.put(lang, dialectGroups.get(lang));
+            }
+        }
+
+// Now use orderedDialectGroups instead of dialectGroups
         List<String> sortedLanguages = new ArrayList<>();
-        for (Map.Entry<String, List<String>> entry : dialectGroups.entrySet()) {
+        for (Map.Entry<String, List<String>> entry : orderedDialectGroups.entrySet()) {
             String baseLanguage = entry.getKey();
             List<String> dialects = entry.getValue();
             Collections.sort(dialects);
+
             for (String dialect : dialects) {
-                if(languages.get(baseLanguage) == null || !languages.get(baseLanguage).equals(dialect)) {
+                if (languages.get(baseLanguage) == null || !languages.get(baseLanguage).equals(dialect)) {
                     if (baseLanguage.contains("Creole"))
                         sortedLanguages.add(baseLanguage.substring(6) + " - " + dialect);
                     else
-                        sortedLanguages.add(baseLanguage+ " - " + dialect);
-                }
-                else
+                        sortedLanguages.add(baseLanguage + " - " + dialect);
+                } else {
                     sortedLanguages.add(dialect);
+                }
             }
         }
+
 
         return new LinkedHashSet<>(sortedLanguages);
     }
