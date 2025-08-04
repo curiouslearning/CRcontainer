@@ -5,9 +5,10 @@ platform :android do
 
   lane :deploy do
     last_commit = sh("git log -1 --pretty=%B").strip
+    current_branch = sh("git rev-parse --abbrev-ref HEAD").strip
 
     if last_commit.downcase.include?("release")
-      UI.message("Release commit detected. Building AAB and uploading to Play Store...")
+      UI.message("Release commit detected on branch '#{current_branch}'. Building AAB...")
 
       gradle(
         task: "bundle",
@@ -15,42 +16,50 @@ platform :android do
         project_dir: "../"
       )
 
-      changelog = sh("git log -5 --pretty=format:'- %s'").strip
+      changelog = "Bug Fixes!"
+
+      # Determine the target track based on branch
+      track = current_branch == "main" ? "production" : "internal"
+
+      # Show which track it's deploying to
+      UI.message("Deploying to Google Play track: #{track}")
 
       upload_to_play_store(
-        track: "internal",
+        track: track,
+        rollout: track == "production" ? 1.0 : nil,
+        release_status: track == "production" ? "completed" : nil,
+        changelog: changelog,
         skip_upload_metadata: true,
         skip_upload_images: true,
         skip_upload_screenshots: true,
-        json_key: "fastlane/service-account.json"
+        json_key: "fastlane/service-account.json",
+        changes_not_sent_for_review: false
       )
 
       slack(
-        message: ":rocket: *Test App successfully deployed to Play Store (Internal Track)*\n\n*Changelog:*\n#{changelog}",
+        message: ":rocket: *App successfully deployed to Play Store (#{track.capitalize} Track)*\n\n*Changelog:*\n#{changelog}",
         success: true,
         default_payloads: []
       )
 
     else
       UI.message("No 'release' keyword in commit message. Building Debug APK...")
+
       if last_commit.include?("Add debug APK from CI build at")
         UI.important("Detected auto-generated debug APK commit. Skipping build and push to prevent CI loop.")
         next
       end
 
-      UI.message("Building Debug APK...")
       gradle(
         task: "assemble",
         build_type: "Debug",
         project_dir: "../"
       )
 
-
       require 'fileutils'
 
       app_dir = File.expand_path("..", __dir__)
       apk_path = File.join(app_dir, "build/outputs/apk/debug/app-debug.apk")
-      UI.message("Resolved APK path: #{apk_path}")
       destination_dir = "debug_apks"
       timestamp = Time.now.strftime("%Y%m%d-%H%M%S")
       destination_path = File.join(destination_dir, "app-debug.apk")
@@ -68,6 +77,7 @@ platform :android do
       if diff_exit_code != "0"
         sh("git commit -m \"Add debug APK from CI build at #{timestamp}\"")
       end
+
       remote_url = "https://#{ENV['GITHUB_TOKEN']}@github.com/curiouslearning/CRcontainer.git"
       sh("git remote set-url origin #{remote_url}")
       sh("git push origin develop")
