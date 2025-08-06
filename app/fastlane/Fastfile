@@ -7,6 +7,25 @@ platform :android do
     last_commit = sh("git log -1 --pretty=%B").strip
     current_branch = sh("git rev-parse --abbrev-ref HEAD").strip
 
+    release_notes = {
+      "en-US" => "Bug Fixes!",
+      "af" => "Bug Fixes!",
+      "am" => "Bug Fixes!",
+      "en-ZA" => "Bug Fixes!",
+      "es-419" => "Bug Fixes!",
+      "es-ES" => "Bug Fixes!",
+      "es-US" => "Bug Fixes!",
+      "hi-IN" => "Bug Fixes!",
+      "mr-IN" => "Bug Fixes!",
+      "pt-BR" => "Bug Fixes!",
+      "pt-PT" => "Bug Fixes!",
+      "sw" => "Bug Fixes!",
+      "th" => "Bug Fixes!",
+      "tr-TR" => "Bug Fixes!",
+      "uk" => "Bug Fixes!",
+      "zu" => "Bug Fixes!"
+    }
+
     if last_commit.downcase.include?("release")
       UI.message("Release commit detected on branch '#{current_branch}'. Building AAB...")
 
@@ -16,28 +35,26 @@ platform :android do
         project_dir: "../"
       )
 
-      changelog = "Bug Fixes!"
-
-      # Determine the target track based on branch
       track = current_branch == "main" ? "production" : "internal"
 
-      # Show which track it's deploying to
       UI.message("Deploying to Google Play track: #{track}")
 
       upload_to_play_store(
         track: track,
         rollout: track == "production" ? 1.0 : nil,
         release_status: track == "production" ? "completed" : nil,
-        changelog: changelog,
         skip_upload_metadata: true,
         skip_upload_images: true,
         skip_upload_screenshots: true,
         json_key: "fastlane/service-account.json",
-        changes_not_sent_for_review: false
+        changes_not_sent_for_review: false,
+        release_notes: release_notes 
       )
 
+      slack_message = release_notes["en-US"] || "Bug Fixes!"
+
       slack(
-        message: ":rocket: *App successfully deployed to Play Store (#{track.capitalize} Track)*\n\n*Changelog:*\n#{changelog}",
+        message: ":rocket: *App successfully deployed to Play Store (#{track.capitalize} Track)*\n\n#{slack_message}",
         success: true,
         default_payloads: []
       )

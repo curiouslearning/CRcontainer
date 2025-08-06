@@ -18,7 +18,6 @@ jobs:
             sudo gem install bundler
             cd app
             bundle install --path vendor/bundle
-
       - run:
           name: Make gradlew executable
           command: chmod +x ./gradlew
@@ -27,12 +26,10 @@ jobs:
           name: Decode Keystore
           command: |
             echo $KEYSTORE_BASE64 | base64 --decode > app/keystore/my-release-key.jks
-
       - run:
           name: Decode Service Account JSON
           command: |
             echo $JSON_KEY_DATA | base64 --decode > app/fastlane/service-account.json
-
       - run:
           name: Run Fastlane
           command: |
@@ -40,9 +37,11 @@ jobs:
             bundle exec fastlane deploy
 
 workflows:
-  deploy_on_develop:
+  deploy_on_branch:
     jobs:
       - deploy:
           filters:
             branches:
-              only: develop
+              only:
+                - develop
+                - main 
