@@ -24,6 +24,8 @@ import com.facebook.appevents.AppEventsLogger;
 import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
+
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -35,6 +37,7 @@ import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.SlackUtils;
 
 import java.math.BigInteger;
@@ -79,6 +82,7 @@ public class MainActivity extends BaseActivity {
     private AudioPlayer audioPlayer;
     private String appVersion;
     private boolean isReferrerHandled;
+    private boolean isAttributionComplete = false;
     private long initialSlackAlertTime;
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
@@ -88,11 +92,19 @@ public class MainActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        dialog = new Dialog(this);
+        loadingIndicator = findViewById(R.id.loadingIndicator);
+        loadingIndicator.setVisibility(View.GONE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
         initialSlackAlertTime= AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
+        if (!isInternetConnected(getApplicationContext())) {
+            logStartedInOfflineMode();
+        }
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
             public void onReferrerReceived(String deferredLang, String fullURL) {
@@ -103,6 +115,7 @@ public class MainActivity extends BaseActivity {
                     editor.putBoolean(REFERRER_HANDLED_KEY, true);
                     editor.apply();
                     if((language!=null && language.length()>0) || fullURL.contains("curiousreader://app")) {
+                        isAttributionComplete = true;
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=",""));
                         String pseudoId = prefs.getString("pseudoId", "");
                         String manifestVrsn = prefs.getString("manifestVersion", "");
@@ -112,8 +125,13 @@ public class MainActivity extends BaseActivity {
                                     + language.substring(1).toLowerCase();
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
-                                manifestVrsn, "true");
+
+                        if (isAttributionComplete) {
+                            AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, language,
+                                    manifestVrsn, "true");
+                        } else {
+                            Log.d(TAG, "Attribution not complete. Skipping event log.");
+                        }
                         Log.d(TAG, "Referrer language received: " + language + " " + lang);
                     }else{
                         fetchFacebookDeferredData();
@@ -149,14 +167,9 @@ public class MainActivity extends BaseActivity {
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
         Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
         AppEventsLogger.activateApp(getApplication());
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
         appVersion = AppUtils.getAppVersionName(this);
         manifestVersion = prefs.getString("manifestVersion", "");
-        dialog = new Dialog(this);
         initRecyclerView();
-        loadingIndicator = findViewById(R.id.loadingIndicator);
-        loadingIndicator.setVisibility(View.GONE);
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
         if (manifestVersion != null && manifestVersion != "") {
@@ -214,9 +227,16 @@ public class MainActivity extends BaseActivity {
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                     selectedLanguage = lang;
                     storeSelectLanguage(lang);
+                    isAttributionComplete = true;
                     AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
-                    AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                            manifestVrsn, "true");
+
+                    if (isAttributionComplete) {
+                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
+                                manifestVrsn, "true");
+                    } else {
+                        Log.d(TAG, "Attribution not complete. Skipping event log.");
+                    }
+
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -292,11 +312,22 @@ public class MainActivity extends BaseActivity {
                 .append("Detected in data at: ").append(convertEpochToDate(currentEpochTime)).append("\n")
                 .append("Alerted in Slack: ").append(convertEpochToDate(initialSlackAlertTime));
         runOnUiThread(() -> {
-        if( language == null || language.length()==0 ){
-            SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-            showLanguagePopup();
-            return;
-        }
+            if (language == null || language.length()==0 ) {
+                String errorMsg = "[AttributionError] Null or empty 'language' received from " + source
+                        + " referrer. PseudoId: " + pseudoId;
+                AnalyticsUtils.logAttributionErrorEvent(MainActivity.this,"attribution_error", deepLinkUri,pseudoId);
+
+                // Firebase Crashlytics non-fatal error
+                FirebaseCrashlytics.getInstance().log(errorMsg);
+                FirebaseCrashlytics.getInstance().recordException(
+                        new IllegalArgumentException(errorMsg)
+                );
+                // Slack alert
+                SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+
+                showLanguagePopup();
+                return;
+            }
             homeViewModal.getAllLanguagesInEnglish().observe(this, validLanguages -> {
                 List<String> lowerCaseLanguages = validLanguages.stream()
                         .map(String::toLowerCase)
@@ -375,7 +406,8 @@ public class MainActivity extends BaseActivity {
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
-                                        selectedLanguage, manifestVrsn, "false");
+                                            selectedLanguage, manifestVrsn, "false");
+
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
                             }
@@ -523,4 +555,15 @@ public class MainActivity extends BaseActivity {
             Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
         }
     }
+
+    private boolean isInternetConnected(Context context) {
+        return ConnectionUtils.getInstance().isInternetConnected(context);
+    }
+
+    private void logStartedInOfflineMode() {
+
+        AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
+                "started_in_offline_mode", prefs.getString("pseudoId", ""));
+    }
+
 }
