@@ -35,10 +35,8 @@ platform :android do
         project_dir: "../"
       )
 
-      # Determine the target track based on branch
       track = current_branch == "main" ? "production" : "internal"
 
-      # Show which track it's deploying to
       UI.message("Deploying to Google Play track: #{track}")
 
       upload_to_play_store(
@@ -50,10 +48,9 @@ platform :android do
         skip_upload_screenshots: true,
         json_key: "fastlane/service-account.json",
         changes_not_sent_for_review: false,
-        release_notes: release_notes # Pass the release notes in multiple languages
+        release_notes: release_notes 
       )
 
-      # Dynamically get release note for 'en-US' for Slack message (or use default)
       slack_message = release_notes["en-US"] || "Bug Fixes!"
 
       slack(
