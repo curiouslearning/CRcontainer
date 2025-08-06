@@ -1,0 +1,103 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build and deploy the app if commit message contains 'release', else build debug APK and upload to GitHub"
+
+  lane :deploy do
+    last_commit = sh("git log -1 --pretty=%B").strip
+    current_branch = sh("git rev-parse --abbrev-ref HEAD").strip
+
+    release_notes = {
+      "en-US" => "Bug Fixes!",
+      "af" => "Bug Fixes!",
+      "am" => "Bug Fixes!",
+      "en-ZA" => "Bug Fixes!",
+      "es-419" => "Bug Fixes!",
+      "es-ES" => "Bug Fixes!",
+      "es-US" => "Bug Fixes!",
+      "hi-IN" => "Bug Fixes!",
+      "mr-IN" => "Bug Fixes!",
+      "pt-BR" => "Bug Fixes!",
+      "pt-PT" => "Bug Fixes!",
+      "sw" => "Bug Fixes!",
+      "th" => "Bug Fixes!",
+      "tr-TR" => "Bug Fixes!",
+      "uk" => "Bug Fixes!",
+      "zu" => "Bug Fixes!"
+    }
+
+    if last_commit.downcase.include?("release")
+      UI.message("Release commit detected on branch '#{current_branch}'. Building AAB...")
+
+      gradle(
+        task: "bundle",
+        build_type: "Release",
+        project_dir: "../"
+      )
+
+      track = current_branch == "main" ? "production" : "internal"
+
+      UI.message("Deploying to Google Play track: #{track}")
+
+      upload_to_play_store(
+        track: track,
+        rollout: track == "production" ? 1.0 : nil,
+        release_status: track == "production" ? "completed" : nil,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_screenshots: true,
+        json_key: "fastlane/service-account.json",
+        changes_not_sent_for_review: false,
+        release_notes: release_notes 
+      )
+
+      slack_message = release_notes["en-US"] || "Bug Fixes!"
+
+      slack(
+        message: ":rocket: *App successfully deployed to Play Store (#{track.capitalize} Track)*\n\n#{slack_message}",
+        success: true,
+        default_payloads: []
+      )
+
+    else
+      UI.message("No 'release' keyword in commit message. Building Debug APK...")
+
+      if last_commit.include?("Add debug APK from CI build at")
+        UI.important("Detected auto-generated debug APK commit. Skipping build and push to prevent CI loop.")
+        next
+      end
+
+      gradle(
+        task: "assemble",
+        build_type: "Debug",
+        project_dir: "../"
+      )
+
+      require 'fileutils'
+
+      app_dir = File.expand_path("..", __dir__)
+      apk_path = File.join(app_dir, "build/outputs/apk/debug/app-debug.apk")
+      destination_dir = "debug_apks"
+      timestamp = Time.now.strftime("%Y%m%d-%H%M%S")
+      destination_path = File.join(destination_dir, "app-debug.apk")
+
+      FileUtils.mkdir_p(destination_dir)
+      FileUtils.cp(apk_path, destination_path)
+      UI.success("Debug APK saved to #{destination_path}")
+
+      sh("git config user.email 'nikhilchoudhary@sutara.org'")
+      sh("git config user.name 'CLAuto'")
+      sh("git add #{destination_path}")
+
+      diff_exit_code = sh("git diff --cached --quiet || echo $?").strip
+
+      if diff_exit_code != "0"
+        sh("git commit -m \"Add debug APK from CI build at #{timestamp}\"")
+      end
+
+      remote_url = "https://#{ENV['GITHUB_TOKEN']}@github.com/curiouslearning/CRcontainer.git"
+      sh("git remote set-url origin #{remote_url}")
+      sh("git push origin develop")
+    end
+  end
+end

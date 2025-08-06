@@ -31,12 +31,22 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        release {
+            storeFile file("keystore/my-release-key.jks")
+            storePassword System.getenv("KEYSTORE_PASSWORD")
+            keyAlias System.getenv("KEY_ALIAS")
+            keyPassword System.getenv("KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         debug{
             testCoverageEnabled true
             buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/dev/\""
         }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/\""

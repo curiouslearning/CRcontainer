@@ -1,0 +1,2 @@
+gem 'fastlane-plugin-slack'
+gem 'fastlane-plugin-versioning_android'
