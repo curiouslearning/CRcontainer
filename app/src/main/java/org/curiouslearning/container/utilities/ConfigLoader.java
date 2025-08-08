@@ -10,7 +10,16 @@ public class ConfigLoader {
             Properties properties = new Properties();
             InputStream inputStream = context.getAssets().open("config.properties");
             properties.load(inputStream);
-            return properties.getProperty("SLACK_WEBHOOK_URL");
+
+            String webhookUrl = properties.getProperty("SLACK_WEBHOOK_URL");
+            if (webhookUrl != null && !webhookUrl.isEmpty()) {
+                return webhookUrl;
+            }
+            webhookUrl = System.getenv("FANT_SLACK_URL");
+            if (webhookUrl != null && !webhookUrl.isEmpty()) {
+                return webhookUrl;
+            }
+            return null;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
