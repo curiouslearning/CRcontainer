@@ -35,26 +35,25 @@ platform :android do
         project_dir: "../"
       )
 
-      track = current_branch == "main" ? "production" : "internal"
+      # Use 'beta' for main branch, 'internal' otherwise
+      track = current_branch == "main" ? "beta" : "internal"
 
-      UI.message("Deploying to Google Play track: #{track}")
+      UI.message("Uploading to Google Play track: #{track}")
 
       upload_to_play_store(
         track: track,
-        rollout: track == "production" ? 1.0 : nil,
-        release_status: track == "production" ? "completed" : nil,
+        json_key: "fastlane/service-account.json",
+        changes_not_sent_for_review: true, 
         skip_upload_metadata: true,
         skip_upload_images: true,
         skip_upload_screenshots: true,
-        json_key: "fastlane/service-account.json",
-        changes_not_sent_for_review: false,
-        release_notes: release_notes 
+        release_notes: release_notes
       )
 
       slack_message = release_notes["en-US"] || "Bug Fixes!"
 
       slack(
-        message: ":rocket: *App successfully deployed to Play Store (#{track.capitalize} Track)*\n\n#{slack_message}",
+        message: ":rocket: *App uploaded to Play Store (#{track.capitalize} Track)*\n\n#{slack_message}\n\n📝 _Manual review pending in Play Console._",
         success: true,
         default_payloads: []
       )
