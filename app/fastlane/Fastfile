@@ -43,12 +43,11 @@ platform :android do
       upload_to_play_store(
         track: track,
         json_key: "fastlane/service-account.json",
-        changes_not_sent_for_review: true, # Do not send for review automatically
+        changes_not_sent_for_review: true, 
         skip_upload_metadata: true,
         skip_upload_images: true,
         skip_upload_screenshots: true,
         release_notes: release_notes
-        # No release_status or rollout needed for beta/internal
       )
 
       slack_message = release_notes["en-US"] || "Bug Fixes!"
