@@ -35,7 +35,6 @@ public class RetrofitInstance {
 
     public static RetrofitInstance getInstance() {
         Log.d("buildtype api Url ",URL);
-        System.out.println("here is url>>> "+URL);
         if (retrofit == null) {
             retrofitInstance = new RetrofitInstance();
             retrofit = new Retrofit.Builder()
