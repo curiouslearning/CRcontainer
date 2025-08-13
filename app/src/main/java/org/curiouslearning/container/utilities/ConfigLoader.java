@@ -3,6 +3,7 @@ package org.curiouslearning.container.utilities;
 import android.content.Context;
 import java.io.InputStream;
 import java.util.Properties;
+import org.curiouslearning.container.BuildConfig;
 
 public class ConfigLoader {
     public static String getSlackWebhookUrl(Context context) {
@@ -15,7 +16,7 @@ public class ConfigLoader {
             if (webhookUrl != null && !webhookUrl.isEmpty()) {
                 return webhookUrl;
             }
-            webhookUrl = System.getenv("FANT_SLACK_URL");
+            webhookUrl = BuildConfig.SLACK_WEBHOOK_URL;
             if (webhookUrl != null && !webhookUrl.isEmpty()) {
                 return webhookUrl;
             }
