@@ -31,6 +31,11 @@ jobs:
           command: |
             echo $JSON_KEY_DATA | base64 --decode > app/fastlane/service-account.json
       - run:
+          name: Inject Slack Webhook URL
+          command: |
+            mkdir -p app/src/main/assets
+            echo "SLACK_WEBHOOK_URL=$FANT_SLACK_URL" > app/src/main/assets/config.properties
+      - run:
           name: Run Fastlane
           command: |
             cd app
