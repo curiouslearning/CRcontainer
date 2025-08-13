@@ -74,9 +74,9 @@ public class InstallReferrerManager {
         try {
             referrerDetails = installReferrerClient.getInstallReferrer();
             Log.d("referal", referrerDetails.toString() +" ");
-            String referrerUrl = referrerDetails.getInstallReferrer();
+//            String referrerUrl = referrerDetails.getInstallReferrer();
 //          the below url is for testing purpose
-//          String referrerUrl = "source=facebook&utm_medium=print&campaign_id=120208084211250195&deferred_deeplink=curiousreader://app?language= ";
+          String referrerUrl = "deferred_deeplink=curiousreader://app?language=hindii&source=testQA&campaign_id=123test";
             Log.d("referal", referrerUrl +" ");
             extractReferrerParameters(referrerUrl);
             logFirstOpenEvent(referrerDetails);

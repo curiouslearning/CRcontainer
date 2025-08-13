@@ -25,6 +25,7 @@ android {
         versionCode 38
         versionName "2.29"
 
+        buildConfigField "String", "SLACK_WEBHOOK_URL", "\"${System.getenv("FANT_SLACK_URL") ?: ""}\""
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         javaCompileOptions {
