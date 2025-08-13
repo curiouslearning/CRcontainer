@@ -6,6 +6,8 @@ platform :android do
   lane :deploy do
     last_commit = sh("git log -1 --pretty=%B").strip
     current_branch = sh("git rev-parse --abbrev-ref HEAD").strip
+    api_url = sh("cd ../ && ./gradlew -q printApiUrl -PbuildBranch=#{current_branch}").strip
+    UI.message("📡 API_URL from build.gradle: #{api_url}")
 
     release_notes = {
       "en-US" => "Bug Fixes!",
@@ -32,7 +34,10 @@ platform :android do
       gradle(
         task: "bundle",
         build_type: "Release",
-        project_dir: "../"
+        project_dir: "../",
+        properties: {
+            "buildBranch" => current_branch
+          }
       )
 
       # Use 'beta' for main branch, 'internal' otherwise

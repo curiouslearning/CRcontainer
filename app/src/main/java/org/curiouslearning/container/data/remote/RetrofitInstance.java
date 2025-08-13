@@ -1,5 +1,7 @@
 package org.curiouslearning.container.data.remote;
 
+import android.util.Log;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -27,11 +29,12 @@ public class RetrofitInstance {
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
     private Map<String, Object> data;
-
     private static String URL = BuildConfig.API_URL;;
+
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
+        Log.d("buildtype api Url ",URL);
         if (retrofit == null) {
             retrofitInstance = new RetrofitInstance();
             retrofit = new Retrofit.Builder()
