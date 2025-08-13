@@ -32,7 +32,10 @@ platform :android do
       gradle(
         task: "bundle",
         build_type: "Release",
-        project_dir: "../"
+        project_dir: "../",
+        properties: {
+            "buildBranch" => current_branch
+          }
       )
 
       # Use 'beta' for main branch, 'internal' otherwise

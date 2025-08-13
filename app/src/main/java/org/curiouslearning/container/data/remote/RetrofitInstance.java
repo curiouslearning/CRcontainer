@@ -29,9 +29,11 @@ public class RetrofitInstance {
     private Map<String, Object> data;
 
     private static String URL = BuildConfig.API_URL;;
+
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
+        System.out.println("here is url>>> "+URL);
         if (retrofit == null) {
             retrofitInstance = new RetrofitInstance();
             retrofit = new Retrofit.Builder()
