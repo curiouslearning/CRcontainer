@@ -8,6 +8,11 @@ def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buil
 def apiUrl = buildBranch == "main" ?
         "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/" :
         "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/"
+task printApiUrl {
+    doLast {
+        println(apiUrl)
+    }
+}
 
 android {
     namespace 'org.curiouslearning.container'
