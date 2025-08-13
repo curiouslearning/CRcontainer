@@ -7,7 +7,7 @@ platform :android do
     last_commit = sh("git log -1 --pretty=%B").strip
     current_branch = sh("git rev-parse --abbrev-ref HEAD").strip
     api_url = sh("cd ../../ && ./gradlew -q :app:printApiUrl -PbuildBranch=#{current_branch}").strip
-    
+    UI.message("🔑 FANT_SLACK_URL from CircleCI: #{ENV['FANT_SLACK_URL']}")
     UI.message("📡 API_URL from build.gradle: #{api_url}")
 
     release_notes = {
