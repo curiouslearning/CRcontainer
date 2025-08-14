@@ -33,8 +33,13 @@ jobs:
       - run:
           name: Inject Slack Webhook URL
           command: |
-            mkdir -p app/src/main/assets
-            echo "SLACK_WEBHOOK_URL=$FANT_SLACK_URL" > app/src/main/assets/config.properties
+            if [ "$CIRCLE_BRANCH" != "develop" ] && ! git log -1 --pretty=%B | grep -qi "release"; then
+              mkdir -p app/src/main/assets
+              echo "SLACK_WEBHOOK_URL=$FANT_SLACK_URL" > app/src/main/assets/config.properties
+              echo "✅ Slack webhook URL added."
+            else
+              echo "⚠️ Skipping Slack webhook URL injection (develop branch or release commit)."
+            fi
       - run:
           name: Run Fastlane
           command: |
