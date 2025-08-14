@@ -35,7 +35,7 @@ jobs:
           command: |
             if git log -1 --pretty=%B | grep -qi "release" && { [ "$CIRCLE_BRANCH" = "develop" ] || [ "$CIRCLE_BRANCH" = "main" ]; }; then
               mkdir -p app/src/main/assets
-              echo "SLACK_WEBHOOK_URL=$FANT_SLACK_URL" > app/src/main/assets/config.properties
+              echo "SLACK_WEBHOOK_URL=$MARKETING_SLACK_URL" > app/src/main/assets/config.properties
               echo "✅ Slack webhook URL added."
             else
               echo "⚠️ Skipping Slack webhook URL injection (without release commit)."
