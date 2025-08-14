@@ -34,7 +34,7 @@ public class RetrofitInstance {
     private List<WebApp> webApps;
 
     public static RetrofitInstance getInstance() {
-        Log.d("buildtype api Url ",URL);
+        Log.d("AppConfig", "Build Type API URL: " + URL);
         if (retrofit == null) {
             retrofitInstance = new RetrofitInstance();
             retrofit = new Retrofit.Builder()
