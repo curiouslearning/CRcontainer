@@ -4,6 +4,15 @@ plugins {
     id 'com.google.firebase.crashlytics'
     id 'jacoco'
 }
+def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buildBranch") : "main"
+def apiUrl = buildBranch == "main" ?
+        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/" :
+        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/"
+task printApiUrl {
+    doLast {
+        println(apiUrl)
+    }
+}
 
 android {
     namespace 'org.curiouslearning.container'
@@ -43,13 +52,13 @@ android {
     buildTypes {
         debug{
             testCoverageEnabled true
-            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/dev/\""
+            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/\""
         }
         release {
             signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/\""
+            buildConfigField "String", "API_URL", "\"${apiUrl}\""
         }
     }
     compileOptions {
