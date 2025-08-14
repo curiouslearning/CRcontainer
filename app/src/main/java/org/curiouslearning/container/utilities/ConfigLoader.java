@@ -16,10 +16,6 @@ public class ConfigLoader {
             if (webhookUrl != null && !webhookUrl.isEmpty()) {
                 return webhookUrl;
             }
-            webhookUrl = BuildConfig.SLACK_WEBHOOK_URL;
-            if (webhookUrl != null && !webhookUrl.isEmpty()) {
-                return webhookUrl;
-            }
             return null;
         } catch (Exception e) {
             e.printStackTrace();
