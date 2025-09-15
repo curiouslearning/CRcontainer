@@ -4,6 +4,8 @@ import android.app.Application;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
 
+import io.sentry.android.core.SentryAndroid;
+
 public class MyApplication extends Application {
     @Override
     public void onCreate() {
