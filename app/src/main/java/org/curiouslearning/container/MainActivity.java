@@ -91,15 +91,6 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // waiting for view to draw to better represent a captured error with a
-        // screenshot
-        findViewById(android.R.id.content).getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-            try {
-                throw new Exception("This app uses Sentry! :)");
-            } catch (Exception e) {
-                Sentry.captureException(e);
-            }
-        });
 
         prefs = getSharedPreferences(SHARED_PREFS_NAME, MODE_PRIVATE);
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
@@ -171,8 +162,6 @@ public class MainActivity extends BaseActivity {
             if (language != null) {
                 selectedLanguage = Character.toUpperCase(language.charAt(0))
                         + language.substring(1).toLowerCase();
-            } else {
-                Sentry.captureMessage("Missing Language when selecting Language ");
             }
         }
         audioPlayer = new AudioPlayer();
@@ -340,7 +329,7 @@ public class MainActivity extends BaseActivity {
                         new IllegalArgumentException(errorMsg));
                 // Slack alert
                 SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-
+                Sentry.captureMessage("Missing Language when selecting Language ");
                 showLanguagePopup();
                 return;
             }
@@ -410,8 +399,6 @@ public class MainActivity extends BaseActivity {
                         selectedLanguage = prefs.getString("selectedLanguage", "");
                         if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
                             textBox.setHint(languagesEnglishNameMap.get(selectedLanguage));
-                        } else {
-                            Sentry.captureMessage("Missing Language when selecting Language ");
                         }
 
                         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
