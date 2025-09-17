@@ -340,6 +340,7 @@ public class MainActivity extends BaseActivity {
                 if (lowerCaseLanguages != null && lowerCaseLanguages.size() > 0
                         && !lowerCaseLanguages.contains(language.toLowerCase().trim())) {
                     SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+                    Sentry.captureMessage("Incorrect Language when selecting Language ");
                     showLanguagePopup();
                     loadingIndicator.setVisibility(View.GONE);
                     selectedLanguage = "";
