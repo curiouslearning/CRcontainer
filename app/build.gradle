@@ -3,6 +3,8 @@ plugins {
     id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
     id 'jacoco'
+
+    id 'io.sentry.android.gradle' version '5.10.0'
 }
 def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buildBranch") : "main"
 def apiUrl = buildBranch == "main" ?
@@ -169,4 +171,14 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
                 })
         )
     }
+}
+
+
+sentry {
+    org = "curious-learning"
+    projectName = "cr-container"
+
+    // this will upload your source code to Sentry to show it as part of the stack traces
+    // disable if you don't want to expose your sources
+    includeSourceContext = true
 }
