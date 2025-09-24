@@ -176,7 +176,7 @@ public class MainActivity extends BaseActivity {
         initRecyclerView();
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
-        if (manifestVersion != null && manifestVersion != "") {
+        if (manifestVersion != null && !manifestVersion.isEmpty()) {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
         settingsButton = findViewById(R.id.settings);
@@ -219,9 +219,9 @@ public class MainActivity extends BaseActivity {
                 if (appLinkData != null) {
                     Uri deepLinkUri = appLinkData.getTargetUri();
                     Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
-                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
-                    String source = ((Uri) deepLinkUri).getQueryParameter("source");
-                    String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
+                    String language = deepLinkUri.getQueryParameter("language");
+                    String source = deepLinkUri.getQueryParameter("source");
+                    String campaign_id = deepLinkUri.getQueryParameter("campaign_id");
                     SharedPreferences.Editor editor = utmPrefs.edit();
                     editor.putString("source", source);
                     editor.putString("campaign_id", campaign_id);
@@ -277,7 +277,7 @@ public class MainActivity extends BaseActivity {
                     generatePseudoId() + calendar.get(Calendar.YEAR) + (calendar.get(Calendar.MONTH) + 1) +
                             calendar.get(Calendar.DAY_OF_MONTH) + calendar.get(Calendar.HOUR_OF_DAY)
                             + calendar.get(Calendar.MINUTE) + calendar.get(Calendar.SECOND));
-            editor.commit();
+            editor.apply();
         }
     }
 
@@ -297,7 +297,7 @@ public class MainActivity extends BaseActivity {
     private String generatePseudoId() {
         SecureRandom random = new SecureRandom();
         String pseudoId = new BigInteger(130, random).toString(32);
-        System.out.println(pseudoId);
+        Log.d(TAG, "generated pseudoId: " + pseudoId);
         return pseudoId;
     }
 
@@ -306,7 +306,7 @@ public class MainActivity extends BaseActivity {
         long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
         String pseudoId = prefs.getString("pseudoId", "");
         String[] uriParts = deepLinkUri.split("(?=[?&])");
-        StringBuilder message = new StringBuilder();
+            StringBuilder message = new StringBuilder();
         message.append("An incorrect or null language value was detected in a ")
                 .append(source)
                 .append(" campaign’s deferred deep link with the following details:\n\n");
@@ -328,7 +328,7 @@ public class MainActivity extends BaseActivity {
                 FirebaseCrashlytics.getInstance().recordException(
                         new IllegalArgumentException(errorMsg));
                 // Slack alert
-                SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+                SlackUtils.sendMessageToSlack(MainActivity.this, message.toString());
                 Sentry.captureMessage("Missing Language when selecting Language ");
                 showLanguagePopup();
                 return;
@@ -339,7 +339,7 @@ public class MainActivity extends BaseActivity {
                         .collect(Collectors.toList());
                 if (lowerCaseLanguages != null && lowerCaseLanguages.size() > 0
                         && !lowerCaseLanguages.contains(language.toLowerCase().trim())) {
-                    SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
+                    SlackUtils.sendMessageToSlack(MainActivity.this, message.toString());
                     Sentry.captureMessage("Incorrect Language when selecting Language ");
                     showLanguagePopup();
                     loadingIndicator.setVisibility(View.GONE);
