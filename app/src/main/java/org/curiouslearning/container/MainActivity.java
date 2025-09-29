@@ -443,9 +443,6 @@ public class MainActivity extends BaseActivity {
                 Log.w(TAG, "showLanguagePopup: Activity is finishing or destroyed, not showing dialog.");
                 return;
             }
-            dialog.setContentView(R.layout.language_popup);
-            dialog.setCanceledOnTouchOutside(false);
-            dialog.getWindow().setBackgroundDrawable(null);
             dialog.show();
         } catch (Exception e) {
                 FirebaseCrashlytics.getInstance().log("showLanguagePopup: Failed to show dialog");
