@@ -23,6 +23,7 @@ import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import io.sentry.Sentry;
 
 public class WebApp extends BaseActivity {
 
@@ -104,14 +105,20 @@ public class WebApp extends BaseActivity {
                     .println(">> url source and campaign params added to the subapp url " + source + " " + campaignId);
             if (source != null && !source.isEmpty()) {
                 appUrl = addSourceToUrl(appUrl);
+            } else {
+                Sentry.captureMessage("Missing source when building URL for app: " + appUrl);
+                Log.w("WebApp", "Missing source parameter for app: " + appUrl);
             }
             if (campaignId != null && !campaignId.isEmpty()) {
                 appUrl = addCampaignIdToUrl(appUrl);
+            } else {
+                Sentry.captureMessage("Missing campaign_id when building URL for app: " + appUrl);
+                Log.w("WebApp", "Missing campaign_id parameter for app: " + appUrl);
             }
         }
-        if(appUrl.contains("docs.google.com/forms")){
+        if (appUrl.contains("docs.google.com/forms")) {
             webView.loadUrl(addCrUserIdToFormUrl(appUrl));
-        }else{
+        } else {
             webView.loadUrl(addCrUserIdToUrl(appUrl));
         }
         System.out.println("subapp url : " + appUrl);
@@ -126,16 +133,23 @@ public class WebApp extends BaseActivity {
     private String addCrUserIdToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
-        String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" + pseudoId;
+        String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" +
+                pseudoId;
+        if (pseudoId == null || pseudoId.isEmpty()) {
+            Sentry.captureMessage("Missing cr_user_id for app: " + appUrl);
+            Log.e("WebApp", "Missing cr_user_id when building URL");
+        }
         return modifiedUrl;
     }
 
     private String addCrUserIdToFormUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
-        String modifiedUrl = originalUri.toString() + pseudoId + separator + "cr_user_id=" + pseudoId;
+        String modifiedUrl = originalUri.toString() + pseudoId + separator +
+                "cr_user_id=" + pseudoId;
         return modifiedUrl;
     }
+
     private String addSourceToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
@@ -146,7 +160,8 @@ public class WebApp extends BaseActivity {
     private String addCampaignIdToUrl(String appUrl) {
         Uri originalUri = Uri.parse(appUrl);
         String separator = (originalUri.getQuery() == null) ? "?" : "&";
-        String modifiedUrl = originalUri.toString() + separator + "campaign_id=" + campaignId;
+        String modifiedUrl = originalUri.toString() + separator + "campaign_id=" +
+                campaignId;
         return modifiedUrl;
     }
 

@@ -1,0 +1,2 @@
+json_key_file("C:\\Users\\DELL\\Documents\\GitHub\\CRcontainer\\app\\fastlane\\service-account.json")
+package_name("org.curiouslearning.container") 

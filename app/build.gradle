@@ -1,19 +1,31 @@
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
     id 'jacoco'
+
+    id 'io.sentry.android.gradle' version '5.10.0'
+}
+def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buildBranch") : "main"
+def apiUrl = buildBranch == "main" ?
+        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/" :
+        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/"
+task printApiUrl {
+    doLast {
+        println(apiUrl)
+    }
 }
 
 android {
     namespace 'org.curiouslearning.container'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "org.curiouslearning.container"
         minSdk 28
-        targetSdk 34
-        versionCode 29
-        versionName "2.27"
+        targetSdk 35
+        versionCode 38
+        versionName "2.29"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -27,17 +39,28 @@ android {
     buildFeatures {
         dataBinding true
         viewBinding true
+        buildConfig = true
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("keystore/my-release-key.jks")
+            storePassword System.getenv("KEYSTORE_PASSWORD")
+            keyAlias System.getenv("KEY_ALIAS")
+            keyPassword System.getenv("KEY_PASSWORD")
+        }
     }
 
     buildTypes {
         debug{
             testCoverageEnabled true
-            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/dev/\""
+            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/\""
         }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/\""
+            buildConfigField "String", "API_URL", "\"${apiUrl}\""
         }
     }
     compileOptions {
@@ -52,6 +75,7 @@ dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
+    implementation platform("org.jetbrains.kotlin:kotlin-bom:1.8.22")
     //RoomDatabase
     implementation "androidx.room:room-runtime:2.3.0"
     annotationProcessor "androidx.room:room-compiler:2.3.0"
@@ -62,6 +86,7 @@ dependencies {
     //firebase
     implementation platform('com.google.firebase:firebase-bom:31.2.3')
     implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-crashlytics:18.6.1'
     implementation 'com.google.firebase:firebase-core:17.5.0'
 
     //picasso (image caching)
@@ -75,12 +100,19 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.10.3'
+    testImplementation 'org.mockito:mockito-core:4.11.0'
+    testImplementation 'org.mockito:mockito-inline:4.11.0'
+    testImplementation 'androidx.test:core:1.5.0'
+
+
+    androidTestImplementation 'androidx.test:core:1.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test:rules:1.5.0'
-
+    androidTestImplementation 'org.mockito:mockito-android:4.11.0'
 
     implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
 }
@@ -139,4 +171,14 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
                 })
         )
     }
+}
+
+
+sentry {
+    org = "curious-learning"
+    projectName = "cr-container"
+
+    // this will upload your source code to Sentry to show it as part of the stack traces
+    // disable if you don't want to expose your sources
+    includeSourceContext = true
 }
