@@ -27,6 +27,9 @@ public class InstallReferrerManager {
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private static final String SOURCE = "source";
     private static final String CAMPAIGN_ID = "campaign_id";
+    private static final String APP_PREFS_NAME = "appCached";
+    private static final String REFERRER_RESPONSE_RECEIVED_KEY = "referrerResponseReceived";
+    private static final String REFERRER_FEATURE_NOT_SUPPORTED_KEY = "referrerFeatureNotSupported";
 
     public InstallReferrerManager(Context context, ReferrerCallback callback) {
         this.context = context;
@@ -53,6 +56,12 @@ public class InstallReferrerManager {
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
                         Log.d("referrer", "install referrer not supported");
+                        // Persist a terminal state so callers can stop retrying
+                        SharedPreferences featurePrefs = context.getSharedPreferences(APP_PREFS_NAME, Context.MODE_PRIVATE);
+                        featurePrefs.edit()
+                                .putBoolean(REFERRER_RESPONSE_RECEIVED_KEY, true)
+                                .putBoolean(REFERRER_FEATURE_NOT_SUPPORTED_KEY, true)
+                                .apply();
                         callback.onReferrerReceived("", "");
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
@@ -78,6 +87,9 @@ public class InstallReferrerManager {
 //          the below url is for testing purpose
 //          String referrerUrl = "deferred_deeplink=curiousreader://app?language=hindii&source=testQA&campaign_id=123test";
             Log.d("referal", referrerUrl +" ");
+            // Mark that we have received a real response from the API
+            SharedPreferences appPrefs = context.getSharedPreferences(APP_PREFS_NAME, Context.MODE_PRIVATE);
+            appPrefs.edit().putBoolean(REFERRER_RESPONSE_RECEIVED_KEY, true).apply();
             extractReferrerParameters(referrerUrl);
             logFirstOpenEvent(referrerDetails);
 

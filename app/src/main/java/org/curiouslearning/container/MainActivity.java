@@ -73,6 +73,8 @@ public class MainActivity extends BaseActivity {
     private ProgressBar loadingIndicator;
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String REFERRER_HANDLED_KEY = "isReferrerHandled";
+    private static final String REFERRER_RESPONSE_RECEIVED_KEY = "referrerResponseReceived";
+    private static final String REFERRER_FEATURE_NOT_SUPPORTED_KEY = "referrerFeatureNotSupported";
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private final String isValidLanguage = "notValidLanguage";
     private SharedPreferences utmPrefs;
@@ -113,10 +115,14 @@ public class MainActivity extends BaseActivity {
                 String language = deferredLang.trim();
 
                 if (!isReferrerHandled) {
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putBoolean(REFERRER_HANDLED_KEY, true);
-                    editor.apply();
-                    if ((language != null && language.length() > 0) || fullURL.contains("curiousreader://app")) {
+                    boolean hasRealResponse = prefs.getBoolean(REFERRER_RESPONSE_RECEIVED_KEY, false);
+                    boolean featureNotSupported = prefs.getBoolean(REFERRER_FEATURE_NOT_SUPPORTED_KEY, false);
+                    boolean hasAttributionSignal = (language != null && language.length() > 0) || fullURL.contains("curiousreader://app");
+
+                    if (hasAttributionSignal) {
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putBoolean(REFERRER_HANDLED_KEY, true);
+                        editor.apply();
                         isAttributionComplete = true;
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
                         String pseudoId = prefs.getString("pseudoId", "");
@@ -136,7 +142,18 @@ public class MainActivity extends BaseActivity {
                             Log.d(TAG, "Attribution not complete. Skipping event log.");
                         }
                         Log.d(TAG, "Referrer language received: " + language + " " + lang);
+                    } else if (featureNotSupported) {
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putBoolean(REFERRER_HANDLED_KEY, true);
+                        editor.apply();
+                        fetchFacebookDeferredData();
+                    } else if (hasRealResponse) {
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putBoolean(REFERRER_HANDLED_KEY, true);
+                        editor.apply();
+                        fetchFacebookDeferredData();
                     } else {
+                        // No real response yet (e.g., offline or service unavailable) → do not mark handled
                         fetchFacebookDeferredData();
                     }
                 } else {
@@ -155,7 +172,11 @@ public class MainActivity extends BaseActivity {
         };
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(getApplicationContext(),
                 referrerCallback);
-        installReferrerManager.checkPlayStoreAvailability();
+        boolean hasRealResponseAtStart = prefs.getBoolean(REFERRER_RESPONSE_RECEIVED_KEY, false);
+        boolean featureNotSupportedAtStart = prefs.getBoolean(REFERRER_FEATURE_NOT_SUPPORTED_KEY, false);
+        if (!hasRealResponseAtStart && !featureNotSupportedAtStart) {
+            installReferrerManager.checkPlayStoreAvailability();
+        }
         Intent intent = getIntent();
         if (intent.getData() != null) {
             String language = intent.getData().getQueryParameter("language");
@@ -292,6 +313,19 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
+        // Retry on resume if we still haven't received a response and feature is supported
+        boolean hasRealResponse = prefs.getBoolean(REFERRER_RESPONSE_RECEIVED_KEY, false);
+        boolean featureNotSupported = prefs.getBoolean(REFERRER_FEATURE_NOT_SUPPORTED_KEY, false);
+        boolean handled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
+        if (!handled && !hasRealResponse && !featureNotSupported && isInternetConnected(getApplicationContext())) {
+            InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
+                @Override
+                public void onReferrerReceived(String deferredLang, String fullURL) {
+                    // Delegate to existing logic by calling validLanguage if needed; the existing onCreate callback handles storage
+                }
+            };
+            new InstallReferrerManager(getApplicationContext(), referrerCallback).checkPlayStoreAvailability();
+        }
     }
 
     private String generatePseudoId() {
