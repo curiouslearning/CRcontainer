@@ -79,6 +79,15 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+
+        <!-- Test Referrer Receiver -->
+        <receiver
+            android:name=".installreferrer.TestReferrerReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.android.vending.INSTALL_REFERRER" />
+            </intent-filter>
+        </receiver>
     
     <!-- Required: set your sentry.io project identifier (DSN) -->
     <meta-data android:name="io.sentry.dsn" android:value="https://3e3bfa9bd4473edd4e0b0d502195f4de@o4504951275651072.ingest.us.sentry.io/4510001311383552" />

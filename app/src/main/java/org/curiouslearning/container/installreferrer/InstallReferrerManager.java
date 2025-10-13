@@ -30,6 +30,19 @@ public class InstallReferrerManager {
     private static final String APP_PREFS_NAME = "appCached";
     private static final String REFERRER_RESPONSE_RECEIVED_KEY = "referrerResponseReceived";
     private static final String REFERRER_FEATURE_NOT_SUPPORTED_KEY = "referrerFeatureNotSupported";
+    private static String testReferrer = null;  // For testing purposes
+
+    public static void overrideReferrerForTesting(Context context, String referrer) {
+        Log.d("referrer_test", "Setting test referrer: " + referrer);
+        testReferrer = referrer;
+        // Create a new instance to process the test referrer
+        new InstallReferrerManager(context, new ReferrerCallback() {
+            @Override
+            public void onReferrerReceived(String referrerUrl, String fullUrl) {
+                Log.d("referrer_test", "Test referrer processed: " + referrerUrl);
+            }
+        }).checkPlayStoreAvailability();
+    }
 
     public InstallReferrerManager(Context context, ReferrerCallback callback) {
         this.context = context;
@@ -79,19 +92,28 @@ public class InstallReferrerManager {
     }
 
     private void handleReferrer() {
-        ReferrerDetails referrerDetails = null;
         try {
-            referrerDetails = installReferrerClient.getInstallReferrer();
-            Log.d("referal", referrerDetails.toString() +" ");
-            String referrerUrl = referrerDetails.getInstallReferrer();
-//          the below url is for testing purpose
-//          String referrerUrl = "deferred_deeplink=curiousreader://app?language=hindii&source=testQA&campaign_id=123test";
-            Log.d("referal", referrerUrl +" ");
-            // Mark that we have received a real response from the API
+            String referrerUrl;
+            
+            // Use test referrer if available
+            if (testReferrer != null) {
+                Log.d("referrer_test", "Using test referrer: " + testReferrer);
+                referrerUrl = testReferrer;
+                testReferrer = null;  // Clear it after use
+            } else {
+                ReferrerDetails referrerDetails = installReferrerClient.getInstallReferrer();
+                Log.d("referal", "Got referrer details: " + referrerDetails.toString());
+                referrerUrl = referrerDetails.getInstallReferrer();
+                Log.d("referal", "Got referrer URL: " + referrerUrl);
+                logFirstOpenEvent(referrerDetails);
+            }
+            
+            // Mark that we have received a real response
             SharedPreferences appPrefs = context.getSharedPreferences(APP_PREFS_NAME, Context.MODE_PRIVATE);
             appPrefs.edit().putBoolean(REFERRER_RESPONSE_RECEIVED_KEY, true).apply();
+            
+            // Process the referrer
             extractReferrerParameters(referrerUrl);
-            logFirstOpenEvent(referrerDetails);
 
         } catch (RemoteException e) {
             e.printStackTrace();
