@@ -63,15 +63,34 @@ public class AnalyticsUtils {
     public static void logStartedInOfflineModeEvent(Context context, String eventName, String pseudoId) {
         try {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME,
-                    Context.MODE_PRIVATE);
+            
+            // Check both SharedPreferences files for source and campaign_id
+            SharedPreferences installReferrerPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences utmPrefs = context.getSharedPreferences("utmPrefs", Context.MODE_PRIVATE);
+            
             Bundle bundle = new Bundle();
             bundle.putString("cr_user_id", pseudoId);
             bundle.putLong("event_timestamp", getCurrentEpochTime());
             bundle.putString("offline_mode", "true");
             
-            String source = prefs.getString(SOURCE, "");
-            String campaign_id = prefs.getString(CAMPAIGN_ID, "");
+            // Try to get source and campaign_id from both locations
+            String source = installReferrerPrefs.getString(SOURCE, "");
+            String campaign_id = installReferrerPrefs.getString(CAMPAIGN_ID, "");
+            
+            // If not found in InstallReferrerPrefs, try utmPrefs
+            if (source.isEmpty() || campaign_id.isEmpty()) {
+                String utmSource = utmPrefs.getString(SOURCE, "");
+                String utmCampaignId = utmPrefs.getString(CAMPAIGN_ID, "");
+                
+                if (!utmSource.isEmpty()) source = utmSource;
+                if (!utmCampaignId.isEmpty()) campaign_id = utmCampaignId;
+                
+                Log.d("AnalyticsUtils", "Found source/campaign_id in utmPrefs: " + source + "/" + campaign_id);
+            }
+            
+            // Add source and campaign_id to the event bundle
+            bundle.putString("source", source);
+            bundle.putString("campaign_id", campaign_id);
             
             firebaseAnalytics.setUserProperty("source", source);
             firebaseAnalytics.setUserProperty("campaign_id", campaign_id);

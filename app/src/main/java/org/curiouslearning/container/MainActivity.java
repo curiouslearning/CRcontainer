@@ -316,6 +316,12 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
+        
+        // Check if we came back online and need to re-log offline events with proper attribution
+        if (isInternetConnected(getApplicationContext())) {
+            checkAndRelogOfflineEvents();
+        }
+        
         // Retry on resume if we still haven't received a response and feature is supported
         boolean hasRealResponse = prefs.getBoolean(REFERRER_RESPONSE_RECEIVED_KEY, false);
         boolean featureNotSupported = prefs.getBoolean(REFERRER_FEATURE_NOT_SUPPORTED_KEY, false);
@@ -328,6 +334,24 @@ public class MainActivity extends BaseActivity {
                 }
             };
             new InstallReferrerManager(getApplicationContext(), referrerCallback).checkPlayStoreAvailability();
+        }
+    }
+    
+    private void checkAndRelogOfflineEvents() {
+        // Check if we have offline events that need to be re-logged with proper attribution
+        SharedPreferences offlinePrefs = getSharedPreferences("offlineEvents", MODE_PRIVATE);
+        boolean hasOfflineEvent = offlinePrefs.getBoolean("hasOfflineEvent", false);
+        
+        if (hasOfflineEvent) {
+            String pseudoId = prefs.getString("pseudoId", "");
+            Log.d(TAG, "Re-logging offline event with proper attribution data");
+            
+            // Re-log the offline event now that we have internet and potentially attribution data
+            AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
+                    "started_in_offline_mode_online", pseudoId);
+            
+            // Clear the offline event flag
+            offlinePrefs.edit().putBoolean("hasOfflineEvent", false).apply();
         }
     }
 
@@ -604,11 +628,61 @@ public class MainActivity extends BaseActivity {
         String pseudoId = prefs.getString("pseudoId", "");
         Log.d(TAG, "Logging started_in_offline_mode event for pseudoId: " + pseudoId);
         
+        // Check if we have referrer data from the broadcast intent
+        Intent intent = getIntent();
+        if (intent != null && intent.hasExtra("referrer")) {
+            String referrerData = intent.getStringExtra("referrer");
+            Log.d(TAG, "Found referrer data in intent: " + referrerData);
+            
+            // Parse and store the referrer data immediately
+            parseAndStoreReferrerData(referrerData);
+        }
+        
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
                 "started_in_offline_mode", pseudoId);
         
+        // Set flag to re-log this event when we come back online
+        SharedPreferences offlinePrefs = getSharedPreferences("offlineEvents", MODE_PRIVATE);
+        offlinePrefs.edit().putBoolean("hasOfflineEvent", true).apply();
+        
         // Also log to Firebase Crashlytics for debugging
         FirebaseCrashlytics.getInstance().log("App started in offline mode - pseudoId: " + pseudoId);
+    }
+    
+    private void parseAndStoreReferrerData(String referrerData) {
+        try {
+            if (referrerData != null && !referrerData.isEmpty()) {
+                // Parse the referrer data similar to InstallReferrerManager
+                Uri uri = Uri.parse("http://dummyurl.com/?" + referrerData);
+                String source = uri.getQueryParameter("source");
+                String campaign_id = uri.getQueryParameter("campaign_id");
+                
+                if (source != null || campaign_id != null) {
+                    // Store in both SharedPreferences files for consistency
+                    SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
+                    SharedPreferences utmPrefs = getSharedPreferences("utmPrefs", MODE_PRIVATE);
+                    
+                    SharedPreferences.Editor installEditor = installReferrerPrefs.edit();
+                    SharedPreferences.Editor utmEditor = utmPrefs.edit();
+                    
+                    if (source != null) {
+                        installEditor.putString("source", source);
+                        utmEditor.putString("source", source);
+                    }
+                    if (campaign_id != null) {
+                        installEditor.putString("campaign_id", campaign_id);
+                        utmEditor.putString("campaign_id", campaign_id);
+                    }
+                    
+                    installEditor.apply();
+                    utmEditor.apply();
+                    
+                    Log.d(TAG, "Stored referrer data - source: " + source + ", campaign_id: " + campaign_id);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing referrer data: " + referrerData, e);
+        }
     }
 
 }
