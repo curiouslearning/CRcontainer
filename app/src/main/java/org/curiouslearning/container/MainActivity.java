@@ -106,9 +106,9 @@ public class MainActivity extends BaseActivity {
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
-        if (!isInternetConnected(getApplicationContext())) {
-            Log.d(TAG, "Device is offline - logging started_in_offline_mode event");
-            logStartedInOfflineMode();
+        boolean isOffline = !isInternetConnected(getApplicationContext());
+        if (isOffline) {
+            Log.d(TAG, "Device is offline - will log started_in_offline_mode event after referrer processing");
         } else {
             Log.d(TAG, "Device is online - no offline mode event needed");
         }
@@ -145,6 +145,12 @@ public class MainActivity extends BaseActivity {
                             Log.d(TAG, "Attribution not complete. Skipping event log.");
                         }
                         Log.d(TAG, "Referrer language received: " + language + " " + lang);
+                        
+                        // Log offline event now that referrer data has been processed
+                        if (isOffline) {
+                            Log.d(TAG, "Logging offline event after referrer processing");
+                            logStartedInOfflineMode();
+                        }
                     } else if (featureNotSupported) {
                         SharedPreferences.Editor editor = prefs.edit();
                         editor.putBoolean(REFERRER_HANDLED_KEY, true);
@@ -158,8 +164,20 @@ public class MainActivity extends BaseActivity {
                     } else {
                         // No real response yet (e.g., offline or service unavailable) → do not mark handled
                         fetchFacebookDeferredData();
+                        
+                        // Log offline event even if no attribution signal
+                        if (isOffline) {
+                            Log.d(TAG, "Logging offline event - no attribution signal");
+                            logStartedInOfflineMode();
+                        }
                     }
                 } else {
+                    // Referrer already handled, but check if we need to log offline event
+                    if (isOffline) {
+                        Log.d(TAG, "Logging offline event - referrer already handled");
+                        logStartedInOfflineMode();
+                    }
+                    
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -628,16 +646,8 @@ public class MainActivity extends BaseActivity {
         String pseudoId = prefs.getString("pseudoId", "");
         Log.d(TAG, "Logging started_in_offline_mode event for pseudoId: " + pseudoId);
         
-        // Check if we have referrer data from the broadcast intent
-        Intent intent = getIntent();
-        if (intent != null && intent.hasExtra("referrer")) {
-            String referrerData = intent.getStringExtra("referrer");
-            Log.d(TAG, "Found referrer data in intent: " + referrerData);
-            
-            // Parse and store the referrer data immediately
-            parseAndStoreReferrerData(referrerData);
-        }
-        
+        // The InstallReferrerManager has already processed and stored the referrer data
+        // by the time this method is called, so we can just log the event
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
                 "started_in_offline_mode", pseudoId);
         
