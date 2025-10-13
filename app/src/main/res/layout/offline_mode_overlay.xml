@@ -24,7 +24,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:textIsSelectable="true" />
     </LinearLayout>
 
     <TextView
@@ -33,7 +34,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:textColor="#FFFFFF"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:textIsSelectable="true" />
 
     <TextView
         android:id="@+id/deeplink_info"
@@ -41,7 +43,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:textColor="#FFFFFF"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:textIsSelectable="true" />
 
     <TextView
         android:id="@+id/source_campaign"
@@ -49,7 +52,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:textColor="#FFFFFF"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:textIsSelectable="true" />
 
     <TextView
         android:id="@+id/event_status"
@@ -57,6 +61,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:textColor="#FFFFFF"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:textIsSelectable="true" />
 
 </LinearLayout>
