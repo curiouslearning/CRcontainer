@@ -118,6 +118,11 @@ public class MainActivity extends BaseActivity {
                     editor.apply();
                     if ((language != null && language.length() > 0) || fullURL.contains("curiousreader://app")) {
                         isAttributionComplete = true;
+                        // Store deferred deeplink
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putString("deferred_deeplink", fullURL);
+                        editor.apply();
+                        
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
                         String pseudoId = prefs.getString("pseudoId", "");
                         String manifestVrsn = prefs.getString("manifestVersion", "");
@@ -127,6 +132,7 @@ public class MainActivity extends BaseActivity {
                                     + language.substring(1).toLowerCase();
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
+                        updateDebugOverlay();
 
                         if (isAttributionComplete) {
                             AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId,
@@ -292,14 +298,7 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
-        
-        // Check if we're back online and hide the overlay if we are
-        if (isInternetConnected(getApplicationContext())) {
-            View offlineOverlay = findViewById(R.id.offline_mode_overlay);
-            if (offlineOverlay != null) {
-                offlineOverlay.setVisibility(View.GONE);
-            }
-        }
+        updateDebugOverlay();
     }
 
     private String generatePseudoId() {
@@ -571,15 +570,43 @@ public class MainActivity extends BaseActivity {
         return ConnectionUtils.getInstance().isInternetConnected(context);
     }
 
-    private void logStartedInOfflineMode() {
-        AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
-                "started_in_offline_mode", prefs.getString("pseudoId", ""));
-        
-        // Show the offline mode overlay
+    private void updateDebugOverlay() {
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         if (offlineOverlay != null) {
             offlineOverlay.setVisibility(View.VISIBLE);
+
+            // Update offline status
+            TextView offlineStatus = offlineOverlay.findViewById(R.id.offline_status);
+            boolean isOffline = !isInternetConnected(getApplicationContext());
+            offlineStatus.setText("Offline Mode: " + isOffline);
+
+            // Update CR User ID
+            TextView crUserId = offlineOverlay.findViewById(R.id.cr_user_id);
+            String pseudoId = prefs.getString("pseudoId", "");
+            crUserId.setText("CR User ID: cr_user_id_" + pseudoId);
+
+            // Update deeplink info
+            TextView deeplinkInfo = offlineOverlay.findViewById(R.id.deeplink_info);
+            String deferredDeeplink = prefs.getString("deferred_deeplink", "");
+            deeplinkInfo.setText("Deferred Deeplink: " + (deferredDeeplink.isEmpty() ? "None" : deferredDeeplink));
+
+            // Update source and campaign
+            TextView sourceCampaign = offlineOverlay.findViewById(R.id.source_campaign);
+            String source = utmPrefs.getString("source", "");
+            String campaignId = utmPrefs.getString("campaign_id", "");
+            sourceCampaign.setText("Source: " + (source.isEmpty() ? "None" : source) + 
+                                 "\nCampaign ID: " + (campaignId.isEmpty() ? "None" : campaignId));
+
+            // Update event status
+            TextView eventStatus = offlineOverlay.findViewById(R.id.event_status);
+            eventStatus.setText("Started In Offline Mode Event Sent: " + isOffline);
         }
+    }
+
+    private void logStartedInOfflineMode() {
+        AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
+                "started_in_offline_mode", prefs.getString("pseudoId", ""));
+        updateDebugOverlay();
     }
 
 }
