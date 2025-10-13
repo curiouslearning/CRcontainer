@@ -158,16 +158,41 @@ public class AnalyticsUtils {
 
     private  static Map<String, String> extractReferrerParameters(String referrerUrl) {
         Map<String, String> params = new HashMap<>();
-        // Using a dummy URL to ensure `Uri.parse` correctly processes the referrerUrl as part of a valid URL.
-        Uri uri = Uri.parse("http://dummyurl.com/?" +referrerUrl);
-
-        String source = uri.getQueryParameter("source");
-        String campaign_id = uri.getQueryParameter("campaign_id");
-        String content = uri.getQueryParameter("utm_content");
+        
+        // Parse the referrer URL directly without dummy URL
+        String source = null;
+        String campaign_id = null;
+        String content = null;
+        
+        // Split by & to get individual parameters
+        String[] pairs = referrerUrl.split("&");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=", 2);
+            if (keyValue.length == 2) {
+                String key = keyValue[0];
+                String value = keyValue[1];
+                
+                switch (key) {
+                    case "source":
+                        source = value;
+                        break;
+                    case "campaign_id":
+                        campaign_id = value;
+                        break;
+                    case "utm_content":
+                        content = value;
+                        break;
+                }
+            }
+        }
+        
+        // Decode content if present
+        if (content != null) {
+            content = urlDecode(content);
+        }
+        
         Log.d("data without decode util", campaign_id + " " + source + " " + content);
-        content = urlDecode(content);
-
-        Log.d("referral data", uri+" "+campaign_id + " " + source + " " + content+" "+referrerUrl);
+        Log.d("referral data", "campaign_id=" + campaign_id + " source=" + source + " content=" + content + " referrerUrl=" + referrerUrl);
 
         params.put("source", source);
         params.put("campaign_id", campaign_id);
