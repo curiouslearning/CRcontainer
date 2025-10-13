@@ -292,6 +292,14 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
+        
+        // Check if we're back online and hide the overlay if we are
+        if (isInternetConnected(getApplicationContext())) {
+            View offlineOverlay = findViewById(R.id.offline_mode_overlay);
+            if (offlineOverlay != null) {
+                offlineOverlay.setVisibility(View.GONE);
+            }
+        }
     }
 
     private String generatePseudoId() {
@@ -564,9 +572,14 @@ public class MainActivity extends BaseActivity {
     }
 
     private void logStartedInOfflineMode() {
-
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
                 "started_in_offline_mode", prefs.getString("pseudoId", ""));
+        
+        // Show the offline mode overlay
+        View offlineOverlay = findViewById(R.id.offline_mode_overlay);
+        if (offlineOverlay != null) {
+            offlineOverlay.setVisibility(View.VISIBLE);
+        }
     }
 
 }
