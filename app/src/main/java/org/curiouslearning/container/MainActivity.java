@@ -659,40 +659,5 @@ public class MainActivity extends BaseActivity {
         FirebaseCrashlytics.getInstance().log("App started in offline mode - pseudoId: " + pseudoId);
     }
     
-    private void parseAndStoreReferrerData(String referrerData) {
-        try {
-            if (referrerData != null && !referrerData.isEmpty()) {
-                // Parse the referrer data similar to InstallReferrerManager
-                Uri uri = Uri.parse("http://dummyurl.com/?" + referrerData);
-                String source = uri.getQueryParameter("source");
-                String campaign_id = uri.getQueryParameter("campaign_id");
-                
-                if (source != null || campaign_id != null) {
-                    // Store in both SharedPreferences files for consistency
-                    SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
-                    SharedPreferences utmPrefs = getSharedPreferences("utmPrefs", MODE_PRIVATE);
-                    
-                    SharedPreferences.Editor installEditor = installReferrerPrefs.edit();
-                    SharedPreferences.Editor utmEditor = utmPrefs.edit();
-                    
-                    if (source != null) {
-                        installEditor.putString("source", source);
-                        utmEditor.putString("source", source);
-                    }
-                    if (campaign_id != null) {
-                        installEditor.putString("campaign_id", campaign_id);
-                        utmEditor.putString("campaign_id", campaign_id);
-                    }
-                    
-                    installEditor.apply();
-                    utmEditor.apply();
-                    
-                    Log.d(TAG, "Stored referrer data - source: " + source + ", campaign_id: " + campaign_id);
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error parsing referrer data: " + referrerData, e);
-        }
-    }
 
 }
