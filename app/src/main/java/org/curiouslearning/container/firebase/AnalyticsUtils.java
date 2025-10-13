@@ -26,6 +26,7 @@ public class AnalyticsUtils {
     public static FirebaseAnalytics getFirebaseAnalytics(Context context) {
         if (mFirebaseAnalytics == null) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            Log.d("AnalyticsUtils", "Firebase Analytics instance created");
         }
         return mFirebaseAnalytics;
     }
@@ -60,17 +61,30 @@ public class AnalyticsUtils {
     }
 
     public static void logStartedInOfflineModeEvent(Context context, String eventName, String pseudoId) {
-        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME,
-                Context.MODE_PRIVATE);
-        Bundle bundle = new Bundle();
-        bundle.putString("cr_user_id", pseudoId);
-        String source = prefs.getString(SOURCE, "");
-        String campaign_id = prefs.getString(CAMPAIGN_ID, "");
-        firebaseAnalytics.setUserProperty("source", source);
-        firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
-        firebaseAnalytics.logEvent(eventName, bundle);
+        try {
+            FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME,
+                    Context.MODE_PRIVATE);
+            Bundle bundle = new Bundle();
+            bundle.putString("cr_user_id", pseudoId);
+            bundle.putLong("event_timestamp", getCurrentEpochTime());
+            bundle.putString("offline_mode", "true");
+            
+            String source = prefs.getString(SOURCE, "");
+            String campaign_id = prefs.getString(CAMPAIGN_ID, "");
+            
+            firebaseAnalytics.setUserProperty("source", source);
+            firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
+            firebaseAnalytics.logEvent(eventName, bundle);
+            
+            Log.d("AnalyticsUtils", "Successfully logged offline event: " + eventName + 
+                  " for user: " + pseudoId + " with source: " + source + 
+                  " and campaign_id: " + campaign_id);
+        } catch (Exception e) {
+            Log.e("AnalyticsUtils", "Failed to log offline event: " + eventName, e);
+        }
     }
+    
     public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language, String manifestVersion, String autoSelected) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

@@ -107,7 +107,10 @@ public class MainActivity extends BaseActivity {
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
         if (!isInternetConnected(getApplicationContext())) {
+            Log.d(TAG, "Device is offline - logging started_in_offline_mode event");
             logStartedInOfflineMode();
+        } else {
+            Log.d(TAG, "Device is online - no offline mode event needed");
         }
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
@@ -186,7 +189,7 @@ public class MainActivity extends BaseActivity {
             }
         }
         audioPlayer = new AudioPlayer();
-        FirebaseApp.initializeApp(this);
+        //FirebaseApp.initializeApp(this); Initializing in MyApplication.java
         FacebookSdk.setAutoInitEnabled(true);
         FacebookSdk.fullyInitialize();
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
@@ -598,9 +601,14 @@ public class MainActivity extends BaseActivity {
     }
 
     private void logStartedInOfflineMode() {
-
+        String pseudoId = prefs.getString("pseudoId", "");
+        Log.d(TAG, "Logging started_in_offline_mode event for pseudoId: " + pseudoId);
+        
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
-                "started_in_offline_mode", prefs.getString("pseudoId", ""));
+                "started_in_offline_mode", pseudoId);
+        
+        // Also log to Firebase Crashlytics for debugging
+        FirebaseCrashlytics.getInstance().log("App started in offline mode - pseudoId: " + pseudoId);
     }
 
 }
