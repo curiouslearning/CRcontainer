@@ -19,7 +19,7 @@ import java.util.Map;
 public class AnalyticsUtils {
 
     private static FirebaseAnalytics mFirebaseAnalytics;
-    private static final String PREFS_NAME = "InstallReferrerPrefs";
+    private static final String PREFS_NAME = "utmPrefs";
     private static final String SOURCE = "source";
     private static final String CAMPAIGN_ID = "campaign_id";
 

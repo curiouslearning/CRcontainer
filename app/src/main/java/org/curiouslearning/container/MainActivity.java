@@ -141,12 +141,20 @@ public class MainActivity extends BaseActivity {
                         editor.putString("deferred_deeplink", fullURL);
                         editor.apply();
                         
-                        // Check if we started in offline mode and log the event now that we have referrer data
+                        // Store UTM parameters first
+                        SharedPreferences.Editor utmEditor = utmPrefs.edit();
+                        Uri uri = Uri.parse("http://dummyurl.com/?" + fullURL);
+                        String source = uri.getQueryParameter("source");
+                        String campaign_id = uri.getQueryParameter("campaign_id");
+                        utmEditor.putString("source", source);
+                        utmEditor.putString("campaign_id", campaign_id);
+                        utmEditor.apply();
+
+                        // Now check offline mode and log event with the stored UTM params
                         if (!isInternetConnected(getApplicationContext())) {
                             logStartedInOfflineMode();
-                        } else {
-                            updateDebugOverlay(); // Update even if not in offline mode
                         }
+                        updateDebugOverlay(); // Always update the overlay
                         
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
                         String pseudoId = prefs.getString("pseudoId", "");
