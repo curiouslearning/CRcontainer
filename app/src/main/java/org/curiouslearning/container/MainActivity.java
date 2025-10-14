@@ -150,6 +150,13 @@ public class MainActivity extends BaseActivity {
                         utmEditor.putString("campaign_id", campaign_id);
                         utmEditor.apply();
 
+                        // Also store in InstallReferrerPrefs for analytics
+                        SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
+                        SharedPreferences.Editor installReferrerEditor = installReferrerPrefs.edit();
+                        installReferrerEditor.putString("source", source);
+                        installReferrerEditor.putString("campaign_id", campaign_id);
+                        installReferrerEditor.apply();
+
                         // Now check offline mode and log event with the stored UTM params
                         if (!isInternetConnected(getApplicationContext())) {
                             logStartedInOfflineMode();
@@ -637,6 +644,13 @@ public class MainActivity extends BaseActivity {
                            .append("/").append(currentReferrerStatus.maxAttempts).append(")");
                 }
                 debugInfo.append("\n");
+                
+                // Show successful attempt number if available
+                if (currentReferrerStatus.successfulAttempt > 0) {
+                    debugInfo.append("Referrer Handled After: ").append(currentReferrerStatus.successfulAttempt)
+                           .append(" attempt(s)\n");
+                }
+                
                 if (currentReferrerStatus.lastError != null) {
                     debugInfo.append("Last Error: ").append(currentReferrerStatus.lastError).append("\n");
                 }

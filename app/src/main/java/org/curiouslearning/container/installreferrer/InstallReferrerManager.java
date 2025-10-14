@@ -58,9 +58,10 @@ public class InstallReferrerManager {
             public void onInstallReferrerSetupFinished(int responseCode) {
                 switch (responseCode) {
                     case InstallReferrerClient.InstallReferrerResponse.OK:
-                        Log.d("referrer", "install connection established");
+                        Log.d("referrer", "install connection established on attempt " + (currentRetryAttempt + 1));
+                        int successAttempt = currentRetryAttempt + 1;
                         currentRetryAttempt = 0; // Reset retry counter on success
-                        callback.onReferrerStatusUpdate(new ReferrerStatus("CONNECTED", currentRetryAttempt, MAX_RETRY_ATTEMPTS, null));
+                        callback.onReferrerStatusUpdate(new ReferrerStatus("CONNECTED", currentRetryAttempt, MAX_RETRY_ATTEMPTS, null, successAttempt));
                         handleReferrer();
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
@@ -154,12 +155,18 @@ public class InstallReferrerManager {
         public final int currentAttempt;
         public final int maxAttempts;
         public final String lastError;
+        public final int successfulAttempt;  // The attempt number where we succeeded, or -1 if not yet successful
 
         public ReferrerStatus(String state, int currentAttempt, int maxAttempts, String lastError) {
+            this(state, currentAttempt, maxAttempts, lastError, -1);
+        }
+
+        public ReferrerStatus(String state, int currentAttempt, int maxAttempts, String lastError, int successfulAttempt) {
             this.state = state;
             this.currentAttempt = currentAttempt;
             this.maxAttempts = maxAttempts;
             this.lastError = lastError;
+            this.successfulAttempt = successfulAttempt;
         }
     }
     private void retryConnection() {
