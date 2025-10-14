@@ -118,7 +118,16 @@ public class MainActivity extends BaseActivity {
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
-        // We'll handle offline mode logging after referrer data is available
+        
+        // Check if we're starting in offline mode
+        if (!isInternetConnected(getApplicationContext())) {
+            // If referrer was already handled before, we can send offline event with stored UTM params
+            if (isReferrerHandled) {
+                logStartedInOfflineMode();
+            }
+            // If referrer wasn't handled yet, we'll wait for referrer callback to send the event
+        }
+
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
             public void onReferrerStatusUpdate(InstallReferrerManager.ReferrerStatus status) {
