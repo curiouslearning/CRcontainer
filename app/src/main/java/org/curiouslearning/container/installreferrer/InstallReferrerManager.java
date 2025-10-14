@@ -27,6 +27,11 @@ public class InstallReferrerManager {
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private static final String SOURCE = "source";
     private static final String CAMPAIGN_ID = "campaign_id";
+    
+    private static final int MAX_RETRY_ATTEMPTS = 5;
+    private static final long RETRY_INTERVAL_MS = 2000; // 2 seconds
+    private int currentRetryAttempt = 0;
+    private android.os.Handler retryHandler = new android.os.Handler();
 
     public InstallReferrerManager(Context context, ReferrerCallback callback) {
         this.context = context;
@@ -36,35 +41,53 @@ public class InstallReferrerManager {
 
     public void checkPlayStoreAvailability() {
         if (installReferrerClient != null) {
+            callback.onReferrerStatusUpdate(new ReferrerStatus("CONNECTING", 0, MAX_RETRY_ATTEMPTS, null));
             startConnection();
         } else {
-            Log.d("referrer", "install connection not established");
+            String error = "Install referrer client not initialized";
+            Log.d("referrer", error);
+            callback.onReferrerStatusUpdate(new ReferrerStatus("FAILED", 0, MAX_RETRY_ATTEMPTS, error));
         }
     }
 
     private void startConnection() {
+        Log.d("referrer", "Attempting to connect to referrer service (attempt " + (currentRetryAttempt + 1) + "/" + MAX_RETRY_ATTEMPTS + ")");
+        
         installReferrerClient.startConnection(new InstallReferrerStateListener() {
             @Override
             public void onInstallReferrerSetupFinished(int responseCode) {
                 switch (responseCode) {
                     case InstallReferrerClient.InstallReferrerResponse.OK:
                         Log.d("referrer", "install connection established");
+                        currentRetryAttempt = 0; // Reset retry counter on success
+                        callback.onReferrerStatusUpdate(new ReferrerStatus("CONNECTED", currentRetryAttempt, MAX_RETRY_ATTEMPTS, null));
                         handleReferrer();
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
-                        Log.d("referrer", "install referrer not supported");
+                        String featureError = "Install referrer not supported";
+                        Log.d("referrer", featureError);
+                        callback.onReferrerStatusUpdate(new ReferrerStatus("FAILED", currentRetryAttempt, MAX_RETRY_ATTEMPTS, featureError));
                         callback.onReferrerReceived("", "");
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
-                        Log.d("referrer", "install referrer service unavailable");
-                        callback.onReferrerReceived("", "");
+                        String serviceError = "Install referrer service unavailable";
+                        Log.d("referrer", serviceError);
+                        callback.onReferrerStatusUpdate(new ReferrerStatus("RETRYING", currentRetryAttempt, MAX_RETRY_ATTEMPTS, serviceError));
+                        retryConnection();
+                        break;
+                    default:
+                        String unknownError = "Unknown response code: " + responseCode;
+                        Log.d("referrer", unknownError);
+                        callback.onReferrerStatusUpdate(new ReferrerStatus("RETRYING", currentRetryAttempt, MAX_RETRY_ATTEMPTS, unknownError));
+                        retryConnection();
                         break;
                 }
             }
 
             @Override
             public void onInstallReferrerServiceDisconnected() {
-                // on service disconnect
+                Log.d("referrer", "Referrer service disconnected");
+                retryConnection();
             }
         });
     }
@@ -123,7 +146,42 @@ public class InstallReferrerManager {
     }
     public interface ReferrerCallback {
         void onReferrerReceived(String referrerUrl, String fullUrl);
+        void onReferrerStatusUpdate(ReferrerStatus status);
     }
+
+    public static class ReferrerStatus {
+        public final String state;  // "CONNECTING", "RETRYING", "CONNECTED", "FAILED", "NOT_STARTED"
+        public final int currentAttempt;
+        public final int maxAttempts;
+        public final String lastError;
+
+        public ReferrerStatus(String state, int currentAttempt, int maxAttempts, String lastError) {
+            this.state = state;
+            this.currentAttempt = currentAttempt;
+            this.maxAttempts = maxAttempts;
+            this.lastError = lastError;
+        }
+    }
+    private void retryConnection() {
+        if (currentRetryAttempt < MAX_RETRY_ATTEMPTS) {
+            currentRetryAttempt++;
+            Log.d("referrer", "Scheduling retry " + currentRetryAttempt + "/" + MAX_RETRY_ATTEMPTS + 
+                  " in " + RETRY_INTERVAL_MS + "ms");
+            
+            retryHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (installReferrerClient != null) {
+                        startConnection();
+                    }
+                }
+            }, RETRY_INTERVAL_MS);
+        } else {
+            Log.d("referrer", "Max retry attempts reached. Giving up.");
+            callback.onReferrerReceived("", "");
+        }
+    }
+
     public static String urlDecode(String encodedString) {
         try {
             if (encodedString != null) {

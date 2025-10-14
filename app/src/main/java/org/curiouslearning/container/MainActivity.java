@@ -87,6 +87,18 @@ public class MainActivity extends BaseActivity {
     private long initialSlackAlertTime;
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
+    private InstallReferrerManager.ReferrerStatus currentReferrerStatus;
+
+    private Handler debugOverlayHandler = new Handler();
+    private static final long DEBUG_OVERLAY_UPDATE_INTERVAL = 1000; // 1 second
+
+    private final Runnable debugOverlayUpdater = new Runnable() {
+        @Override
+        public void run() {
+            updateDebugOverlay();
+            debugOverlayHandler.postDelayed(this, DEBUG_OVERLAY_UPDATE_INTERVAL);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,6 +119,12 @@ public class MainActivity extends BaseActivity {
         // We'll handle offline mode logging after referrer data is available
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
+            public void onReferrerStatusUpdate(InstallReferrerManager.ReferrerStatus status) {
+                currentReferrerStatus = status;
+                updateDebugOverlay();
+            }
+
+            @Override
             public void onReferrerReceived(String deferredLang, String fullURL) {
                 String language = deferredLang.trim();
 
@@ -124,6 +142,8 @@ public class MainActivity extends BaseActivity {
                         // Check if we started in offline mode and log the event now that we have referrer data
                         if (!isInternetConnected(getApplicationContext())) {
                             logStartedInOfflineMode();
+                        } else {
+                            updateDebugOverlay(); // Update even if not in offline mode
                         }
                         
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
@@ -302,6 +322,15 @@ public class MainActivity extends BaseActivity {
         super.onResume();
         recyclerView.setAdapter(apps);
         updateDebugOverlay();
+        // Start periodic updates of debug overlay
+        debugOverlayHandler.post(debugOverlayUpdater);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Stop periodic updates of debug overlay
+        debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
     }
 
     private String generatePseudoId() {
@@ -558,6 +587,7 @@ public class MainActivity extends BaseActivity {
         editor.putString("selectedLanguage", language);
         editor.apply();
         Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
+        updateDebugOverlay(); // Update overlay when language changes
     }
 
     private void cacheManifestVersion(String versionNumber) {
@@ -566,6 +596,7 @@ public class MainActivity extends BaseActivity {
             editor.putString("manifestVersion", versionNumber);
             editor.apply();
             Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
+            updateDebugOverlay(); // Update overlay when manifest version changes
         }
     }
 
@@ -589,6 +620,19 @@ public class MainActivity extends BaseActivity {
 
             // Referrer & Attribution Section
             debugInfo.append("=== Referrer & Attribution ===\n");
+            if (currentReferrerStatus != null) {
+                debugInfo.append("Referrer Status: ").append(currentReferrerStatus.state);
+                if (currentReferrerStatus.state.equals("RETRYING")) {
+                    debugInfo.append(" (Attempt ").append(currentReferrerStatus.currentAttempt)
+                           .append("/").append(currentReferrerStatus.maxAttempts).append(")");
+                }
+                debugInfo.append("\n");
+                if (currentReferrerStatus.lastError != null) {
+                    debugInfo.append("Last Error: ").append(currentReferrerStatus.lastError).append("\n");
+                }
+            } else {
+                debugInfo.append("Referrer Status: NOT_STARTED\n");
+            }
             debugInfo.append("Referrer Handled: ").append(isReferrerHandled).append("\n");
             debugInfo.append("Attribution Complete: ").append(isAttributionComplete).append("\n");
             String deferredDeeplink = prefs.getString("deferred_deeplink", "");
