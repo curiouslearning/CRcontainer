@@ -1,67 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="8dp"
     android:background="#80000000">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/debug_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@android:drawable/ic_dialog_info"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="@string/offline_mode_icon" />
-
-        <TextView
-            android:id="@+id/offline_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textIsSelectable="true" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/cr_user_id"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:padding="16dp"
         android:textColor="#FFFFFF"
         android:textSize="12sp"
-        android:textIsSelectable="true" />
+        android:fontFamily="monospace"
+        android:typeface="monospace" />
 
-    <TextView
-        android:id="@+id/deeplink_info"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp"
-        android:textIsSelectable="true" />
-
-    <TextView
-        android:id="@+id/source_campaign"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp"
-        android:textIsSelectable="true" />
-
-    <TextView
-        android:id="@+id/event_status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp"
-        android:textIsSelectable="true" />
-
-</LinearLayout>
+</ScrollView>

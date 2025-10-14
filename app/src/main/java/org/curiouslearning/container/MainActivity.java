@@ -104,9 +104,7 @@ public class MainActivity extends BaseActivity {
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
-        if (!isInternetConnected(getApplicationContext())) {
-            logStartedInOfflineMode();
-        }
+        // We'll handle offline mode logging after referrer data is available
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
             @Override
             public void onReferrerReceived(String deferredLang, String fullURL) {
@@ -119,9 +117,14 @@ public class MainActivity extends BaseActivity {
                     if ((language != null && language.length() > 0) || fullURL.contains("curiousreader://app")) {
                         isAttributionComplete = true;
                         // Store deferred deeplink
-                        SharedPreferences.Editor editor = prefs.edit();
+                        editor = prefs.edit();
                         editor.putString("deferred_deeplink", fullURL);
                         editor.apply();
+                        
+                        // Check if we started in offline mode and log the event now that we have referrer data
+                        if (!isInternetConnected(getApplicationContext())) {
+                            logStartedInOfflineMode();
+                        }
                         
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
                         String pseudoId = prefs.getString("pseudoId", "");
@@ -574,32 +577,43 @@ public class MainActivity extends BaseActivity {
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         if (offlineOverlay != null) {
             offlineOverlay.setVisibility(View.VISIBLE);
+            StringBuilder debugInfo = new StringBuilder();
 
-            // Update offline status
-            TextView offlineStatus = offlineOverlay.findViewById(R.id.offline_status);
+            // Basic Info Section
             boolean isOffline = !isInternetConnected(getApplicationContext());
-            offlineStatus.setText("Offline Mode: " + isOffline);
+            debugInfo.append("=== Basic Info ===\n");
+            debugInfo.append("Offline Mode: ").append(isOffline).append("\n");
+            debugInfo.append("App Version: ").append(appVersion).append("\n");
+            debugInfo.append("Manifest Version: ").append(manifestVersion).append("\n");
+            debugInfo.append("CR User ID: cr_user_id_").append(prefs.getString("pseudoId", "")).append("\n\n");
 
-            // Update CR User ID
-            TextView crUserId = offlineOverlay.findViewById(R.id.cr_user_id);
-            String pseudoId = prefs.getString("pseudoId", "");
-            crUserId.setText("CR User ID: cr_user_id_" + pseudoId);
-
-            // Update deeplink info
-            TextView deeplinkInfo = offlineOverlay.findViewById(R.id.deeplink_info);
+            // Referrer & Attribution Section
+            debugInfo.append("=== Referrer & Attribution ===\n");
+            debugInfo.append("Referrer Handled: ").append(isReferrerHandled).append("\n");
+            debugInfo.append("Attribution Complete: ").append(isAttributionComplete).append("\n");
             String deferredDeeplink = prefs.getString("deferred_deeplink", "");
-            deeplinkInfo.setText("Deferred Deeplink: " + (deferredDeeplink.isEmpty() ? "None" : deferredDeeplink));
+            debugInfo.append("Deferred Deeplink: ").append(deferredDeeplink.isEmpty() ? "None" : deferredDeeplink).append("\n\n");
 
-            // Update source and campaign
-            TextView sourceCampaign = offlineOverlay.findViewById(R.id.source_campaign);
-            String source = utmPrefs.getString("source", "");
-            String campaignId = utmPrefs.getString("campaign_id", "");
-            sourceCampaign.setText("Source: " + (source.isEmpty() ? "None" : source) + 
-                                 "\nCampaign ID: " + (campaignId.isEmpty() ? "None" : campaignId));
+            // UTM Parameters Section
+            debugInfo.append("=== UTM Parameters ===\n");
+            debugInfo.append("Source: ").append(utmPrefs.getString("source", "None")).append("\n");
+            debugInfo.append("Campaign ID: ").append(utmPrefs.getString("campaign_id", "None")).append("\n");
+            debugInfo.append("Content: ").append(utmPrefs.getString("utm_content", "None")).append("\n\n");
 
-            // Update event status
-            TextView eventStatus = offlineOverlay.findViewById(R.id.event_status);
-            eventStatus.setText("Started In Offline Mode Event Sent: " + isOffline);
+            // Language Section
+            debugInfo.append("=== Language Info ===\n");
+            debugInfo.append("Selected Language: ").append(selectedLanguage.isEmpty() ? "None" : selectedLanguage).append("\n");
+            debugInfo.append("Stored Language: ").append(prefs.getString("selectedLanguage", "None")).append("\n\n");
+
+            // Events Section
+            debugInfo.append("=== Events ===\n");
+            debugInfo.append("Started In Offline Mode Event Sent: ").append(isOffline).append("\n");
+            debugInfo.append("Initial Slack Alert Time: ").append(convertEpochToDate(initialSlackAlertTime)).append("\n");
+            debugInfo.append("Current Time: ").append(convertEpochToDate(AnalyticsUtils.getCurrentEpochTime())).append("\n");
+
+            // Set the debug info
+            TextView debugText = offlineOverlay.findViewById(R.id.debug_info);
+            debugText.setText(debugInfo.toString());
         }
     }
 
