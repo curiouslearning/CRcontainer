@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -89,7 +91,7 @@ public class MainActivity extends BaseActivity {
     private TextView textView;
     private InstallReferrerManager.ReferrerStatus currentReferrerStatus;
 
-    private Handler debugOverlayHandler = new Handler();
+    private Handler debugOverlayHandler = new Handler(Looper.getMainLooper());
     private static final long DEBUG_OVERLAY_UPDATE_INTERVAL = 1000; // 1 second
 
     private final Runnable debugOverlayUpdater = new Runnable() {
