@@ -90,6 +90,11 @@ public class MainActivity extends BaseActivity {
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
     private InstallReferrerManager.ReferrerStatus currentReferrerStatus;
+    private View debugTriggerArea;
+    private int debugTapCount = 0;
+    private long lastTapTime = 0;
+    private static final long TAP_TIMEOUT = 3000; // Reset tap count after 3 seconds
+    private static final int REQUIRED_TAPS = 8;
 
     private Handler debugOverlayHandler = new Handler(Looper.getMainLooper());
     private static final long DEBUG_OVERLAY_UPDATE_INTERVAL = 1000; // 1 second
@@ -247,6 +252,31 @@ public class MainActivity extends BaseActivity {
                         showLanguagePopup();
                     }
                 });
+            }
+        });
+
+        // Initialize debug trigger area
+        debugTriggerArea = findViewById(R.id.debug_trigger_area);
+        debugTriggerArea.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastTapTime > TAP_TIMEOUT) {
+                    debugTapCount = 1;
+                } else {
+                    debugTapCount++;
+                }
+                lastTapTime = currentTime;
+
+                if (debugTapCount >= REQUIRED_TAPS) {
+                    debugTapCount = 0;
+                    View offlineOverlay = findViewById(R.id.offline_mode_overlay);
+                    if (offlineOverlay != null) {
+                        offlineOverlay.setVisibility(View.VISIBLE);
+                        updateDebugOverlay();
+                        debugOverlayHandler.post(debugOverlayUpdater);
+                    }
+                }
             }
         });
     }
@@ -637,6 +667,18 @@ public class MainActivity extends BaseActivity {
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         if (offlineOverlay != null) {
             offlineOverlay.setVisibility(View.VISIBLE);
+            
+            // Initialize close button
+            ImageButton closeButton = offlineOverlay.findViewById(R.id.debug_overlay_close);
+            if (closeButton != null) {
+                closeButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        offlineOverlay.setVisibility(View.GONE);
+                        debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
+                    }
+                });
+            }
             StringBuilder debugInfo = new StringBuilder();
 
             // Basic Info Section
