@@ -1,29 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="#80000000">
 
-    <RelativeLayout
+    <ScrollView
+        android:id="@+id/debug_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp">
-
-        <ImageButton
-            android:id="@+id/debug_overlay_close"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_alignParentEnd="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:contentDescription="Close debug overlay" />
-
-    </RelativeLayout>
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_above="@+id/bottom_button_container">
 
         <TextView
         android:id="@+id/debug_info"
@@ -36,7 +21,27 @@
         android:typeface="monospace"
         android:textIsSelectable="true"
         android:focusable="true"
-        android:longClickable="true" />
+            android:longClickable="true" />
 
     </ScrollView>
-</LinearLayout>
+
+    <RelativeLayout
+        android:id="@+id/bottom_button_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:padding="16dp">
+
+        <ImageButton
+            android:id="@+id/debug_overlay_close"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_alignParentEnd="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:contentDescription="Close debug overlay"
+            android:tint="#FFFFFF" />
+
+    </RelativeLayout>
+
+</RelativeLayout>
