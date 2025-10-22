@@ -235,9 +235,6 @@ public class InstallReferrerManager {
         Map<String, Object> eventData = new HashMap<>();
         SharedPreferences sharedPrefs = context.getSharedPreferences(SHARED_PREFS_NAME, context.MODE_PRIVATE);
         String pseudoId = sharedPrefs.getString("pseudoId", "");
-
-        System.out.println(">>>>>>>>>>>>" + status + pseudoId + referralUrl + " " + MAX_RETRY_ATTEMPTS + " "
-                + successAttemptCount + " " + source + " " + campaignId);
         AnalyticsUtils.logAttributionStatusEvent(context, "attribution_status_6", status, referralUrl, pseudoId,
                 MAX_RETRY_ATTEMPTS, successAttemptCount, source, campaignId);
     }
