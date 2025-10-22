@@ -30,7 +30,8 @@ public class AnalyticsUtils {
         return mFirebaseAnalytics;
     }
 
-    public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId, String language) {
+    public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId,
+            String language) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Bundle bundle = new Bundle();
@@ -44,6 +45,7 @@ public class AnalyticsUtils {
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
     }
+
     public static void logAttributionErrorEvent(Context context, String eventName, String appUrl, String pseudoId) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -71,7 +73,9 @@ public class AnalyticsUtils {
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
     }
-    public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language, String manifestVersion, String autoSelected) {
+
+    public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language,
+            String manifestVersion, String autoSelected) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Bundle bundle = new Bundle();
@@ -80,21 +84,20 @@ public class AnalyticsUtils {
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
         bundle.putString("manifest_version", manifestVersion);
-        bundle.putString("auto_selected",autoSelected);
+        bundle.putString("auto_selected", autoSelected);
         firebaseAnalytics.setUserProperty("source", prefs.getString(SOURCE, ""));
         firebaseAnalytics.setUserProperty("campaign_id", prefs.getString(CAMPAIGN_ID, ""));
         firebaseAnalytics.logEvent(eventName, bundle);
 
     }
 
-
-
     public static void logReferrerEvent(Context context, String eventName, ReferrerDetails response) {
         if (response != null) {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
             String referrerUrl = response.getInstallReferrer();
             // below one is the url for testing purpose
-            // String referrerUrl = "source=facebook&utm_medium=print&campaign_id=120208084211250195&deferred_deeplink=curiousreader://app?language=nepali";
+            // String referrerUrl =
+            // "source=facebook&utm_medium=print&campaign_id=120208084211250195&deferred_deeplink=curiousreader://app?language=nepali";
             Bundle bundle = new Bundle();
             bundle.putString("referrer_url", referrerUrl);
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
@@ -114,6 +117,21 @@ public class AnalyticsUtils {
             firebaseAnalytics.logEvent(eventName, bundle);
         }
     }
+
+    public static void logAttributionStatusEvent(Context context, String eventName, String status, String appUrl,
+            String pseudoId, int maxRetries, int attemptCount, String source, String campaignId) {
+        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+        Bundle bundle = new Bundle();
+        bundle.putString("status", status);
+        bundle.putString("referral_url", appUrl);
+        bundle.putString("cr_user_id", pseudoId);
+        bundle.putInt("max_retries", maxRetries);
+        bundle.putInt("attempt_count", attemptCount);
+        bundle.putString("source", source);
+        bundle.putString("campaign_id", campaignId);
+        firebaseAnalytics.logEvent(eventName, bundle);
+    }
+
     public static void storeReferrerParams(Context context, String source, String campaign_id) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -122,11 +140,11 @@ public class AnalyticsUtils {
         editor.apply();
     }
 
-
-    private  static Map<String, String> extractReferrerParameters(String referrerUrl) {
+    private static Map<String, String> extractReferrerParameters(String referrerUrl) {
         Map<String, String> params = new HashMap<>();
-        // Using a dummy URL to ensure `Uri.parse` correctly processes the referrerUrl as part of a valid URL.
-        Uri uri = Uri.parse("http://dummyurl.com/?" +referrerUrl);
+        // Using a dummy URL to ensure `Uri.parse` correctly processes the referrerUrl
+        // as part of a valid URL.
+        Uri uri = Uri.parse("http://dummyurl.com/?" + referrerUrl);
 
         String source = uri.getQueryParameter("source");
         String campaign_id = uri.getQueryParameter("campaign_id");
@@ -134,7 +152,7 @@ public class AnalyticsUtils {
         Log.d("data without decode util", campaign_id + " " + source + " " + content);
         content = urlDecode(content);
 
-        Log.d("referral data", uri+" "+campaign_id + " " + source + " " + content+" "+referrerUrl);
+        Log.d("referral data", uri + " " + campaign_id + " " + source + " " + content + " " + referrerUrl);
 
         params.put("source", source);
         params.put("campaign_id", campaign_id);
@@ -164,4 +182,5 @@ public class AnalyticsUtils {
             return null;
         }
     }
+
 }

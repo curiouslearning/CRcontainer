@@ -118,14 +118,16 @@ public class MainActivity extends BaseActivity {
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
-        
+
         // Check if we're starting in offline mode
         if (!isInternetConnected(getApplicationContext())) {
-            // If referrer was already handled before, we can send offline event with stored UTM params
+            // If referrer was already handled before, we can send offline event with stored
+            // UTM params
             if (isReferrerHandled) {
                 logStartedInOfflineMode();
             }
-            // If referrer wasn't handled yet, we'll wait for referrer callback to send the event
+            // If referrer wasn't handled yet, we'll wait for referrer callback to send the
+            // event
         }
 
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
@@ -149,7 +151,7 @@ public class MainActivity extends BaseActivity {
                         editor = prefs.edit();
                         editor.putString("deferred_deeplink", fullURL);
                         editor.apply();
-                        
+
                         // Store UTM parameters first
                         SharedPreferences.Editor utmEditor = utmPrefs.edit();
                         Uri uri = Uri.parse("http://dummyurl.com/?" + fullURL);
@@ -160,7 +162,8 @@ public class MainActivity extends BaseActivity {
                         utmEditor.apply();
 
                         // Also store in InstallReferrerPrefs for analytics
-                        SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
+                        SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs",
+                                MODE_PRIVATE);
                         SharedPreferences.Editor installReferrerEditor = installReferrerPrefs.edit();
                         installReferrerEditor.putString("source", source);
                         installReferrerEditor.putString("campaign_id", campaign_id);
@@ -171,7 +174,7 @@ public class MainActivity extends BaseActivity {
                             logStartedInOfflineMode();
                         }
                         updateDebugOverlay(); // Always update the overlay
-                        
+
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
                         String pseudoId = prefs.getString("pseudoId", "");
                         String manifestVrsn = prefs.getString("manifestVersion", "");
@@ -650,16 +653,16 @@ public class MainActivity extends BaseActivity {
                 debugInfo.append("Referrer Status: ").append(currentReferrerStatus.state);
                 if (currentReferrerStatus.state.equals("RETRYING")) {
                     debugInfo.append(" (Attempt ").append(currentReferrerStatus.currentAttempt)
-                           .append("/").append(currentReferrerStatus.maxAttempts).append(")");
+                            .append("/").append(currentReferrerStatus.maxAttempts).append(")");
                 }
                 debugInfo.append("\n");
-                
+
                 // Show successful attempt number if available
                 if (currentReferrerStatus.successfulAttempt > 0) {
                     debugInfo.append("Referrer Handled After: ").append(currentReferrerStatus.successfulAttempt)
-                           .append(" attempt(s)\n");
+                            .append(" attempt(s)\n");
                 }
-                
+
                 if (currentReferrerStatus.lastError != null) {
                     debugInfo.append("Last Error: ").append(currentReferrerStatus.lastError).append("\n");
                 }
@@ -669,7 +672,8 @@ public class MainActivity extends BaseActivity {
             debugInfo.append("Referrer Handled: ").append(isReferrerHandled).append("\n");
             debugInfo.append("Attribution Complete: ").append(isAttributionComplete).append("\n");
             String deferredDeeplink = prefs.getString("deferred_deeplink", "");
-            debugInfo.append("Deferred Deeplink: ").append(deferredDeeplink.isEmpty() ? "None" : deferredDeeplink).append("\n\n");
+            debugInfo.append("Deferred Deeplink: ").append(deferredDeeplink.isEmpty() ? "None" : deferredDeeplink)
+                    .append("\n\n");
 
             // UTM Parameters Section
             debugInfo.append("=== UTM Parameters ===\n");
@@ -679,14 +683,17 @@ public class MainActivity extends BaseActivity {
 
             // Language Section
             debugInfo.append("=== Language Info ===\n");
-            debugInfo.append("Selected Language: ").append(selectedLanguage.isEmpty() ? "None" : selectedLanguage).append("\n");
+            debugInfo.append("Selected Language: ").append(selectedLanguage.isEmpty() ? "None" : selectedLanguage)
+                    .append("\n");
             debugInfo.append("Stored Language: ").append(prefs.getString("selectedLanguage", "None")).append("\n\n");
 
             // Events Section
             debugInfo.append("=== Events ===\n");
             debugInfo.append("Started In Offline Mode Event Sent: ").append(isOffline).append("\n");
-            debugInfo.append("Initial Slack Alert Time: ").append(convertEpochToDate(initialSlackAlertTime)).append("\n");
-            debugInfo.append("Current Time: ").append(convertEpochToDate(AnalyticsUtils.getCurrentEpochTime())).append("\n");
+            debugInfo.append("Initial Slack Alert Time: ").append(convertEpochToDate(initialSlackAlertTime))
+                    .append("\n");
+            debugInfo.append("Current Time: ").append(convertEpochToDate(AnalyticsUtils.getCurrentEpochTime()))
+                    .append("\n");
 
             // Set the debug info
             TextView debugText = offlineOverlay.findViewById(R.id.debug_info);
