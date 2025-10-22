@@ -94,7 +94,7 @@
     <View
         android:id="@+id/debug_trigger_area"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="62dp"
         android:background="@drawable/debug_trigger_border"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
