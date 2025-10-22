@@ -381,9 +381,12 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
-        updateDebugOverlay();
-        // Start periodic updates of debug overlay
-        debugOverlayHandler.post(debugOverlayUpdater);
+        // Only update the overlay if it's visible
+        View offlineOverlay = findViewById(R.id.offline_mode_overlay);
+        if (offlineOverlay != null && offlineOverlay.getVisibility() == View.VISIBLE) {
+            updateDebugOverlay();
+            debugOverlayHandler.post(debugOverlayUpdater);
+        }
     }
 
     @Override
@@ -667,7 +670,7 @@ public class MainActivity extends BaseActivity {
     private void updateDebugOverlay() {
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         if (offlineOverlay != null) {
-            offlineOverlay.setVisibility(View.VISIBLE);
+            // Don't change visibility here, let it be controlled by the trigger button
             
             // Initialize close button
             ImageButton closeButton = offlineOverlay.findViewById(R.id.debug_overlay_close);
