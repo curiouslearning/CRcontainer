@@ -443,7 +443,19 @@ public class MainActivity extends BaseActivity {
                 }
 
             });
+            try {
+            if (isFinishing() ||  isDestroyed()) {
+                Log.w(TAG, "showLanguagePopup: Activity is finishing or destroyed, not showing dialog.");
+                return;
+            }
             dialog.show();
+        } catch (Exception e) {
+                FirebaseCrashlytics.getInstance().log("showLanguagePopup: Failed to show dialog");
+                FirebaseCrashlytics.getInstance().recordException(
+                        new RuntimeException("showLanguagePopup: Failed to show dialog", e)
+                );
+            Log.e(TAG, "showLanguagePopup: Failed to show dialog", e);
+        }
         }
     }
 
