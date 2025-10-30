@@ -11,4 +11,6 @@
     <string name="setting_box">setting_box</string>
     <string name="setting_box_close">setting_box_close</string>
     <string name="select">...</string>
+    <string name="offline_mode_icon">Offline mode indicator</string>
+    <string name="offline_mode_message">You\'re currently in offline mode</string>
 </resources>
