@@ -89,7 +89,7 @@ platform :android do
       FileUtils.cp(apk_path, destination_path)
       UI.success("Debug APK saved to #{destination_path}")
 
-      sh("git config user.email 'nikhilchoudhary@sutara.org'")
+      sh("git config user.email 'kumar@sutara.org'")
       sh("git config user.name 'CLAuto'")
       sh("git add #{destination_path}")
 
