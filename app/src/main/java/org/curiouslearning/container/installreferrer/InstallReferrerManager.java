@@ -107,9 +107,10 @@ public class InstallReferrerManager {
         try {
             referrerDetails = installReferrerClient.getInstallReferrer();
             Log.d("referal", referrerDetails.toString() + " ");
-             String referrerUrl = referrerDetails.getInstallReferrer();
+            String referrerUrl = referrerDetails.getInstallReferrer();
             // the below url is for testing purpose
-//            String referrerUrl = "deferred_deeplink=curiousreader://app?language=hindii&source=testQA&campaign_id=123test";
+            // String referrerUrl =
+            // "deferred_deeplink=curiousreader://app?language=hindii&source=testQA&campaign_id=123test";
             Log.d("referal", referrerUrl + " ");
             Map<String, String> extractedParams = extractReferrerParameters(referrerUrl);
             logFirstOpenEvent(referrerDetails);
@@ -235,7 +236,7 @@ public class InstallReferrerManager {
         Map<String, Object> eventData = new HashMap<>();
         SharedPreferences sharedPrefs = context.getSharedPreferences(SHARED_PREFS_NAME, context.MODE_PRIVATE);
         String pseudoId = sharedPrefs.getString("pseudoId", "");
-        AnalyticsUtils.logAttributionStatusEvent(context, "attribution_status_6", status, referralUrl, pseudoId,
+        AnalyticsUtils.logAttributionStatusEvent(context, "attribution_status", status, referralUrl, pseudoId,
                 MAX_RETRY_ATTEMPTS, successAttemptCount, source, campaignId);
     }
 
