@@ -62,8 +62,8 @@ jobs:
             VERSION_NAME=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
 
             echo "Creating Sentry release: $VERSION_NAME"
-            ./sentry-cli releases new "$VERSION_NAME"
-            ./sentry-cli releases set-commits --auto "$VERSION_NAME"
+            sentry-cli releases new "$VERSION_NAME"
+            sentry-cli releases set-commits --auto "$VERSION_NAME"
 
       # 🟣 Run Fastlane (handles build + upload + release)
       - run:
