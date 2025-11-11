@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -13,6 +15,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 
@@ -87,6 +90,23 @@ public class MainActivity extends BaseActivity {
     private long initialSlackAlertTime;
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
+    private InstallReferrerManager.ReferrerStatus currentReferrerStatus;
+    private View debugTriggerArea;
+    private int debugTapCount = 0;
+    private long lastTapTime = 0;
+    private static final long TAP_TIMEOUT = 3000; // Reset tap count after 3 seconds
+    private static final int REQUIRED_TAPS = 8;
+
+    private Handler debugOverlayHandler = new Handler(Looper.getMainLooper());
+    private static final long DEBUG_OVERLAY_UPDATE_INTERVAL = 1000; // 1 second
+
+    private final Runnable debugOverlayUpdater = new Runnable() {
+        @Override
+        public void run() {
+            updateDebugOverlay();
+            debugOverlayHandler.postDelayed(this, DEBUG_OVERLAY_UPDATE_INTERVAL);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,10 +124,25 @@ public class MainActivity extends BaseActivity {
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
+
+        // Check if we're starting in offline mode
         if (!isInternetConnected(getApplicationContext())) {
-            logStartedInOfflineMode();
+            // If referrer was already handled before, we can send offline event with stored
+            // UTM params
+            if (isReferrerHandled) {
+                logStartedInOfflineMode();
+            }
+            // If referrer wasn't handled yet, we'll wait for referrer callback to send the
+            // event
         }
+
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
+            @Override
+            public void onReferrerStatusUpdate(InstallReferrerManager.ReferrerStatus status) {
+                currentReferrerStatus = status;
+                updateDebugOverlay();
+            }
+
             @Override
             public void onReferrerReceived(String deferredLang, String fullURL) {
                 String language = deferredLang.trim();
@@ -118,6 +153,34 @@ public class MainActivity extends BaseActivity {
                     editor.apply();
                     if ((language != null && language.length() > 0) || fullURL.contains("curiousreader://app")) {
                         isAttributionComplete = true;
+                        // Store deferred deeplink
+                        editor = prefs.edit();
+                        editor.putString("deferred_deeplink", fullURL);
+                        editor.apply();
+
+                        // Store UTM parameters first
+                        SharedPreferences.Editor utmEditor = utmPrefs.edit();
+                        Uri uri = Uri.parse("http://dummyurl.com/?" + fullURL);
+                        String source = uri.getQueryParameter("source");
+                        String campaign_id = uri.getQueryParameter("campaign_id");
+                        utmEditor.putString("source", source);
+                        utmEditor.putString("campaign_id", campaign_id);
+                        utmEditor.apply();
+
+                        // Also store in InstallReferrerPrefs for analytics
+                        SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs",
+                                MODE_PRIVATE);
+                        SharedPreferences.Editor installReferrerEditor = installReferrerPrefs.edit();
+                        installReferrerEditor.putString("source", source);
+                        installReferrerEditor.putString("campaign_id", campaign_id);
+                        installReferrerEditor.apply();
+
+                        // Now check offline mode and log event with the stored UTM params
+                        if (!isInternetConnected(getApplicationContext())) {
+                            logStartedInOfflineMode();
+                        }
+                        updateDebugOverlay(); // Always update the overlay
+
                         validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
                         String pseudoId = prefs.getString("pseudoId", "");
                         String manifestVrsn = prefs.getString("manifestVersion", "");
@@ -127,6 +190,7 @@ public class MainActivity extends BaseActivity {
                                     + language.substring(1).toLowerCase();
                         selectedLanguage = lang;
                         storeSelectLanguage(lang);
+                        updateDebugOverlay();
 
                         if (isAttributionComplete) {
                             AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId,
@@ -189,6 +253,31 @@ public class MainActivity extends BaseActivity {
                         showLanguagePopup();
                     }
                 });
+            }
+        });
+
+        // Initialize debug trigger area
+        debugTriggerArea = findViewById(R.id.debug_trigger_area);
+        debugTriggerArea.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastTapTime > TAP_TIMEOUT) {
+                    debugTapCount = 1;
+                } else {
+                    debugTapCount++;
+                }
+                lastTapTime = currentTime;
+
+                if (debugTapCount >= REQUIRED_TAPS) {
+                    debugTapCount = 0;
+                    View offlineOverlay = findViewById(R.id.offline_mode_overlay);
+                    if (offlineOverlay != null) {
+                        offlineOverlay.setVisibility(View.VISIBLE);
+                        updateDebugOverlay();
+                        debugOverlayHandler.post(debugOverlayUpdater);
+                    }
+                }
             }
         });
     }
@@ -292,6 +381,19 @@ public class MainActivity extends BaseActivity {
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
+        // Only update the overlay if it's visible
+        View offlineOverlay = findViewById(R.id.offline_mode_overlay);
+        if (offlineOverlay != null && offlineOverlay.getVisibility() == View.VISIBLE) {
+            updateDebugOverlay();
+            debugOverlayHandler.post(debugOverlayUpdater);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Stop periodic updates of debug overlay
+        debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
     }
 
     private String generatePseudoId() {
@@ -560,6 +662,7 @@ public class MainActivity extends BaseActivity {
         editor.putString("selectedLanguage", language);
         editor.apply();
         Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
+        updateDebugOverlay(); // Update overlay when language changes
     }
 
     private void cacheManifestVersion(String versionNumber) {
@@ -568,6 +671,7 @@ public class MainActivity extends BaseActivity {
             editor.putString("manifestVersion", versionNumber);
             editor.apply();
             Log.d(TAG, "cacheManifestVersion: Cached manifest version: " + versionNumber);
+            updateDebugOverlay(); // Update overlay when manifest version changes
         }
     }
 
@@ -575,10 +679,90 @@ public class MainActivity extends BaseActivity {
         return ConnectionUtils.getInstance().isInternetConnected(context);
     }
 
-    private void logStartedInOfflineMode() {
+    private void updateDebugOverlay() {
+        View offlineOverlay = findViewById(R.id.offline_mode_overlay);
+        if (offlineOverlay != null) {
+            // Don't change visibility here, let it be controlled by the trigger button
+            
+            // Initialize close button
+            ImageButton closeButton = offlineOverlay.findViewById(R.id.debug_overlay_close);
+            if (closeButton != null) {
+                closeButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        offlineOverlay.setVisibility(View.GONE);
+                        debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
+                    }
+                });
+            }
+            StringBuilder debugInfo = new StringBuilder();
 
+            // Basic Info Section
+            boolean isOffline = !isInternetConnected(getApplicationContext());
+            debugInfo.append("=== Basic Info ===\n");
+            debugInfo.append("Offline Mode: ").append(isOffline).append("\n");
+            debugInfo.append("App Version: ").append(appVersion).append("\n");
+            debugInfo.append("Manifest Version: ").append(manifestVersion).append("\n");
+            debugInfo.append("CR User ID: cr_user_id_").append(prefs.getString("pseudoId", "")).append("\n\n");
+
+            // Referrer & Attribution Section
+            debugInfo.append("=== Referrer & Attribution ===\n");
+            if (currentReferrerStatus != null) {
+                debugInfo.append("Referrer Status: ").append(currentReferrerStatus.state);
+                if (currentReferrerStatus.state.equals("RETRYING")) {
+                    debugInfo.append(" (Attempt ").append(currentReferrerStatus.currentAttempt)
+                            .append("/").append(currentReferrerStatus.maxAttempts).append(")");
+                }
+                debugInfo.append("\n");
+
+                // Show successful attempt number if available
+                if (currentReferrerStatus.successfulAttempt > 0) {
+                    debugInfo.append("Referrer Handled After: ").append(currentReferrerStatus.successfulAttempt)
+                            .append(" attempt(s)\n");
+                }
+
+                if (currentReferrerStatus.lastError != null) {
+                    debugInfo.append("Last Error: ").append(currentReferrerStatus.lastError).append("\n");
+                }
+            } else {
+                debugInfo.append("Referrer Status: NOT_STARTED\n");
+            }
+            debugInfo.append("Referrer Handled: ").append(isReferrerHandled).append("\n");
+            debugInfo.append("Attribution Complete: ").append(isAttributionComplete).append("\n");
+            String deferredDeeplink = prefs.getString("deferred_deeplink", "");
+            debugInfo.append("Deferred Deeplink: ").append(deferredDeeplink.isEmpty() ? "None" : deferredDeeplink)
+                    .append("\n\n");
+
+            // UTM Parameters Section
+            debugInfo.append("=== UTM Parameters ===\n");
+            debugInfo.append("Source: ").append(utmPrefs.getString("source", "None")).append("\n");
+            debugInfo.append("Campaign ID: ").append(utmPrefs.getString("campaign_id", "None")).append("\n");
+            debugInfo.append("Content: ").append(utmPrefs.getString("utm_content", "None")).append("\n\n");
+
+            // Language Section
+            debugInfo.append("=== Language Info ===\n");
+            debugInfo.append("Selected Language: ").append(selectedLanguage.isEmpty() ? "None" : selectedLanguage)
+                    .append("\n");
+            debugInfo.append("Stored Language: ").append(prefs.getString("selectedLanguage", "None")).append("\n\n");
+
+            // Events Section
+            debugInfo.append("=== Events ===\n");
+            debugInfo.append("Started In Offline Mode Event Sent: ").append(isOffline).append("\n");
+            debugInfo.append("Initial Slack Alert Time: ").append(convertEpochToDate(initialSlackAlertTime))
+                    .append("\n");
+            debugInfo.append("Current Time: ").append(convertEpochToDate(AnalyticsUtils.getCurrentEpochTime()))
+                    .append("\n");
+
+            // Set the debug info
+            TextView debugText = offlineOverlay.findViewById(R.id.debug_info);
+            debugText.setText(debugInfo.toString());
+        }
+    }
+
+    private void logStartedInOfflineMode() {
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
                 "started_in_offline_mode", prefs.getString("pseudoId", ""));
+        updateDebugOverlay();
     }
 
 }

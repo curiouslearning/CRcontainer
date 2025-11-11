@@ -83,4 +83,21 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <include
+        android:id="@+id/offline_mode_overlay"
+        layout="@layout/offline_mode_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/debug_trigger_area"
+        android:layout_width="match_parent"
+        android:layout_height="62dp"
+        android:background="@drawable/debug_trigger_border"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
