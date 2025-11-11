@@ -76,7 +76,7 @@ jobs:
           name: Finalize Sentry Release
           command: |
             VERSION_NAME=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
-            ./sentry-cli releases finalize "$VERSION_NAME"
+            sentry-cli releases finalize "$VERSION_NAME"
             echo "✅ Sentry release finalized for version: $VERSION_NAME"
 
 workflows:
