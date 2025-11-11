@@ -64,7 +64,9 @@ jobs:
             echo "Creating Sentry release: $VERSION_NAME"
             sentry-cli releases new "$VERSION_NAME"
             sentry-cli releases set-commits --auto "$VERSION_NAME"
-
+      - run:
+          name: Fetch full git history for Sentry
+          command: git fetch --unshallow || git fetch --all --tags
       # 🟣 Run Fastlane (handles build + upload + release)
       - run:
           name: Run Fastlane
