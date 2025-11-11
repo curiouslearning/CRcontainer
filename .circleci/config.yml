@@ -18,6 +18,7 @@ jobs:
             sudo gem install bundler
             cd app
             bundle install --path vendor/bundle
+
       - run:
           name: Make gradlew executable
           command: chmod +x ./gradlew
@@ -26,10 +27,12 @@ jobs:
           name: Decode Keystore
           command: |
             echo $KEYSTORE_BASE64 | base64 --decode > app/keystore/my-release-key.jks
+
       - run:
           name: Decode Service Account JSON
           command: |
             echo $JSON_KEY_DATA | base64 --decode > app/fastlane/service-account.json
+
       - run:
           name: Inject Slack Webhook URL
           command: |
@@ -40,11 +43,42 @@ jobs:
             else
               echo "⚠️ Skipping Slack webhook URL injection (without release commit)."
             fi
+
+      # 🟣 Install Sentry CLI
+      - run:
+          name: Install Sentry CLI
+          command: |
+            curl -sL https://sentry.io/get-cli/ | bash
+            sentry-cli --version
+
+      # 🟣 Create Sentry release (before Fastlane)
+      - run:
+          name: Create Sentry Release
+          command: |
+            export SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+            export SENTRY_ORG=$SENTRY_ORG
+            export SENTRY_PROJECT=$SENTRY_PROJECT
+
+            VERSION_NAME=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
+
+            echo "Creating Sentry release: $VERSION_NAME"
+            ./sentry-cli releases new "$VERSION_NAME"
+            ./sentry-cli releases set-commits --auto "$VERSION_NAME"
+
+      # 🟣 Run Fastlane (handles build + upload + release)
       - run:
           name: Run Fastlane
           command: |
             cd app
             bundle exec fastlane deploy
+
+      # 🟣 Finalize the Sentry release
+      - run:
+          name: Finalize Sentry Release
+          command: |
+            VERSION_NAME=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
+            ./sentry-cli releases finalize "$VERSION_NAME"
+            echo "✅ Sentry release finalized for version: $VERSION_NAME"
 
 workflows:
   deploy_on_branch:
@@ -54,4 +88,4 @@ workflows:
             branches:
               only:
                 - develop
-                - main 
+                - main
