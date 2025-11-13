@@ -24,8 +24,9 @@ android {
         applicationId "org.curiouslearning.container"
         minSdk 28
         targetSdk 35
-        versionCode 48
-        versionName "2.39"
+        versionCode 49
+        versionName "2.40"
+        
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
