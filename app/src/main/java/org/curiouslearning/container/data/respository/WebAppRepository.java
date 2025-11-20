@@ -22,6 +22,8 @@ public class WebAppRepository {
     private LiveData<List<WebApp>> webApp;
     private Application application;
 
+    private boolean isFetching = false;
+
     public WebAppRepository(Application application) {
         this.application = application;
         retrofitInstance = RetrofitInstance.getInstance();
@@ -29,8 +31,17 @@ public class WebAppRepository {
     }
 
     public void fetchWebApp() {
+        if (isFetching) {
+            return;
+        }
         if (ConnectionUtils.getInstance().isInternetConnected(application)) {
-            retrofitInstance.fetchAndCacheWebApps(webAppDatabase);
+            isFetching = true;
+            retrofitInstance.fetchAndCacheWebApps(webAppDatabase, new RetrofitInstance.FetchCallback() {
+                @Override
+                public void onComplete() {
+                    isFetching = false;
+                }
+            });
         }
     }
 
