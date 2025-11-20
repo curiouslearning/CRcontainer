@@ -19,10 +19,12 @@ import android.widget.ImageView;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.google.gson.Gson;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import java.util.Map;
 import io.sentry.Sentry;
 
 public class WebApp extends BaseActivity {
@@ -44,6 +46,7 @@ public class WebApp extends BaseActivity {
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private AudioPlayer audioPlayer;
+    private FirebaseEventLogger firebaseLogger;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +57,7 @@ public class WebApp extends BaseActivity {
         initViews();
         logAppLaunchEvent();
         loadWebView();
+        firebaseLogger = new FirebaseEventLogger();
     }
 
     private void getIntentData() {
@@ -208,6 +212,20 @@ public class WebApp extends BaseActivity {
                 setAppOrientation(orientationType);
             } else {
                 Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
+            }
+        }
+
+        @JavascriptInterface
+        public void logEvent(String jsonString) {
+            try {
+                Map<String, Object> map =
+                        new Gson().fromJson(jsonString, new com.google.gson.reflect.TypeToken<Map<String, Object>>(){}.getType());
+
+                firebaseLogger.logEvent(map);
+
+                Log.d("WebApp", "POC event received → " + jsonString);
+            } catch (Exception e) {
+                Log.e("WebApp", "Error parsing JSON event", e);
             }
         }
     }
