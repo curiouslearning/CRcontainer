@@ -41,6 +41,12 @@ public class AnalyticsUtils {
         bundle.putString("web_app_url", appUrl);
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
+
+        // Add the raw_referrer_url from install_referrer_prefs as well
+        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+        bundle.putString("raw_referrer_url", rawReferrerUrl);
+
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
@@ -56,6 +62,11 @@ public class AnalyticsUtils {
         bundle.putString("deep_link_uri", appUrl);
         bundle.putString("missing_key", "language");
         bundle.putString("cr_user_id", pseudoId);
+
+        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+        bundle.putString("raw_referrer_url", rawReferrerUrl);
+
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
@@ -63,10 +74,15 @@ public class AnalyticsUtils {
 
     public static void logStartedInOfflineModeEvent(Context context, String eventName, String pseudoId) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME,
-                Context.MODE_PRIVATE);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Bundle bundle = new Bundle();
         bundle.putString("cr_user_id", pseudoId);
+
+        // Add the raw_referrer_url from install_referrer_prefs as well
+        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+        bundle.putString("raw_referrer_url", rawReferrerUrl);
+
         String source = prefs.getString(SOURCE, "");
         String campaign_id = prefs.getString(CAMPAIGN_ID, "");
         firebaseAnalytics.setUserProperty("source", source);
@@ -85,6 +101,12 @@ public class AnalyticsUtils {
         bundle.putString("cr_language", language);
         bundle.putString("manifest_version", manifestVersion);
         bundle.putString("auto_selected", autoSelected);
+
+        // Add the raw_referrer_url from install_referrer_prefs as in other events
+        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+        bundle.putString("raw_referrer_url", rawReferrerUrl);
+
         firebaseAnalytics.setUserProperty("source", prefs.getString(SOURCE, ""));
         firebaseAnalytics.setUserProperty("campaign_id", prefs.getString(CAMPAIGN_ID, ""));
         firebaseAnalytics.logEvent(eventName, bundle);
@@ -102,6 +124,11 @@ public class AnalyticsUtils {
             bundle.putString("referrer_url", referrerUrl);
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
             bundle.putLong("app_install_time", response.getInstallBeginTimestampSeconds());
+
+            // Add the raw_referrer_url from SharedPreferences
+            SharedPreferences prefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+            String rawReferrerUrl = prefs.getString("raw_referrer_url", "");
+            bundle.putString("raw_referrer_url", rawReferrerUrl);
 
             Map<String, String> extractedParams = extractReferrerParameters(referrerUrl);
             if (extractedParams != null) {
@@ -127,8 +154,23 @@ public class AnalyticsUtils {
         bundle.putString("cr_user_id", pseudoId);
         bundle.putInt("max_retries", maxRetries);
         bundle.putInt("attempt_count", attemptCount);
+
         bundle.putString("source", source);
         bundle.putString("campaign_id", campaignId);
+
+        // INSERT_YOUR_CODE
+        // Add "cached_attribution" parameter using cached source and campaign_id from SharedPreferences (PREFS_NAME)
+        SharedPreferences cachedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String cachedSource = cachedPrefs.getString(SOURCE, "");
+        String cachedCampaignId = cachedPrefs.getString(CAMPAIGN_ID, "");
+        String cachedAttribution = cachedSource + ":" + cachedCampaignId;
+        bundle.putString("cached_attribution", cachedAttribution);
+
+        // Always add the raw_referrer_url if available in SharedPreferences
+        SharedPreferences prefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        String rawReferrerUrl = prefs.getString("raw_referrer_url", "");
+        bundle.putString("raw_referrer_url", rawReferrerUrl);
+
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 

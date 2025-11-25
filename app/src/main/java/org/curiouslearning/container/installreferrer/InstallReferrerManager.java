@@ -28,8 +28,10 @@ public class InstallReferrerManager {
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String SOURCE = "source";
     private static final String CAMPAIGN_ID = "campaign_id";
+    private static final String RETRY_ATTEMPT_KEY = "current_retry_attempt";
+    private static final String SUCCESS_ATTEMPT_COUNT_KEY = "success_attempt_count";
 
-    private static final int MAX_RETRY_ATTEMPTS = 5;
+    private static int MAX_RETRY_ATTEMPTS = 5;
     private static final long RETRY_INTERVAL_MS = 2000; // 2 seconds
     private int currentRetryAttempt = 0;
     private int successAttemptCount = 0;
@@ -39,7 +41,14 @@ public class InstallReferrerManager {
         this.context = context;
         this.callback = callback;
         installReferrerClient = InstallReferrerClient.newBuilder(context).build();
-
+        
+        // Load cached retry attempt from SharedPreferences
+        SharedPreferences prefs = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+        currentRetryAttempt = prefs.getInt(RETRY_ATTEMPT_KEY, 0);
+        successAttemptCount = prefs.getInt(SUCCESS_ATTEMPT_COUNT_KEY, 0);
+        // INSERT_YOUR_CODE
+        MAX_RETRY_ATTEMPTS = currentRetryAttempt + 5;
+        Log.d("referrer", "Loaded cached retry attempt: " + currentRetryAttempt + ", success attempt count: " + successAttemptCount);
     }
 
     public void checkPlayStoreAvailability() {
@@ -66,6 +75,7 @@ public class InstallReferrerManager {
                         int successAttempt = currentRetryAttempt + 1;
                         successAttemptCount = successAttempt;
                         currentRetryAttempt = 0; // Reset retry counter on success
+                        saveRetryAttemptToCache(); // Cache the reset value
                         callback.onReferrerStatusUpdate(new ReferrerStatus("CONNECTED", currentRetryAttempt,
                                 MAX_RETRY_ATTEMPTS, null, successAttempt));
                         handleReferrer();
@@ -108,6 +118,12 @@ public class InstallReferrerManager {
             referrerDetails = installReferrerClient.getInstallReferrer();
             Log.d("referal", referrerDetails.toString() + " ");
             String referrerUrl = referrerDetails.getInstallReferrer();
+
+            // Cache the raw referrerUrl in preferences
+            SharedPreferences prefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString("raw_referrer_url", referrerUrl);
+            editor.apply();
             // the below url is for testing purpose
             // String referrerUrl =
             // "deferred_deeplink=curiousreader://app?language=hindii&source=testQA&campaign_id=123test";
@@ -123,7 +139,7 @@ public class InstallReferrerManager {
             }
 
         } catch (RemoteException e) {
-            logAttributionStatus("failed", "url not available", null, null);
+            logAttributionStatus("failed", e.getMessage(), null, null);
             e.printStackTrace();
         } finally {
             installReferrerClient.endConnection();
@@ -198,6 +214,7 @@ public class InstallReferrerManager {
     private void retryConnection() {
         if (currentRetryAttempt < MAX_RETRY_ATTEMPTS) {
             currentRetryAttempt++;
+            saveRetryAttemptToCache(); // Cache the incremented value
             Log.d("referrer", "Scheduling retry " + currentRetryAttempt + "/" + MAX_RETRY_ATTEMPTS +
                     " in " + RETRY_INTERVAL_MS + "ms");
 
@@ -214,6 +231,15 @@ public class InstallReferrerManager {
             callback.onReferrerReceived("", "");
             logAttributionStatus("failed", "url not available", null, null);
         }
+    }
+    
+    private void saveRetryAttemptToCache() {
+        SharedPreferences prefs = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putInt(RETRY_ATTEMPT_KEY, currentRetryAttempt);
+        editor.putInt(SUCCESS_ATTEMPT_COUNT_KEY, successAttemptCount);
+        editor.apply();
+        Log.d("referrer", "Cached retry attempt: " + currentRetryAttempt + ", success attempt count: " + successAttemptCount);
     }
 
     public static String urlDecode(String encodedString) {
