@@ -119,6 +119,8 @@ dependencies {
     androidTestImplementation 'org.mockito:mockito-android:4.11.0'
 
     implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.code.gson:gson:2.10.1'
 }
 jacoco {
     toolVersion = "0.8.10" // or latest stable version
