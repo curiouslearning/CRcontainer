@@ -83,9 +83,44 @@ public class InstallReferrerManager {
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
                         String featureError = "Install referrer not supported";
                         Log.d("referrer", featureError);
+                        // Don't overwrite existing cached raw_referrer_url - preserve it for extraction
+                        
+                        // Try to extract from cached raw_referrer_url first (might have utm_source/utm_medium)
+                        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+                        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+                        String extractedSource = null;
+                        String extractedCampaignId = null;
+                        
+                        if (!TextUtils.isEmpty(rawReferrerUrl)) {
+                            // Try to extract fallback values from cached raw_referrer_url
+                            Map<String, String> extractedParams = extractReferrerParameters(rawReferrerUrl);
+                            if (extractedParams != null) {
+                                extractedSource = extractedParams.get("source");
+                                extractedCampaignId = extractedParams.get("campaign_id");
+                                Log.d("referrer", "Extracted from cached raw_referrer_url - source: " + extractedSource + ", campaign_id: " + extractedCampaignId);
+                            }
+                        }
+                        
+                        // Check cached values from InstallReferrerPrefs (might have valid attribution from other sources)
+                        SharedPreferences cachedPrefs = context.getSharedPreferences("InstallReferrerPrefs", Context.MODE_PRIVATE);
+                        String cachedSource = cachedPrefs.getString("source", "");
+                        String cachedCampaignId = cachedPrefs.getString("campaign_id", "");
+                        
+                        // Use extracted values if available, otherwise fall back to cached values
+                        String finalSource = !TextUtils.isEmpty(extractedSource) ? extractedSource : cachedSource;
+                        String finalCampaignId = !TextUtils.isEmpty(extractedCampaignId) ? extractedCampaignId : cachedCampaignId;
+                        
                         callback.onReferrerStatusUpdate(
                                 new ReferrerStatus("FAILED", currentRetryAttempt, MAX_RETRY_ATTEMPTS, featureError));
                         callback.onReferrerReceived("", "");
+                        
+                        // Only mark as failed if we don't have any valid attribution (extracted or cached)
+                        if (TextUtils.isEmpty(finalSource) || TextUtils.isEmpty(finalCampaignId)) {
+                            logAttributionStatus("failed", featureError, null, null);
+                        } else {
+                            // We have valid attribution (from extraction or cache), so mark as success
+                            logAttributionStatus("success", featureError, finalSource, finalCampaignId);
+                        }
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
                         String serviceError = "Install referrer service unavailable";
@@ -119,11 +154,8 @@ public class InstallReferrerManager {
             Log.d("referal", referrerDetails.toString() + " ");
             String referrerUrl = referrerDetails.getInstallReferrer();
 
-            // Cache the raw referrerUrl in preferences
-            SharedPreferences prefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putString("raw_referrer_url", referrerUrl);
-            editor.apply();
+            // Cache the raw referrerUrl in preferences (handle null case)
+            cacheRawReferrerUrl(referrerUrl);
             // the below url is for testing purpose
             // String referrerUrl =
             // "deferred_deeplink=curiousreader://app?language=hindii&source=testQA&campaign_id=123test";
@@ -132,14 +164,130 @@ public class InstallReferrerManager {
             logFirstOpenEvent(referrerDetails);
             String source = extractedParams.get("source");
             String campaignId = extractedParams.get("campaign_id");
-            if (TextUtils.isEmpty(source) || TextUtils.isEmpty(campaignId)) {
+            
+            // Log extracted values (which may include fallback from utm_source/utm_medium)
+            Log.d("referrer", "Extracted source: " + source + ", campaign_id: " + campaignId);
+            
+            // Check cached values from PREFS_NAME (InstallReferrerPrefs) which is used for user properties
+            // This ensures we use the same source as user properties for attribution status
+            SharedPreferences cachedPrefs = context.getSharedPreferences("InstallReferrerPrefs", Context.MODE_PRIVATE);
+            String cachedSource = cachedPrefs.getString("source", "");
+            String cachedCampaignId = cachedPrefs.getString("campaign_id", "");
+            
+            // Use cached values if current extraction is empty (cached values might come from Facebook deferred deep link or previous extraction)
+            if (TextUtils.isEmpty(source) && !TextUtils.isEmpty(cachedSource)) {
+                source = cachedSource;
+                Log.d("referrer", "Using cached source: " + source);
+            }
+            if (TextUtils.isEmpty(campaignId) && !TextUtils.isEmpty(cachedCampaignId)) {
+                campaignId = cachedCampaignId;
+                Log.d("referrer", "Using cached campaign_id: " + campaignId);
+            }
+            
+            // Check if this is an organic install (utm_source=google-play&utm_medium=organic)
+            // Also check for invalid referrer URLs like utm_source=(not set)&utm_medium=(not set)
+            boolean isOrganicInstall = false;
+            boolean isInvalidReferrer = false;
+            if (!TextUtils.isEmpty(referrerUrl)) {
+                Uri uri = Uri.parse("http://dummyurl.com/?" + referrerUrl);
+                String utmSource = uri.getQueryParameter("utm_source");
+                String utmMedium = uri.getQueryParameter("utm_medium");
+                
+                // Check for invalid/not set values
+                if (utmSource != null && (utmSource.equals("(not set)") || utmSource.equals("(not%20set)"))) {
+                    isInvalidReferrer = true;
+                    Log.d("referrer", "Detected invalid referrer with utm_source=(not set)");
+                }
+                if (utmMedium != null && (utmMedium.equals("(not set)") || utmMedium.equals("(not%20set)"))) {
+                    isInvalidReferrer = true;
+                    Log.d("referrer", "Detected invalid referrer with utm_medium=(not set)");
+                }
+                
+                // Check for valid organic install
+                if ("google-play".equalsIgnoreCase(utmSource) && "organic".equalsIgnoreCase(utmMedium)) {
+                    isOrganicInstall = true;
+                    Log.d("referrer", "Detected organic install from Google Play");
+                }
+            }
+            
+            // Determine status based on final source and campaignId (from current extraction with fallback, or cache)
+            // Success if: organic install OR we have both source and campaign_id
+            // Failed if: invalid referrer OR referrer URL is empty or we don't have required parameters
+            if (isInvalidReferrer) {
+                Log.d("referrer", "Attribution status: FAILED - invalid referrer with (not set) values");
                 logAttributionStatus("failed", referrerUrl, source, campaignId);
-            } else {
+            } else if (isOrganicInstall || (!TextUtils.isEmpty(source) && !TextUtils.isEmpty(campaignId))) {
+                Log.d("referrer", "Attribution status: SUCCESS - organic: " + isOrganicInstall + ", source: " + source + ", campaign_id: " + campaignId);
                 logAttributionStatus("success", referrerUrl, source, campaignId);
+            } else {
+                Log.d("referrer", "Attribution status: FAILED - source: " + source + ", campaign_id: " + campaignId);
+                logAttributionStatus("failed", referrerUrl, source, campaignId);
             }
 
         } catch (RemoteException e) {
-            logAttributionStatus("failed", e.getMessage(), null, null);
+            // Don't overwrite existing cached raw_referrer_url - preserve it for extraction
+            
+            // Try to extract from cached raw_referrer_url first (might have utm_source/utm_medium)
+            SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+            String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+            String extractedSource = null;
+            String extractedCampaignId = null;
+            
+            if (!TextUtils.isEmpty(rawReferrerUrl)) {
+                // Try to extract fallback values from cached raw_referrer_url
+                Map<String, String> extractedParams = extractReferrerParameters(rawReferrerUrl);
+                if (extractedParams != null) {
+                    extractedSource = extractedParams.get("source");
+                    extractedCampaignId = extractedParams.get("campaign_id");
+                    Log.d("referrer", "Extracted from cached raw_referrer_url - source: " + extractedSource + ", campaign_id: " + extractedCampaignId);
+                }
+            }
+            
+            // Check cached values from InstallReferrerPrefs (might have valid attribution from other sources)
+            SharedPreferences cachedPrefs = context.getSharedPreferences("InstallReferrerPrefs", Context.MODE_PRIVATE);
+            String cachedSource = cachedPrefs.getString("source", "");
+            String cachedCampaignId = cachedPrefs.getString("campaign_id", "");
+            
+            // Use extracted values if available, otherwise fall back to cached values
+            String finalSource = !TextUtils.isEmpty(extractedSource) ? extractedSource : cachedSource;
+            String finalCampaignId = !TextUtils.isEmpty(extractedCampaignId) ? extractedCampaignId : cachedCampaignId;
+            
+            // Check if this is an organic install from cached raw_referrer_url
+            // Also check for invalid referrer URLs like utm_source=(not set)&utm_medium=(not set)
+            boolean isOrganicInstall = false;
+            boolean isInvalidReferrer = false;
+            if (!TextUtils.isEmpty(rawReferrerUrl)) {
+                Uri uri = Uri.parse("http://dummyurl.com/?" + rawReferrerUrl);
+                String utmSource = uri.getQueryParameter("utm_source");
+                String utmMedium = uri.getQueryParameter("utm_medium");
+                
+                // Check for invalid/not set values
+                if (utmSource != null && (utmSource.equals("(not set)") || utmSource.equals("(not%20set)"))) {
+                    isInvalidReferrer = true;
+                    Log.d("referrer", "Detected invalid cached referrer with utm_source=(not set)");
+                }
+                if (utmMedium != null && (utmMedium.equals("(not set)") || utmMedium.equals("(not%20set)"))) {
+                    isInvalidReferrer = true;
+                    Log.d("referrer", "Detected invalid cached referrer with utm_medium=(not set)");
+                }
+                
+                // Check for valid organic install
+                if ("google-play".equalsIgnoreCase(utmSource) && "organic".equalsIgnoreCase(utmMedium)) {
+                    isOrganicInstall = true;
+                    Log.d("referrer", "Detected organic install from cached referrer URL");
+                }
+            }
+            
+            // Success if: organic install OR we have valid attribution (extracted or cached)
+            // Failed if: invalid referrer OR no valid attribution
+            if (isInvalidReferrer) {
+                Log.d("referrer", "Attribution status: FAILED - invalid cached referrer with (not set) values");
+                logAttributionStatus("failed", e.getMessage(), null, null);
+            } else if (isOrganicInstall || (!TextUtils.isEmpty(finalSource) && !TextUtils.isEmpty(finalCampaignId))) {
+                logAttributionStatus("success", e.getMessage(), finalSource, finalCampaignId);
+            } else {
+                logAttributionStatus("failed", e.getMessage(), null, null);
+            }
             e.printStackTrace();
         } finally {
             installReferrerClient.endConnection();
@@ -159,8 +307,50 @@ public class InstallReferrerManager {
         } else {
             callback.onReferrerReceived("", referrerUrl);
         }
-        String source = uri.getQueryParameter("source");
-        String campaign_id = uri.getQueryParameter("campaign_id");
+        
+        String source = null;
+        String campaign_id = null;
+        
+        // First, try to extract source and campaign_id from deferred_deeplink (highest priority)
+        if (deeplink != null && !deeplink.isEmpty()) {
+            Uri deeplinkUri = Uri.parse(deeplink);
+            source = deeplinkUri.getQueryParameter("source");
+            campaign_id = deeplinkUri.getQueryParameter("campaign_id");
+            if (!TextUtils.isEmpty(source) || !TextUtils.isEmpty(campaign_id)) {
+                Log.d("referrer", "Extracted from deferred_deeplink - source: " + source + ", campaign_id: " + campaign_id);
+            }
+        }
+        
+        // If not found in deferred_deeplink, try top-level parameters in referrer URL
+        if (TextUtils.isEmpty(source)) {
+            source = uri.getQueryParameter("source");
+            if (!TextUtils.isEmpty(source)) {
+                Log.d("referrer", "Extracted source from top-level referrer URL: " + source);
+            }
+        }
+        if (TextUtils.isEmpty(campaign_id)) {
+            campaign_id = uri.getQueryParameter("campaign_id");
+            if (!TextUtils.isEmpty(campaign_id)) {
+                Log.d("referrer", "Extracted campaign_id from top-level referrer URL: " + campaign_id);
+            }
+        }
+        
+        // Fallback to utm_source and utm_medium ONLY if source/campaign_id are still not available
+        // if (TextUtils.isEmpty(source)) {
+        //     String utmSource = uri.getQueryParameter("utm_source");
+        //     if (!TextUtils.isEmpty(utmSource)) {
+        //         source = utmSource;
+        //         Log.d("referrer", "Using utm_source as fallback for source: " + source);
+        //     }
+        // }
+        // if (TextUtils.isEmpty(campaign_id)) {
+        //     String utmMedium = uri.getQueryParameter("utm_medium");
+        //     if (!TextUtils.isEmpty(utmMedium)) {
+        //         campaign_id = utmMedium;
+        //         Log.d("referrer", "Using utm_medium as fallback for campaign_id: " + campaign_id);
+        //     }
+        // }
+        
         String content = uri.getQueryParameter("utm_content");
         Log.d("data without decode", deeplink + " " + campaign_id + " " + source + " " + content);
         content = urlDecode(content);
@@ -228,8 +418,41 @@ public class InstallReferrerManager {
             }, RETRY_INTERVAL_MS);
         } else {
             Log.d("referrer", "Max retry attempts reached. Giving up.");
+            // Don't overwrite existing cached raw_referrer_url - preserve it for extraction
             callback.onReferrerReceived("", "");
-            logAttributionStatus("failed", "url not available", null, null);
+            
+            // Try to extract from cached raw_referrer_url first (might have utm_source/utm_medium)
+            SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+            String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+            String extractedSource = null;
+            String extractedCampaignId = null;
+            
+            if (!TextUtils.isEmpty(rawReferrerUrl)) {
+                // Try to extract fallback values from cached raw_referrer_url
+                Map<String, String> extractedParams = extractReferrerParameters(rawReferrerUrl);
+                if (extractedParams != null) {
+                    extractedSource = extractedParams.get("source");
+                    extractedCampaignId = extractedParams.get("campaign_id");
+                    Log.d("referrer", "Extracted from cached raw_referrer_url - source: " + extractedSource + ", campaign_id: " + extractedCampaignId);
+                }
+            }
+            
+            // Check cached values from InstallReferrerPrefs (might have valid attribution from other sources)
+            SharedPreferences cachedPrefs = context.getSharedPreferences("InstallReferrerPrefs", Context.MODE_PRIVATE);
+            String cachedSource = cachedPrefs.getString("source", "");
+            String cachedCampaignId = cachedPrefs.getString("campaign_id", "");
+            
+            // Use extracted values if available, otherwise fall back to cached values
+            String finalSource = !TextUtils.isEmpty(extractedSource) ? extractedSource : cachedSource;
+            String finalCampaignId = !TextUtils.isEmpty(extractedCampaignId) ? extractedCampaignId : cachedCampaignId;
+            
+            // Only mark as failed if we don't have any valid attribution (extracted or cached)
+            if (TextUtils.isEmpty(finalSource) || TextUtils.isEmpty(finalCampaignId)) {
+                logAttributionStatus("failed", "url not available", null, null);
+            } else {
+                // We have valid attribution (from extraction or cache), so mark as success
+                logAttributionStatus("success", "url not available", finalSource, finalCampaignId);
+            }
         }
     }
     
@@ -240,6 +463,21 @@ public class InstallReferrerManager {
         editor.putInt(SUCCESS_ATTEMPT_COUNT_KEY, successAttemptCount);
         editor.apply();
         Log.d("referrer", "Cached retry attempt: " + currentRetryAttempt + ", success attempt count: " + successAttemptCount);
+    }
+
+    /**
+     * Helper method to cache the raw referrer URL in SharedPreferences.
+     * This ensures the value is always cached, even if empty, so AnalyticsUtils can read it.
+     * 
+     * @param referrerUrl The raw referrer URL to cache (can be null or empty)
+     */
+    private void cacheRawReferrerUrl(String referrerUrl) {
+        SharedPreferences prefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        // Always cache as non-null string (empty if null) to avoid null values in SharedPreferences
+        editor.putString("raw_referrer_url", referrerUrl != null ? referrerUrl : "");
+        editor.apply();
+        Log.d("referrer", "Cached raw_referrer_url: " + (referrerUrl != null && !referrerUrl.isEmpty() ? referrerUrl : "(empty)"));
     }
 
     public static String urlDecode(String encodedString) {

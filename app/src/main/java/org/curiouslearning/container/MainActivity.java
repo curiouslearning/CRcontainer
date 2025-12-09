@@ -195,7 +195,7 @@ public class MainActivity extends BaseActivity {
                         if (isAttributionComplete) {
                             AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId,
                                     language,
-                                    manifestVrsn, "true");
+                                    manifestVrsn, "true", fullURL.replace("deferred_deeplink=", ""));
                         } else {
                             Log.d(TAG, "Attribution not complete. Skipping event log.");
                         }
@@ -325,7 +325,7 @@ public class MainActivity extends BaseActivity {
 
                     if (isAttributionComplete) {
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                                manifestVrsn, "true");
+                                manifestVrsn, "true", String.valueOf(deepLinkUri));
                     } else {
                         Log.d(TAG, "Attribution not complete. Skipping event log.");
                     }
@@ -513,7 +513,7 @@ public class MainActivity extends BaseActivity {
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
-                                        selectedLanguage, manifestVrsn, "false");
+                                        selectedLanguage, manifestVrsn, "false", "");
 
                                 dialog.dismiss();
                                 loadApps(selectedLanguage);
