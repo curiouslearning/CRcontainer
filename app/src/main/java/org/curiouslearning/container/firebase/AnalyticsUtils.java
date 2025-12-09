@@ -30,6 +30,15 @@ public class AnalyticsUtils {
         return mFirebaseAnalytics;
     }
 
+    /**
+     * Helper method to add raw_referrer_url to the bundle if available
+     */
+    private static void addRawReferrerUrl(Context context, Bundle bundle) {
+        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+        bundle.putString("raw_referrer_url", rawReferrerUrl.isEmpty() ? null : rawReferrerUrl);
+    }
+
     public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId,
             String language) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
@@ -41,6 +50,10 @@ public class AnalyticsUtils {
         bundle.putString("web_app_url", appUrl);
         bundle.putString("cr_user_id", pseudoId);
         bundle.putString("cr_language", language);
+
+        // Add the raw_referrer_url from install_referrer_prefs as well (only if not empty)
+        addRawReferrerUrl(context, bundle);
+
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
@@ -56,6 +69,9 @@ public class AnalyticsUtils {
         bundle.putString("deep_link_uri", appUrl);
         bundle.putString("missing_key", "language");
         bundle.putString("cr_user_id", pseudoId);
+
+        addRawReferrerUrl(context, bundle);
+
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
@@ -63,10 +79,13 @@ public class AnalyticsUtils {
 
     public static void logStartedInOfflineModeEvent(Context context, String eventName, String pseudoId) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME,
-                Context.MODE_PRIVATE);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Bundle bundle = new Bundle();
         bundle.putString("cr_user_id", pseudoId);
+
+        // Add the raw_referrer_url from install_referrer_prefs as well (only if not empty)
+        addRawReferrerUrl(context, bundle);
+
         String source = prefs.getString(SOURCE, "");
         String campaign_id = prefs.getString(CAMPAIGN_ID, "");
         firebaseAnalytics.setUserProperty("source", source);
@@ -75,7 +94,7 @@ public class AnalyticsUtils {
     }
 
     public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language,
-            String manifestVersion, String autoSelected) {
+            String manifestVersion, String autoSelected, String deepLinkUri) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Bundle bundle = new Bundle();
@@ -85,6 +104,15 @@ public class AnalyticsUtils {
         bundle.putString("cr_language", language);
         bundle.putString("manifest_version", manifestVersion);
         bundle.putString("auto_selected", autoSelected);
+
+        // Add deepLinkUri if not null or empty
+        if (deepLinkUri != null && !deepLinkUri.isEmpty()) {
+            bundle.putString("deferred_deeplink", deepLinkUri);
+        }
+
+        // Add the raw_referrer_url from install_referrer_prefs as in other events (only if not empty)
+        addRawReferrerUrl(context, bundle);
+
         firebaseAnalytics.setUserProperty("source", prefs.getString(SOURCE, ""));
         firebaseAnalytics.setUserProperty("campaign_id", prefs.getString(CAMPAIGN_ID, ""));
         firebaseAnalytics.logEvent(eventName, bundle);
@@ -102,6 +130,9 @@ public class AnalyticsUtils {
             bundle.putString("referrer_url", referrerUrl);
             bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
             bundle.putLong("app_install_time", response.getInstallBeginTimestampSeconds());
+
+            // Add the raw_referrer_url from SharedPreferences (only if not empty)
+            addRawReferrerUrl(context, bundle);
 
             Map<String, String> extractedParams = extractReferrerParameters(referrerUrl);
             if (extractedParams != null) {
@@ -127,8 +158,21 @@ public class AnalyticsUtils {
         bundle.putString("cr_user_id", pseudoId);
         bundle.putInt("max_retries", maxRetries);
         bundle.putInt("attempt_count", attemptCount);
+
         bundle.putString("source", source);
         bundle.putString("campaign_id", campaignId);
+
+        // INSERT_YOUR_CODE
+        // Add "cached_attribution" parameter using cached source and campaign_id from SharedPreferences (PREFS_NAME)
+        SharedPreferences cachedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String cachedSource = cachedPrefs.getString(SOURCE, "");
+        String cachedCampaignId = cachedPrefs.getString(CAMPAIGN_ID, "");
+        String cachedAttribution = cachedSource + ":" + cachedCampaignId;
+        bundle.putString("cached_attribution", cachedAttribution);
+
+        // Always add the raw_referrer_url if available and not empty in SharedPreferences
+        addRawReferrerUrl(context, bundle);
+
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
@@ -146,8 +190,50 @@ public class AnalyticsUtils {
         // as part of a valid URL.
         Uri uri = Uri.parse("http://dummyurl.com/?" + referrerUrl);
 
-        String source = uri.getQueryParameter("source");
-        String campaign_id = uri.getQueryParameter("campaign_id");
+        String source = null;
+        String campaign_id = null;
+        
+        // First, try to extract source and campaign_id from deferred_deeplink (highest priority)
+        String deeplink = uri.getQueryParameter("deferred_deeplink");
+        if (deeplink != null && !deeplink.isEmpty()) {
+            Uri deeplinkUri = Uri.parse(deeplink);
+            source = deeplinkUri.getQueryParameter("source");
+            campaign_id = deeplinkUri.getQueryParameter("campaign_id");
+            if (source != null && !source.isEmpty() || (campaign_id != null && !campaign_id.isEmpty())) {
+                Log.d("referrer", "Extracted from deferred_deeplink - source: " + source + ", campaign_id: " + campaign_id);
+            }
+        }
+        
+        // If not found in deferred_deeplink, try top-level parameters in referrer URL
+        if (source == null || source.isEmpty()) {
+            source = uri.getQueryParameter("source");
+            if (source != null && !source.isEmpty()) {
+                Log.d("referrer", "Extracted source from top-level referrer URL: " + source);
+            }
+        }
+        if (campaign_id == null || campaign_id.isEmpty()) {
+            campaign_id = uri.getQueryParameter("campaign_id");
+            if (campaign_id != null && !campaign_id.isEmpty()) {
+                Log.d("referrer", "Extracted campaign_id from top-level referrer URL: " + campaign_id);
+            }
+        }
+        
+        // Fallback to utm_source and utm_medium ONLY if source/campaign_id are still not available
+        // if (source == null || source.isEmpty()) {
+        //     String utmSource = uri.getQueryParameter("utm_source");
+        //     if (utmSource != null && !utmSource.isEmpty()) {
+        //         source = utmSource;
+        //         Log.d("referrer", "Using utm_source as fallback for source: " + source);
+        //     }
+        // }
+        // if (campaign_id == null || campaign_id.isEmpty()) {
+        //     String utmMedium = uri.getQueryParameter("utm_medium");
+        //     if (utmMedium != null && !utmMedium.isEmpty()) {
+        //         campaign_id = utmMedium;
+        //         Log.d("referrer", "Using utm_medium as fallback for campaign_id: " + campaign_id);
+        //     }
+        // }
+        
         String content = uri.getQueryParameter("utm_content");
         Log.d("data without decode util", campaign_id + " " + source + " " + content);
         content = urlDecode(content);
@@ -162,9 +248,7 @@ public class AnalyticsUtils {
     }
 
     public static long getCurrentEpochTime() {
-        long currentTimeMillis = System.currentTimeMillis();
-
-        return currentTimeMillis;
+        return System.currentTimeMillis();
     }
 
     public static String urlDecode(String encodedString) {

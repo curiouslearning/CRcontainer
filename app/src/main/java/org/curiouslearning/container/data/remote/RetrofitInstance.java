@@ -45,7 +45,11 @@ public class RetrofitInstance {
         return retrofitInstance;
     }
 
-    public void getAppManifest(WebAppDatabase webAppDatabase) {
+    public interface FetchCallback {
+        void onComplete();
+    }
+
+    public void getAppManifest(WebAppDatabase webAppDatabase, FetchCallback callback) {
         ApiService api = retrofit.create(ApiService.class);
         Call<JsonElement> call = api.getWebApps(); // Assume your API call returns a raw JsonElement
 
@@ -67,17 +71,23 @@ public class RetrofitInstance {
                         }
                     }
                 }
+                if (callback != null) {
+                    callback.onComplete();
+                }
             }
 
             @Override
             public void onFailure(Call<JsonElement> call, Throwable t) {
                 System.out.println(t.getMessage() + "Something went wrong");
+                if (callback != null) {
+                    callback.onComplete();
+                }
             }
         });
     }
 
-    public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase) {
-        getAppManifest(webAppDatabase);
+    public void fetchAndCacheWebApps(WebAppDatabase webAppDatabase, FetchCallback callback) {
+        getAppManifest(webAppDatabase, callback);
     }
 
     public void getUpdatedAppManifest(WebAppDatabase webAppDatabase, String manifestVersion) {

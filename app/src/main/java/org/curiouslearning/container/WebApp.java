@@ -44,7 +44,7 @@ public class WebApp extends BaseActivity {
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private AudioPlayer audioPlayer;
-
+    ImageView goBack;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,7 +74,7 @@ public class WebApp extends BaseActivity {
         pseudoId = sharedPref.getString("pseudoId", "");
         source = utmPrefs.getString("source", "");
         campaignId = utmPrefs.getString("campaign_id", "");
-        ImageView goBack = findViewById(R.id.button2);
+        goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -118,6 +118,9 @@ public class WebApp extends BaseActivity {
         }
         if (appUrl.contains("docs.google.com/forms")) {
             webView.loadUrl(addCrUserIdToFormUrl(appUrl));
+        }else if (appUrl.contains("welcome_parent_video")) {
+            goBack.setVisibility(View.GONE);
+            webView.loadUrl(addCrUserIdToUrl(appUrl));
         } else {
             webView.loadUrl(addCrUserIdToUrl(appUrl));
         }
@@ -209,6 +212,13 @@ public class WebApp extends BaseActivity {
             } else {
                 Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
             }
+        }
+        @JavascriptInterface
+        public void closeWebView(){
+            goBack.setVisibility(View.GONE);
+            logAppExitEvent();
+            audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
+            finish();
         }
     }
 
