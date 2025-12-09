@@ -30,6 +30,15 @@ public class AnalyticsUtils {
         return mFirebaseAnalytics;
     }
 
+    /**
+     * Helper method to add raw_referrer_url to the bundle if available
+     */
+    private static void addRawReferrerUrl(Context context, Bundle bundle) {
+        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
+        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
+        bundle.putString("raw_referrer_url", rawReferrerUrl.isEmpty() ? null : rawReferrerUrl);
+    }
+
     public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId,
             String language) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
@@ -43,11 +52,7 @@ public class AnalyticsUtils {
         bundle.putString("cr_language", language);
 
         // Add the raw_referrer_url from install_referrer_prefs as well (only if not empty)
-        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
-        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
-        if (rawReferrerUrl != null && !rawReferrerUrl.isEmpty()) {
-            bundle.putString("raw_referrer_url", rawReferrerUrl);
-        }
+        addRawReferrerUrl(context, bundle);
 
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
@@ -65,11 +70,7 @@ public class AnalyticsUtils {
         bundle.putString("missing_key", "language");
         bundle.putString("cr_user_id", pseudoId);
 
-        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
-        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
-        if (rawReferrerUrl != null && !rawReferrerUrl.isEmpty()) {
-            bundle.putString("raw_referrer_url", rawReferrerUrl);
-        }
+        addRawReferrerUrl(context, bundle);
 
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
@@ -83,11 +84,7 @@ public class AnalyticsUtils {
         bundle.putString("cr_user_id", pseudoId);
 
         // Add the raw_referrer_url from install_referrer_prefs as well (only if not empty)
-        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
-        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
-        if (rawReferrerUrl != null && !rawReferrerUrl.isEmpty()) {
-            bundle.putString("raw_referrer_url", rawReferrerUrl);
-        }
+        addRawReferrerUrl(context, bundle);
 
         String source = prefs.getString(SOURCE, "");
         String campaign_id = prefs.getString(CAMPAIGN_ID, "");
@@ -114,11 +111,7 @@ public class AnalyticsUtils {
         }
 
         // Add the raw_referrer_url from install_referrer_prefs as in other events (only if not empty)
-        SharedPreferences installReferrerPrefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
-        String rawReferrerUrl = installReferrerPrefs.getString("raw_referrer_url", "");
-        if (rawReferrerUrl != null && !rawReferrerUrl.isEmpty()) {
-            bundle.putString("raw_referrer_url", rawReferrerUrl);
-        }
+        addRawReferrerUrl(context, bundle);
 
         firebaseAnalytics.setUserProperty("source", prefs.getString(SOURCE, ""));
         firebaseAnalytics.setUserProperty("campaign_id", prefs.getString(CAMPAIGN_ID, ""));
@@ -139,11 +132,7 @@ public class AnalyticsUtils {
             bundle.putLong("app_install_time", response.getInstallBeginTimestampSeconds());
 
             // Add the raw_referrer_url from SharedPreferences (only if not empty)
-            SharedPreferences prefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
-            String rawReferrerUrl = prefs.getString("raw_referrer_url", "");
-            if (rawReferrerUrl != null && !rawReferrerUrl.isEmpty()) {
-                bundle.putString("raw_referrer_url", rawReferrerUrl);
-            }
+            addRawReferrerUrl(context, bundle);
 
             Map<String, String> extractedParams = extractReferrerParameters(referrerUrl);
             if (extractedParams != null) {
@@ -182,12 +171,7 @@ public class AnalyticsUtils {
         bundle.putString("cached_attribution", cachedAttribution);
 
         // Always add the raw_referrer_url if available and not empty in SharedPreferences
-        SharedPreferences prefs = context.getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE);
-        String rawReferrerUrl = prefs.getString("raw_referrer_url", "");
-        // Only add the parameter if it has a value to avoid error_value in BigQuery
-        if (rawReferrerUrl != null && !rawReferrerUrl.isEmpty()) {
-            bundle.putString("raw_referrer_url", rawReferrerUrl);
-        }
+        addRawReferrerUrl(context, bundle);
 
         firebaseAnalytics.logEvent(eventName, bundle);
     }
@@ -264,9 +248,7 @@ public class AnalyticsUtils {
     }
 
     public static long getCurrentEpochTime() {
-        long currentTimeMillis = System.currentTimeMillis();
-
-        return currentTimeMillis;
+        return System.currentTimeMillis();
     }
 
     public static String urlDecode(String encodedString) {
