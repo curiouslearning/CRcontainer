@@ -49,9 +49,9 @@ public class ConfigLoader {
 
             // Decrypt webhook
             byte[] decryptedBytes = org.curiouslearning.container.utilities.CryptoUtils.decryptAesCbc(
-                    encryptedWebhook,
+                    aesKeyBytes,
                     iv,
-                    aesKeyBytes
+                    encryptedWebhook
             ).getBytes();
 
             String webhookUrl = new String(decryptedBytes, StandardCharsets.UTF_8);
