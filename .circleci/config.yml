@@ -41,8 +41,6 @@ jobs:
               echo "SLACK_AES_KEY=$SLACK_AES_KEY" > app/src/main/assets/config.properties
               echo "🔐 AES key injected (encrypted webhook remains inside APK)"
             else
-              mkdir -p app/src/main/assets
-              echo "SLACK_AES_KEY=$SLACK_AES_KEY" > app/src/main/assets/config.properties
               echo "⚠️ Skipping Slack webhook URL injection (without release commit)."
             fi
 
