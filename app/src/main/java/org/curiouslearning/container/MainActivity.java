@@ -136,6 +136,7 @@ public class MainActivity extends BaseActivity {
             // event
         }
 
+        // putting release
         SlackUtils.sendMessageToSlack(this, "Test message from Android!");
 
         InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
