@@ -24,7 +24,7 @@ android {
         applicationId "org.curiouslearning.container"
         minSdk 28
         targetSdk 35
-        versionCode 51
+        versionCode 60
         versionName "2.32"
         
 
@@ -67,6 +67,11 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+        }
     }
 }
 
@@ -185,4 +190,9 @@ sentry {
     // this will upload your source code to Sentry to show it as part of the stack traces
     // disable if you don't want to expose your sources
     includeSourceContext = true
+}
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
