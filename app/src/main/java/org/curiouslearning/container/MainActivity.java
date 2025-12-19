@@ -274,12 +274,17 @@ public class MainActivity extends BaseActivity {
                     View offlineOverlay = findViewById(R.id.offline_mode_overlay);
                     if (offlineOverlay != null) {
                         offlineOverlay.setVisibility(View.VISIBLE);
+                        offlineOverlay.setElevation(dpToPx(24));
+                        offlineOverlay.bringToFront();
                         updateDebugOverlay();
                         debugOverlayHandler.post(debugOverlayUpdater);
                     }
                 }
             }
         });
+    }
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     private class GestureListener extends GestureDetector.SimpleOnGestureListener {
