@@ -45,6 +45,7 @@ import org.curiouslearning.container.utilities.SlackUtils;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -54,8 +55,10 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import android.util.Log;
@@ -375,12 +378,14 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    public static String convertEpochToDate(long epochTimeMillis) {
-        Instant instant = Instant.ofEpochMilli(epochTimeMillis);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy hh:mm a")
-                .withZone(ZoneId.systemDefault());
-        return formatter.format(instant);
+    public static String convertEpochToDate(long epochMillis) {
+        Date date = new Date(epochMillis);
+        SimpleDateFormat sdf =
+                new SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.getDefault());
+        sdf.setTimeZone(TimeZone.getDefault());
+        return sdf.format(date);
     }
+
 
     @Override
     public void onResume() {
