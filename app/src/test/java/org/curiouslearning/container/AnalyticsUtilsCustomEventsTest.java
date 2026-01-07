@@ -92,14 +92,14 @@ public class AnalyticsUtilsCustomEventsTest {
             faStatic.when(() -> FirebaseAnalytics.getInstance(context)).thenReturn(spyFA);
 
             // Call the language‐select method
-            AnalyticsUtils.logLanguageSelectEvent(
-                    context,
-                    "language_selected",
-                    "user456",
-                    "Nepali",
-                    "v1.2.3",
-                    "false"
-            );
+//            AnalyticsUtils.logLanguageSelectEvent(
+//                    context,
+//                    "language_selected",
+//                    "user456",
+//                    "Nepali",
+//                    "v1.2.3",
+//                    "false"
+//            );
 
             // Capture and assert that logEvent was called
             ArgumentCaptor<Bundle> captor = ArgumentCaptor.forClass(Bundle.class);

@@ -1,9 +1,13 @@
 package org.curiouslearning.container;
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,6 +15,7 @@ import android.os.Looper;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -61,7 +66,12 @@ import java.util.stream.Collectors;
 import android.util.Log;
 import android.content.Intent;
 import android.widget.TextView;
+
 import androidx.core.view.GestureDetectorCompat;
+import app.rive.runtime.kotlin.RiveAnimationView;
+import app.rive.runtime.kotlin.core.Alignment;
+import app.rive.runtime.kotlin.core.Fit;
+import app.rive.runtime.kotlin.core.Loop;
 import io.sentry.Sentry;
 
 public class MainActivity extends BaseActivity {
@@ -96,7 +106,7 @@ public class MainActivity extends BaseActivity {
     private long lastTapTime = 0;
     private static final long TAP_TIMEOUT = 3000; // Reset tap count after 3 seconds
     private static final int REQUIRED_TAPS = 8;
-
+    private ObjectAnimator breathingAnimator;
     private Handler debugOverlayHandler = new Handler(Looper.getMainLooper());
     private static final long DEBUG_OVERLAY_UPDATE_INTERVAL = 1000; // 1 second
 
@@ -116,6 +126,31 @@ public class MainActivity extends BaseActivity {
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        RiveAnimationView monsterView = findViewById(R.id.monsterView);
+        // Load the .riv file
+        monsterView.setRiveResource(
+                R.raw.adultmonster,   // 1. .riv file
+                null,               // 2. artboard (null = default)
+                null,               // 3. animation (null = first)
+                null,               // 4. state machine
+                true,               // 5. autoplay
+                Fit.CONTAIN,        // 6. fit
+                Alignment.CENTER,   // 7. alignment
+                Loop.LOOP           // 8. loop mode
+        );
+
+
+        View lightOverlay = findViewById(R.id.light_overlay);
+        addBreathingEffect(lightOverlay);
+
+        ImageView sky = findViewById(R.id.imageView);
+//        ImageView hills = findViewById(R.id.imageView4);
+//        ImageView foreground = findViewById(R.id.imageView6);
+
+        applyCartoonEffect(sky);
+//        applyCartoonEffect(hills);
+//        applyCartoonEffect(foreground);
+
         dialog = new Dialog(this);
         loadingIndicator = findViewById(R.id.loadingIndicator);
         loadingIndicator.setVisibility(View.GONE);
@@ -283,6 +318,41 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
+    private void addBreathingEffect(View view) {
+        breathingAnimator = ObjectAnimator.ofFloat(
+                view,
+                "alpha",
+                0.06f,
+                0.1f
+        );
+        breathingAnimator.setDuration(6000);
+        breathingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        breathingAnimator.setRepeatMode(ValueAnimator.REVERSE);
+        breathingAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        breathingAnimator.start();
+    }
+    private void applyCartoonEffect(ImageView imageView) {
+
+        ColorMatrix colorMatrix = new ColorMatrix();
+
+        // 1️⃣ Increase saturation (cartoon look)
+        colorMatrix.setSaturation(1.2f);
+
+        // 2️⃣ Slight brightness boost
+        ColorMatrix brightnessMatrix = new ColorMatrix(new float[]{
+                1, 0, 0, 0, 20,
+                0, 1, 0, 0, 20,
+                0, 0, 1, 0, 20,
+                0, 0, 0, 1, 0
+        });
+
+        colorMatrix.postConcat(brightnessMatrix);
+
+        imageView.setColorFilter(
+                new ColorMatrixColorFilter(colorMatrix)
+        );
+    }
+
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density);
     }
@@ -392,6 +462,7 @@ public class MainActivity extends BaseActivity {
             updateDebugOverlay();
             debugOverlayHandler.post(debugOverlayUpdater);
         }
+        if (breathingAnimator != null) breathingAnimator.resume();
     }
 
     @Override
@@ -399,6 +470,7 @@ public class MainActivity extends BaseActivity {
         super.onPause();
         // Stop periodic updates of debug overlay
         debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
+        if (breathingAnimator != null) breathingAnimator.pause();
     }
 
     private String generatePseudoId() {
