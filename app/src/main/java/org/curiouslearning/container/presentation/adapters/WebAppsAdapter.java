@@ -66,7 +66,10 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
             startGlowAnimation(holder.appIconImage);
         }
 
+        // Only show and animate pulse effect for Feed The Monster when not cached
         if ( webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
+            // Make pulsator visible for FTM
+            holder.pulsatorLayout.setVisibility(View.VISIBLE);
             if(!isAnimated){
                 holder.pulsatorLayout.startAnimation();
                 SharedPreferences.Editor editor = prefs.edit();
@@ -81,10 +84,10 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                     }
                 }, 5000);
             }
-
-
         }else{
+            // Hide and stop pulse animation for all other apps
             holder.pulsatorLayout.stopAnimation();
+            holder.pulsatorLayout.setVisibility(View.GONE);
         }
 
         // if (!isAppCached(webApps.get(position).getAppId())) {
@@ -134,7 +137,9 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         holder.appIconImage.setScaleY(1f);
         stopGlowAnimation(holder.appIconImage);
 
+        // Stop and hide pulse animation when view is recycled
         holder.pulsatorLayout.stopAnimation();
+        holder.pulsatorLayout.setVisibility(View.GONE);
     }
 
     public boolean isAppCached(int appId) {
