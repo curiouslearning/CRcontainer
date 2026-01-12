@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Small screen devices (small phones) -->
+    <dimen name="monster_size">160dp</dimen>
+    <dimen name="monster_margin_start">12dp</dimen>
+    <dimen name="monster_margin_bottom">8dp</dimen>
+</resources>

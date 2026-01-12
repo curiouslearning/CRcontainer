@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Normal screen devices (phones) -->
+    <dimen name="monster_size">200dp</dimen>
+    <dimen name="monster_margin_start">16dp</dimen>
+    <dimen name="monster_margin_bottom">0dp</dimen>
+</resources>
