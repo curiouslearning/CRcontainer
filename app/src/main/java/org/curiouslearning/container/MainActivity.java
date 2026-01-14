@@ -130,17 +130,8 @@ public class MainActivity extends BaseActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         RiveAnimationView monsterView = findViewById(R.id.monsterView);
-        // Load the .riv file
-        monsterView.setRiveResource(
-                R.raw.adultmonster,   // 1. .riv file
-                null,               // 2. artboard (null = default)
-                null,               // 3. animation (null = first)
-                null,               // 4. state machine
-                true,               // 5. autoplay
-                Fit.CONTAIN,        // 6. fit
-                Alignment.CENTER,   // 7. alignment
-                Loop.LOOP           // 8. loop mode
-        );
+        // Update monster animation based on FTM state
+        updateMonsterAnimation(monsterView);
 
 
         View lightOverlay = findViewById(R.id.light_overlay);
@@ -467,6 +458,12 @@ public class MainActivity extends BaseActivity {
             debugOverlayHandler.post(debugOverlayUpdater);
         }
         if (breathingAnimator != null) breathingAnimator.resume();
+        
+        // Refresh monster animation in case it was updated while WebApp was open
+        RiveAnimationView monsterView = findViewById(R.id.monsterView);
+        if (monsterView != null) {
+            updateMonsterAnimation(monsterView);
+        }
     }
 
     @Override
@@ -844,6 +841,98 @@ public class MainActivity extends BaseActivity {
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
                 "started_in_offline_mode", prefs.getString("pseudoId", ""));
         updateDebugOverlay();
+    }
+
+    /**
+     * Updates the monster animation based on FTM monster phase.
+     * Shows egg monster if FTM is not downloaded, otherwise shows phase-appropriate monster.
+     */
+    private void updateMonsterAnimation(RiveAnimationView monsterView) {
+        // Check if FTM is downloaded by checking if any FTM app is cached
+        boolean isFtmDownloaded = isFtmDownloaded();
+        
+        if (!isFtmDownloaded) {
+            // Show egg monster if FTM is not downloaded
+            loadMonsterAnimation(monsterView, 0);
+            Log.d(TAG, "updateMonsterAnimation: FTM not downloaded, showing egg monster");
+            return;
+        }
+        
+        // Get stored monster phase from SharedPreferences
+        int monsterPhase = prefs.getInt("ftm_monster_phase", 0);
+        loadMonsterAnimation(monsterView, monsterPhase);
+        Log.d(TAG, "updateMonsterAnimation: Showing monster phase " + monsterPhase);
+    }
+
+    /**
+     * Checks if Feed the Monster is downloaded by checking cache status
+     */
+    private boolean isFtmDownloaded() {
+        // First check if we have the explicit flag
+        if (prefs.getBoolean("ftm_downloaded", false)) {
+            return true;
+        }
+        
+        // Check if we have stored monster phase (indicates FTM was used before)
+        int storedPhase = prefs.getInt("ftm_monster_phase", -1);
+        if (storedPhase >= 0) {
+            return true;
+        }
+        
+        // Check if any FTM app is cached by checking app list
+        if (homeViewModal != null && apps != null && apps.webApps != null) {
+            for (WebApp webApp : apps.webApps) {
+                if (webApp.getTitle() != null && webApp.getTitle().contains("Feed The Monster")) {
+                    String appId = String.valueOf(webApp.getAppId());
+                    boolean isCached = prefs.getBoolean(appId, false);
+                    if (isCached) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Loads the appropriate Rive animation based on monster phase
+     * Phase 0: Egg
+     * Phase 1: Hatched (≥12 stars)
+     * Phase 2: Young (≥38 stars)
+     * Phase 3: Adult (≥63 stars)
+     */
+    private void loadMonsterAnimation(RiveAnimationView monsterView, int phase) {
+        int riveResource;
+        
+        switch (phase) {
+            case 0:
+                riveResource = R.raw.eggmonster;
+                break;
+            case 1:
+                riveResource = R.raw.hatchedmonster;
+                break;
+            case 2:
+                riveResource = R.raw.youngmonster;
+                break;
+            case 3:
+                riveResource = R.raw.adultmonster;
+                break;
+            default:
+                riveResource = R.raw.eggmonster;
+                break;
+        }
+        
+        monsterView.setRiveResource(
+                riveResource,
+                null,               // artboard (null = default)
+                null,               // animation (null = first)
+                null,               // state machine
+                true,               // autoplay
+                Fit.CONTAIN,        // fit
+                Alignment.CENTER,   // alignment
+                Loop.LOOP           // loop mode
+        );
     }
 
 }

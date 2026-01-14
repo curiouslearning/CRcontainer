@@ -45,6 +45,9 @@ public class WebApp extends BaseActivity {
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private AudioPlayer audioPlayer;
     ImageView goBack;
+    private android.os.Handler monsterStateCheckHandler;
+    private Runnable monsterStateCheckRunnable;
+    private boolean isFtmApp;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -94,13 +97,36 @@ public class WebApp extends BaseActivity {
         webView = findViewById(R.id.web_app);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setHorizontalScrollBarEnabled(false);
-        webView.setWebViewClient(new WebViewClient());
+        
+        // Check if this is FTM app
+        isFtmApp = appUrl.contains("feedthemonster");
+        
+        // Create custom WebViewClient for FTM to handle monster state API
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                // Query monster evolution state when FTM loads
+                if (isFtmApp) {
+                    // Wait a bit for the API to be ready, then query
+                    view.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            queryMonsterEvolutionState(view);
+                            // Start periodic checks for phase updates during gameplay
+                            startPeriodicMonsterStateCheck(view);
+                        }
+                    }, 2000); // Wait 2 seconds for FTM to initialize
+                }
+            }
+        });
+        
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().getDomStorageEnabled();
         webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
-        if (appUrl.contains("feedthemonster")) {
+        if (isFtmApp) {
             System.out
                     .println(">> url source and campaign params added to the subapp url " + source + " " + campaignId);
             if (source != null && !source.isEmpty()) {
@@ -219,6 +245,113 @@ public class WebApp extends BaseActivity {
             logAppExitEvent();
             audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
             finish();
+        }
+        
+        @JavascriptInterface
+        public void onMonsterEvolutionStateReceived(String jsonState) {
+            Log.d("WebApp", "Monster evolution state received: " + jsonState);
+            
+            try {
+                // Parse JSON string
+                org.json.JSONObject stateJson = new org.json.JSONObject(jsonState);
+                String app = stateJson.optString("app", "");
+                int monsterPhase = stateJson.optInt("monsterPhase", 0);
+                int successStars = stateJson.optInt("successStars", 0);
+                boolean hasError = stateJson.has("error");
+                
+                if ("feed_the_monster".equals(app) && !hasError) {
+                    // Store monster phase in SharedPreferences
+                    SharedPreferences.Editor editor = sharedPref.edit();
+                    editor.putInt("ftm_monster_phase", monsterPhase);
+                    editor.putInt("ftm_success_stars", successStars);
+                    editor.putBoolean("ftm_downloaded", true);
+                    editor.putLong("ftm_state_timestamp", stateJson.optLong("timestamp", System.currentTimeMillis()));
+                    editor.apply();
+                    
+                    Log.d("WebApp", "Stored monster phase: " + monsterPhase + ", success stars: " + successStars);
+                } else if (hasError) {
+                    Log.w("WebApp", "Monster state not ready: " + stateJson.optString("error", "UNKNOWN"));
+                }
+            } catch (org.json.JSONException e) {
+                Log.e("WebApp", "Error parsing monster evolution state JSON", e);
+            }
+        }
+    }
+    
+    /**
+     * Queries the monster evolution state from FTM using the getMonsterEvolutionState() API
+     */
+    private void queryMonsterEvolutionState(WebView webView) {
+        String javascript = 
+            "(function() {" +
+            "  try {" +
+            "    if (typeof window.getMonsterEvolutionState === 'function') {" +
+            "      var state = window.getMonsterEvolutionState();" +
+            "      if (state && window.Android && window.Android.onMonsterEvolutionStateReceived) {" +
+            "        window.Android.onMonsterEvolutionStateReceived(JSON.stringify(state));" +
+            "        console.log('Monster evolution state sent to Android:', state);" +
+            "        return true;" +
+            "      }" +
+            "    } else {" +
+            "      console.log('getMonsterEvolutionState API not available yet');" +
+            "    }" +
+            "    return false;" +
+            "  } catch (e) {" +
+            "    console.error('Error getting monster evolution state: ' + e.message);" +
+            "    return false;" +
+            "  }" +
+            "})();";
+        
+        webView.evaluateJavascript(javascript, null);
+    }
+    
+    /**
+     * Starts periodic checking of monster evolution state while FTM is open
+     */
+    private void startPeriodicMonsterStateCheck(WebView webView) {
+        if (monsterStateCheckHandler == null) {
+            monsterStateCheckHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        }
+        
+        monsterStateCheckRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (webView != null && isFtmApp) {
+                    queryMonsterEvolutionState(webView);
+                    // Check every 5 seconds for phase updates
+                    monsterStateCheckHandler.postDelayed(this, 5000);
+                }
+            }
+        };
+        
+        // Start checking after initial delay
+        monsterStateCheckHandler.postDelayed(monsterStateCheckRunnable, 5000);
+    }
+    
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Stop periodic state checks when leaving FTM
+        if (monsterStateCheckHandler != null && monsterStateCheckRunnable != null) {
+            monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
+        }
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Resume periodic state checks if FTM is open
+        if (webView != null && isFtmApp) {
+            startPeriodicMonsterStateCheck(webView);
+        }
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Stop periodic state checks
+        if (monsterStateCheckHandler != null && monsterStateCheckRunnable != null) {
+            monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
         }
     }
 
