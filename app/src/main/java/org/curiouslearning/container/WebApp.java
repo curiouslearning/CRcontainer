@@ -20,15 +20,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
 import androidx.appcompat.app.AlertDialog;
-
-import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import io.sentry.Sentry;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 import org.curiouslearning.container.core.subapp.validation.AppEventPayloadValidator;
