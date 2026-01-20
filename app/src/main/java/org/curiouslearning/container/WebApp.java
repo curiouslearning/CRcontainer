@@ -48,6 +48,7 @@ public class WebApp extends BaseActivity {
     private android.os.Handler monsterStateCheckHandler;
     private Runnable monsterStateCheckRunnable;
     private boolean isFtmApp;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -97,10 +98,10 @@ public class WebApp extends BaseActivity {
         webView = findViewById(R.id.web_app);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setHorizontalScrollBarEnabled(false);
-        
+
         // Check if this is FTM app
         isFtmApp = appUrl.contains("feedthemonster");
-        
+
         // Create custom WebViewClient for FTM to handle monster state API
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -120,7 +121,7 @@ public class WebApp extends BaseActivity {
                 }
             }
         });
-        
+
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().getDomStorageEnabled();
         webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
@@ -144,7 +145,7 @@ public class WebApp extends BaseActivity {
         }
         if (appUrl.contains("docs.google.com/forms")) {
             webView.loadUrl(addCrUserIdToFormUrl(appUrl));
-        }else if (appUrl.contains("welcome_parent_video")) {
+        } else if (appUrl.contains("welcome_parent_video")) {
             goBack.setVisibility(View.GONE);
             webView.loadUrl(addCrUserIdToUrl(appUrl));
         } else {
@@ -239,18 +240,19 @@ public class WebApp extends BaseActivity {
                 Log.e("WebView", "Invalid orientation value received from webapp " + appUrl);
             }
         }
+
         @JavascriptInterface
-        public void closeWebView(){
+        public void closeWebView() {
             goBack.setVisibility(View.GONE);
             logAppExitEvent();
             audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
             finish();
         }
-        
+
         @JavascriptInterface
         public void onMonsterEvolutionStateReceived(String jsonState) {
             Log.d("WebApp", "Monster evolution state received: " + jsonState);
-            
+
             try {
                 // Parse JSON string
                 org.json.JSONObject stateJson = new org.json.JSONObject(jsonState);
@@ -258,17 +260,19 @@ public class WebApp extends BaseActivity {
                 int monsterPhase = stateJson.optInt("monsterPhase", 0);
                 int successStars = stateJson.optInt("successStars", 0);
                 boolean hasError = stateJson.has("error");
-                
+
                 if ("feed_the_monster".equals(app) && !hasError) {
-                    // Store monster phase in SharedPreferences
+                    // Store monster phase per language using a map structure
+                    storeMonsterPhaseForLanguage(languageInEnglishName, monsterPhase, successStars,
+                            stateJson.optLong("timestamp", System.currentTimeMillis()));
+
+                    // Also set global downloaded flag
                     SharedPreferences.Editor editor = sharedPref.edit();
-                    editor.putInt("ftm_monster_phase", monsterPhase);
-                    editor.putInt("ftm_success_stars", successStars);
                     editor.putBoolean("ftm_downloaded", true);
-                    editor.putLong("ftm_state_timestamp", stateJson.optLong("timestamp", System.currentTimeMillis()));
                     editor.apply();
-                    
-                    Log.d("WebApp", "Stored monster phase: " + monsterPhase + ", success stars: " + successStars);
+
+                    Log.d("WebApp", "Stored monster phase for language '" + languageInEnglishName +
+                            "': phase=" + monsterPhase + ", stars=" + successStars);
                 } else if (hasError) {
                     Log.w("WebApp", "Monster state not ready: " + stateJson.optString("error", "UNKNOWN"));
                 }
@@ -276,35 +280,63 @@ public class WebApp extends BaseActivity {
                 Log.e("WebApp", "Error parsing monster evolution state JSON", e);
             }
         }
+
+        /**
+         * Stores monster phase for a specific language in a JSON map structure
+         */
+        private void storeMonsterPhaseForLanguage(String language, int phase, int successStars, long timestamp) {
+            try {
+                // Get existing map or create new one
+                String mapJson = sharedPref.getString("ftm_monster_phases_map", "{}");
+                org.json.JSONObject phasesMap = new org.json.JSONObject(mapJson);
+
+                // Create or update entry for this language
+                org.json.JSONObject languageData = new org.json.JSONObject();
+                languageData.put("monsterPhase", phase);
+                languageData.put("successStars", successStars);
+                languageData.put("timestamp", timestamp);
+
+                phasesMap.put(language, languageData);
+
+                // Store updated map
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putString("ftm_monster_phases_map", phasesMap.toString());
+                editor.apply();
+
+                Log.d("WebApp", "Updated monster phase map for language: " + language);
+            } catch (org.json.JSONException e) {
+                Log.e("WebApp", "Error storing monster phase for language: " + language, e);
+            }
+        }
     }
-    
+
     /**
-     * Queries the monster evolution state from FTM using the getMonsterEvolutionState() API
+     * Queries the monster evolution state from FTM using the
+     * getMonsterEvolutionState() API
      */
     private void queryMonsterEvolutionState(WebView webView) {
-        String javascript = 
-            "(function() {" +
-            "  try {" +
-            "    if (typeof window.getMonsterEvolutionState === 'function') {" +
-            "      var state = window.getMonsterEvolutionState();" +
-            "      if (state && window.Android && window.Android.onMonsterEvolutionStateReceived) {" +
-            "        window.Android.onMonsterEvolutionStateReceived(JSON.stringify(state));" +
-            "        console.log('Monster evolution state sent to Android:', state);" +
-            "        return true;" +
-            "      }" +
-            "    } else {" +
-            "      console.log('getMonsterEvolutionState API not available yet');" +
-            "    }" +
-            "    return false;" +
-            "  } catch (e) {" +
-            "    console.error('Error getting monster evolution state: ' + e.message);" +
-            "    return false;" +
-            "  }" +
-            "})();";
-        
+        String javascript = "(function() {" +
+                "  try {" +
+                "    if (typeof window.getMonsterEvolutionState === 'function') {" +
+                "      var state = window.getMonsterEvolutionState();" +
+                "      if (state && window.Android && window.Android.onMonsterEvolutionStateReceived) {" +
+                "        window.Android.onMonsterEvolutionStateReceived(JSON.stringify(state));" +
+                "        console.log('Monster evolution state sent to Android:', state);" +
+                "        return true;" +
+                "      }" +
+                "    } else {" +
+                "      console.log('getMonsterEvolutionState API not available yet');" +
+                "    }" +
+                "    return false;" +
+                "  } catch (e) {" +
+                "    console.error('Error getting monster evolution state: ' + e.message);" +
+                "    return false;" +
+                "  }" +
+                "})();";
+
         webView.evaluateJavascript(javascript, null);
     }
-    
+
     /**
      * Starts periodic checking of monster evolution state while FTM is open
      */
@@ -312,7 +344,7 @@ public class WebApp extends BaseActivity {
         if (monsterStateCheckHandler == null) {
             monsterStateCheckHandler = new android.os.Handler(android.os.Looper.getMainLooper());
         }
-        
+
         monsterStateCheckRunnable = new Runnable() {
             @Override
             public void run() {
@@ -323,11 +355,11 @@ public class WebApp extends BaseActivity {
                 }
             }
         };
-        
+
         // Start checking after initial delay
         monsterStateCheckHandler.postDelayed(monsterStateCheckRunnable, 5000);
     }
-    
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -336,7 +368,7 @@ public class WebApp extends BaseActivity {
             monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
         }
     }
-    
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -345,7 +377,7 @@ public class WebApp extends BaseActivity {
             startPeriodicMonsterStateCheck(webView);
         }
     }
-    
+
     @Override
     protected void onDestroy() {
         super.onDestroy();

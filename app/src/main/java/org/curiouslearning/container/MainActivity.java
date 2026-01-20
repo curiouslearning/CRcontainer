@@ -133,17 +133,16 @@ public class MainActivity extends BaseActivity {
         // Update monster animation based on FTM state
         updateMonsterAnimation(monsterView);
 
-
         View lightOverlay = findViewById(R.id.light_overlay);
         addBreathingEffect(lightOverlay);
 
         ImageView sky = findViewById(R.id.imageView);
-//        ImageView hills = findViewById(R.id.imageView4);
-//        ImageView foreground = findViewById(R.id.imageView6);
+        // ImageView hills = findViewById(R.id.imageView4);
+        // ImageView foreground = findViewById(R.id.imageView6);
 
         applyCartoonEffect(sky);
-//        applyCartoonEffect(hills);
-//        applyCartoonEffect(foreground);
+        // applyCartoonEffect(hills);
+        // applyCartoonEffect(foreground);
 
         dialog = new Dialog(this);
         loadingIndicator = findViewById(R.id.loadingIndicator);
@@ -312,19 +311,20 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
+
     private void addBreathingEffect(View view) {
         breathingAnimator = ObjectAnimator.ofFloat(
                 view,
                 "alpha",
                 0.06f,
-                0.1f
-        );
+                0.1f);
         breathingAnimator.setDuration(6000);
         breathingAnimator.setRepeatCount(ValueAnimator.INFINITE);
         breathingAnimator.setRepeatMode(ValueAnimator.REVERSE);
         breathingAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         breathingAnimator.start();
     }
+
     private void applyCartoonEffect(ImageView imageView) {
 
         ColorMatrix colorMatrix = new ColorMatrix();
@@ -333,7 +333,7 @@ public class MainActivity extends BaseActivity {
         colorMatrix.setSaturation(1.2f);
 
         // 2️⃣ Slight brightness boost
-        ColorMatrix brightnessMatrix = new ColorMatrix(new float[]{
+        ColorMatrix brightnessMatrix = new ColorMatrix(new float[] {
                 1, 0, 0, 0, 20,
                 0, 1, 0, 0, 20,
                 0, 0, 1, 0, 20,
@@ -343,8 +343,7 @@ public class MainActivity extends BaseActivity {
         colorMatrix.postConcat(brightnessMatrix);
 
         imageView.setColorFilter(
-                new ColorMatrixColorFilter(colorMatrix)
-        );
+                new ColorMatrixColorFilter(colorMatrix));
     }
 
     private int dpToPx(int dp) {
@@ -441,8 +440,7 @@ public class MainActivity extends BaseActivity {
 
     public static String convertEpochToDate(long epochMillis) {
         Date date = new Date(epochMillis);
-        SimpleDateFormat sdf =
-                new SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.getDefault());
+        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.getDefault());
         sdf.setTimeZone(TimeZone.getDefault());
         return sdf.format(date);
     }
@@ -457,8 +455,9 @@ public class MainActivity extends BaseActivity {
             updateDebugOverlay();
             debugOverlayHandler.post(debugOverlayUpdater);
         }
-        if (breathingAnimator != null) breathingAnimator.resume();
-        
+        if (breathingAnimator != null)
+            breathingAnimator.resume();
+
         // Refresh monster animation in case it was updated while WebApp was open
         RiveAnimationView monsterView = findViewById(R.id.monsterView);
         if (monsterView != null) {
@@ -471,7 +470,8 @@ public class MainActivity extends BaseActivity {
         super.onPause();
         // Stop periodic updates of debug overlay
         debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
-        if (breathingAnimator != null) breathingAnimator.pause();
+        if (breathingAnimator != null)
+            breathingAnimator.pause();
     }
 
     private String generatePseudoId() {
@@ -624,18 +624,17 @@ public class MainActivity extends BaseActivity {
 
             });
             try {
-            if (isFinishing() ||  isDestroyed()) {
-                Log.w(TAG, "showLanguagePopup: Activity is finishing or destroyed, not showing dialog.");
-                return;
-            }
-            dialog.show();
-        } catch (Exception e) {
+                if (isFinishing() || isDestroyed()) {
+                    Log.w(TAG, "showLanguagePopup: Activity is finishing or destroyed, not showing dialog.");
+                    return;
+                }
+                dialog.show();
+            } catch (Exception e) {
                 FirebaseCrashlytics.getInstance().log("showLanguagePopup: Failed to show dialog");
                 FirebaseCrashlytics.getInstance().recordException(
-                        new RuntimeException("showLanguagePopup: Failed to show dialog", e)
-                );
-            Log.e(TAG, "showLanguagePopup: Failed to show dialog", e);
-        }
+                        new RuntimeException("showLanguagePopup: Failed to show dialog", e));
+                Log.e(TAG, "showLanguagePopup: Failed to show dialog", e);
+            }
         }
     }
 
@@ -741,6 +740,12 @@ public class MainActivity extends BaseActivity {
         editor.apply();
         Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
         updateDebugOverlay(); // Update overlay when language changes
+
+        // Update monster animation when language changes
+        RiveAnimationView monsterView = findViewById(R.id.monsterView);
+        if (monsterView != null) {
+            updateMonsterAnimation(monsterView);
+        }
     }
 
     private void cacheManifestVersion(String versionNumber) {
@@ -761,7 +766,7 @@ public class MainActivity extends BaseActivity {
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         if (offlineOverlay != null) {
             // Don't change visibility here, let it be controlled by the trigger button
-            
+
             // Initialize close button
             ImageButton closeButton = offlineOverlay.findViewById(R.id.debug_overlay_close);
             if (closeButton != null) {
@@ -844,24 +849,66 @@ public class MainActivity extends BaseActivity {
     }
 
     /**
-     * Updates the monster animation based on FTM monster phase.
-     * Shows egg monster if FTM is not downloaded, otherwise shows phase-appropriate monster.
+     * Updates the monster animation based on FTM monster phase for the current
+     * language.
+     * Shows egg monster if FTM is not downloaded, otherwise shows phase-appropriate
+     * monster.
      */
     private void updateMonsterAnimation(RiveAnimationView monsterView) {
         // Check if FTM is downloaded by checking if any FTM app is cached
         boolean isFtmDownloaded = isFtmDownloaded();
-        
+
         if (!isFtmDownloaded) {
             // Show egg monster if FTM is not downloaded
             loadMonsterAnimation(monsterView, 0);
             Log.d(TAG, "updateMonsterAnimation: FTM not downloaded, showing egg monster");
             return;
         }
-        
-        // Get stored monster phase from SharedPreferences
-        int monsterPhase = prefs.getInt("ftm_monster_phase", 0);
+
+        // Get stored monster phase for the current selected language
+        int monsterPhase = getMonsterPhaseForLanguage(selectedLanguage);
         loadMonsterAnimation(monsterView, monsterPhase);
-        Log.d(TAG, "updateMonsterAnimation: Showing monster phase " + monsterPhase);
+        Log.d(TAG,
+                "updateMonsterAnimation: Showing monster phase " + monsterPhase + " for language: " + selectedLanguage);
+    }
+
+    /**
+     * Retrieves monster phase for a specific language from the stored map
+     * 
+     * @param language The language name (English name)
+     * @return Monster phase (0-3), or 0 if not found
+     */
+    private int getMonsterPhaseForLanguage(String language) {
+        if (language == null || language.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            // Get the phases map
+            String mapJson = prefs.getString("ftm_monster_phases_map", "{}");
+            org.json.JSONObject phasesMap = new org.json.JSONObject(mapJson);
+
+            // Check if we have data for this language
+            if (phasesMap.has(language)) {
+                org.json.JSONObject languageData = phasesMap.getJSONObject(language);
+                int phase = languageData.optInt("monsterPhase", 0);
+                Log.d(TAG, "Found monster phase " + phase + " for language: " + language);
+                return phase;
+            } else {
+                Log.d(TAG, "No monster phase data found for language: " + language);
+                // Fallback to old global key for backward compatibility
+                int oldPhase = prefs.getInt("ftm_monster_phase", -1);
+                if (oldPhase >= 0) {
+                    Log.d(TAG, "Using legacy global monster phase: " + oldPhase);
+                    return oldPhase;
+                }
+                return 0;
+            }
+        } catch (org.json.JSONException e) {
+            Log.e(TAG, "Error retrieving monster phase for language: " + language, e);
+            // Fallback to old global key
+            return prefs.getInt("ftm_monster_phase", 0);
+        }
     }
 
     /**
@@ -872,13 +919,26 @@ public class MainActivity extends BaseActivity {
         if (prefs.getBoolean("ftm_downloaded", false)) {
             return true;
         }
-        
-        // Check if we have stored monster phase (indicates FTM was used before)
+
+        // Check if we have stored monster phase map (indicates FTM was used before)
+        String mapJson = prefs.getString("ftm_monster_phases_map", "{}");
+        if (!mapJson.equals("{}")) {
+            try {
+                org.json.JSONObject phasesMap = new org.json.JSONObject(mapJson);
+                if (phasesMap.length() > 0) {
+                    return true;
+                }
+            } catch (org.json.JSONException e) {
+                // Ignore, fall through to other checks
+            }
+        }
+
+        // Check legacy global phase for backward compatibility
         int storedPhase = prefs.getInt("ftm_monster_phase", -1);
         if (storedPhase >= 0) {
             return true;
         }
-        
+
         // Check if any FTM app is cached by checking app list
         if (homeViewModal != null && apps != null && apps.webApps != null) {
             for (WebApp webApp : apps.webApps) {
@@ -891,7 +951,7 @@ public class MainActivity extends BaseActivity {
                 }
             }
         }
-        
+
         return false;
     }
 
@@ -904,7 +964,7 @@ public class MainActivity extends BaseActivity {
      */
     private void loadMonsterAnimation(RiveAnimationView monsterView, int phase) {
         int riveResource;
-        
+
         switch (phase) {
             case 0:
                 riveResource = R.raw.eggmonster;
@@ -922,16 +982,16 @@ public class MainActivity extends BaseActivity {
                 riveResource = R.raw.eggmonster;
                 break;
         }
-        
+
         monsterView.setRiveResource(
                 riveResource,
-                null,               // artboard (null = default)
-                null,               // animation (null = first)
-                null,               // state machine
-                true,               // autoplay
-                Fit.CONTAIN,        // fit
-                Alignment.CENTER,   // alignment
-                Loop.LOOP           // loop mode
+                null, // artboard (null = default)
+                null, // animation (null = first)
+                null, // state machine
+                true, // autoplay
+                Fit.CONTAIN, // fit
+                Alignment.CENTER, // alignment
+                Loop.LOOP // loop mode
         );
     }
 
