@@ -38,19 +38,19 @@
     <!--        app:layout_constraintVertical_bias="0.829"-->
     <!--        app:srcCompat="@drawable/hill" />-->
 
-    <!--    <ImageView-->
-    <!--        android:id="@+id/imageView6"-->
-    <!--        android:layout_width="0dp"-->
-    <!--        android:layout_height="0dp"-->
-    <!--        android:contentDescription="@string/foreground"-->
-    <!--        android:scaleType="fitXY"-->
-    <!--        app:layout_constraintBottom_toBottomOf="parent"-->
-    <!--        app:layout_constraintEnd_toEndOf="parent"-->
-    <!--        app:layout_constraintHorizontal_bias="0.201"-->
-    <!--        app:layout_constraintStart_toStartOf="parent"-->
-    <!--        app:layout_constraintTop_toTopOf="@+id/imageView"-->
-    <!--        app:layout_constraintVertical_bias="0.829"-->
-    <!--        app:srcCompat="@drawable/foreground_foliage" />-->
+    <ImageView
+        android:id="@+id/foreground_foliage"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@string/foreground"
+        android:scaleType="fitXY"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.201"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/imageView"
+        app:layout_constraintVertical_bias="0.829"
+        app:srcCompat="@drawable/foreground_foliage" />
     <View
         android:id="@+id/light_overlay"
         android:layout_width="0dp"

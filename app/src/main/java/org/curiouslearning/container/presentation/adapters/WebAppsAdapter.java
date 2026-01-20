@@ -56,14 +56,11 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
-        // Always reset glow first (important for RecyclerView)
-        stopGlowAnimation(holder.appIconImage);
-        holder.startIdleAnimation(holder.appIconImage);
+
 // Apply glow ONLY for key apps
         if (webApps.get(position).getTitle().contains("Feed The Monster")
                 && !isAppCached(webApps.get(position).getAppId())) {
 
-            startGlowAnimation(holder.appIconImage);
         }
 
         // Only show and animate pulse effect for Feed The Monster when not cached
@@ -135,7 +132,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         holder.appIconImage.setAlpha(1f);
         holder.appIconImage.setScaleX(1f);
         holder.appIconImage.setScaleY(1f);
-        stopGlowAnimation(holder.appIconImage);
+
 
         // Stop and hide pulse animation when view is recycled
         holder.pulsatorLayout.stopAnimation();
@@ -157,44 +154,11 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
             pulsatorLayout = itemView.findViewById(R.id.pulsing_view);
 
         }
-        public void startIdleAnimation(View icon) {
-            ObjectAnimator scaleX = ObjectAnimator.ofFloat(icon, "scaleX", 1f, 1.08f);
-            ObjectAnimator scaleY = ObjectAnimator.ofFloat(icon, "scaleY", 1f, 1.08f);
 
-            scaleX.setRepeatCount(ValueAnimator.INFINITE);
-            scaleY.setRepeatCount(ValueAnimator.INFINITE);
-
-            scaleX.setRepeatMode(ValueAnimator.REVERSE);
-            scaleY.setRepeatMode(ValueAnimator.REVERSE);
-
-            scaleX.setDuration(1600);
-            scaleY.setDuration(1600);
-
-            scaleX.start();
-            scaleY.start();
-        }
 
 
     }
-    private void startGlowAnimation(View view) {
-        view.setBackgroundResource(R.drawable.glow_circle);
 
-        ObjectAnimator glow = ObjectAnimator.ofFloat(view, "alpha", 0.75f, 1f);
-        glow.setDuration(1500);
-        glow.setRepeatCount(ValueAnimator.INFINITE);
-        glow.setRepeatMode(ValueAnimator.REVERSE);
-        glow.start();
 
-        view.setTag(R.id.glow_animator_tag, glow);
-    }
-
-    private void stopGlowAnimation(View view) {
-        Object tag = view.getTag(R.id.glow_animator_tag);
-        if (tag instanceof ObjectAnimator) {
-            ((ObjectAnimator) tag).cancel();
-        }
-        view.setAlpha(1f);
-        view.setBackground(null);
-    }
 
 }

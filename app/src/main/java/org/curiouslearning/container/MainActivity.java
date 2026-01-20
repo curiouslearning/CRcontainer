@@ -137,10 +137,13 @@ public class MainActivity extends BaseActivity {
         addBreathingEffect(lightOverlay);
 
         ImageView sky = findViewById(R.id.imageView);
-        // ImageView hills = findViewById(R.id.imageView4);
-        // ImageView foreground = findViewById(R.id.imageView6);
+        ImageView foreground = findViewById(R.id.foreground_foliage);
 
         applyCartoonEffect(sky);
+        if (foreground != null) {
+            applyCartoonEffect(foreground);
+            addWindEffect(foreground);
+        }
         // applyCartoonEffect(hills);
         // applyCartoonEffect(foreground);
 
@@ -275,6 +278,8 @@ public class MainActivity extends BaseActivity {
         settingsButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // Add spinning animation to settings gear
+                spinSettingsGear(view);
                 AnimationUtil.scaleButton(view, new Runnable() {
                     @Override
                     public void run() {
@@ -323,6 +328,87 @@ public class MainActivity extends BaseActivity {
         breathingAnimator.setRepeatMode(ValueAnimator.REVERSE);
         breathingAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         breathingAnimator.start();
+    }
+
+    /**
+     * Adds a subtle wind/sway effect to the foliage layer
+     */
+    private void addWindEffect(ImageView foliageView) {
+        // Create a subtle horizontal translation animation to simulate wind
+        ObjectAnimator windAnimatorX = ObjectAnimator.ofFloat(
+                foliageView,
+                "translationX",
+                -8f, // Slight left movement
+                8f // Slight right movement
+        );
+        windAnimatorX.setDuration(4000); // Slow, gentle movement
+        windAnimatorX.setRepeatCount(ValueAnimator.INFINITE);
+        windAnimatorX.setRepeatMode(ValueAnimator.REVERSE);
+        windAnimatorX.setInterpolator(new AccelerateDecelerateInterpolator());
+
+        // Add slight rotation for more natural wind effect
+        ObjectAnimator windAnimatorRotation = ObjectAnimator.ofFloat(
+                foliageView,
+                "rotation",
+                -1.5f, // Slight counter-clockwise
+                1.5f // Slight clockwise
+        );
+        windAnimatorRotation.setDuration(5000); // Slightly different duration for organic feel
+        windAnimatorRotation.setRepeatCount(ValueAnimator.INFINITE);
+        windAnimatorRotation.setRepeatMode(ValueAnimator.REVERSE);
+        windAnimatorRotation.setInterpolator(new AccelerateDecelerateInterpolator());
+
+        // Start both animations
+        windAnimatorX.start();
+        windAnimatorRotation.start();
+
+        // Store animators for cleanup if needed
+        foliageView.setTag(R.id.wind_animator_x_tag, windAnimatorX);
+        foliageView.setTag(R.id.wind_animator_rotation_tag, windAnimatorRotation);
+    }
+
+    /**
+     * Spins the settings gear when tapped
+     */
+    private void spinSettingsGear(View settingsButton) {
+        ObjectAnimator spinAnimator = ObjectAnimator.ofFloat(
+                settingsButton,
+                "rotation",
+                0f,
+                360f);
+        spinAnimator.setDuration(400); // Quick spin
+        spinAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        spinAnimator.start();
+    }
+
+    /**
+     * Pauses wind effect animations
+     */
+    private void pauseWindEffect(ImageView foliageView) {
+        Object tagX = foliageView.getTag(R.id.wind_animator_x_tag);
+        Object tagRotation = foliageView.getTag(R.id.wind_animator_rotation_tag);
+
+        if (tagX instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagX).pause();
+        }
+        if (tagRotation instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagRotation).pause();
+        }
+    }
+
+    /**
+     * Resumes wind effect animations
+     */
+    private void resumeWindEffect(ImageView foliageView) {
+        Object tagX = foliageView.getTag(R.id.wind_animator_x_tag);
+        Object tagRotation = foliageView.getTag(R.id.wind_animator_rotation_tag);
+
+        if (tagX instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagX).resume();
+        }
+        if (tagRotation instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagRotation).resume();
+        }
     }
 
     private void applyCartoonEffect(ImageView imageView) {
@@ -458,6 +544,12 @@ public class MainActivity extends BaseActivity {
         if (breathingAnimator != null)
             breathingAnimator.resume();
 
+        // Resume wind animations
+        ImageView foliage = findViewById(R.id.foreground_foliage);
+        if (foliage != null) {
+            resumeWindEffect(foliage);
+        }
+
         // Refresh monster animation in case it was updated while WebApp was open
         RiveAnimationView monsterView = findViewById(R.id.monsterView);
         if (monsterView != null) {
@@ -472,6 +564,12 @@ public class MainActivity extends BaseActivity {
         debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
         if (breathingAnimator != null)
             breathingAnimator.pause();
+
+        // Pause wind animations
+        ImageView foliage = findViewById(R.id.foreground_foliage);
+        if (foliage != null) {
+            pauseWindEffect(foliage);
+        }
     }
 
     private String generatePseudoId() {
@@ -541,6 +639,23 @@ public class MainActivity extends BaseActivity {
         if (!dialog.isShowing()) {
             dialog.setContentView(R.layout.language_popup);
 
+            // Get the root view of the dialog content for animations
+            // The root ConstraintLayout from language_popup.xml
+            // After setContentView, the root is available via window decor view
+            View dialogRoot = null;
+            if (dialog.getWindow() != null) {
+                View decorView = dialog.getWindow().getDecorView();
+                if (decorView != null) {
+                    View contentView = decorView.findViewById(android.R.id.content);
+                    if (contentView instanceof android.view.ViewGroup) {
+                        android.view.ViewGroup contentGroup = (android.view.ViewGroup) contentView;
+                        if (contentGroup.getChildCount() > 0) {
+                            dialogRoot = contentGroup.getChildAt(0); // This is the root ConstraintLayout
+                        }
+                    }
+                }
+            }
+
             dialog.setCanceledOnTouchOutside(false);
             dialog.getWindow().setBackgroundDrawable(null);
 
@@ -593,8 +708,33 @@ public class MainActivity extends BaseActivity {
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                         selectedLanguage, manifestVrsn, "false", "");
 
-                                dialog.dismiss();
-                                loadApps(selectedLanguage);
+                                // Animate dropdown exit before dismissing
+                                View dialogRootForDismiss = null;
+                                if (dialog.getWindow() != null) {
+                                    View decorView = dialog.getWindow().getDecorView();
+                                    if (decorView != null) {
+                                        View contentView = decorView.findViewById(android.R.id.content);
+                                        if (contentView instanceof android.view.ViewGroup) {
+                                            android.view.ViewGroup contentGroup = (android.view.ViewGroup) contentView;
+                                            if (contentGroup.getChildCount() > 0) {
+                                                dialogRootForDismiss = contentGroup.getChildAt(0);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (dialogRootForDismiss != null) {
+                                    AnimationUtil.animateDropdownClose(dialogRootForDismiss, new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            dialog.dismiss();
+                                            loadApps(selectedLanguage);
+                                        }
+                                    });
+                                } else {
+                                    dialog.dismiss();
+                                    loadApps(selectedLanguage);
+                                }
                             }
                         });
                     }
@@ -609,26 +749,53 @@ public class MainActivity extends BaseActivity {
                 });
             }
 
+            final View finalDialogRoot = dialogRoot; // Make final for use in inner class
+
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                    AnimationUtil.scaleButton(v, new Runnable() {
+                    textView.setVisibility(View.GONE);
+
+                    // Animate close button, then trigger dropdown exit animation
+                    AnimationUtil.animateCloseButton(v, new Runnable() {
                         @Override
                         public void run() {
-                            textView.setVisibility(View.GONE);
-                            dialog.dismiss();
+                            // After close button animation, animate dropdown exit
+                            if (finalDialogRoot != null) {
+                                AnimationUtil.animateDropdownClose(finalDialogRoot, new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        dialog.dismiss();
+                                    }
+                                });
+                            } else {
+                                dialog.dismiss();
+                            }
                         }
                     });
-
                 }
-
             });
+
             try {
                 if (isFinishing() || isDestroyed()) {
                     Log.w(TAG, "showLanguagePopup: Activity is finishing or destroyed, not showing dialog.");
                     return;
                 }
                 dialog.show();
+
+                // Apply entrance animation after dialog is shown
+                final View finalDialogRootForShow = dialogRoot; // Make final for use in post
+                if (finalDialogRootForShow != null) {
+                    // Use post to ensure dialog is fully laid out before animating
+                    finalDialogRootForShow.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            AnimationUtil.animateDropdownOpen(finalDialogRootForShow);
+                            // Optionally add subtle breathing animation
+                            AnimationUtil.addBreathingAnimation(finalDialogRootForShow);
+                        }
+                    });
+                }
             } catch (Exception e) {
                 FirebaseCrashlytics.getInstance().log("showLanguagePopup: Failed to show dialog");
                 FirebaseCrashlytics.getInstance().recordException(
