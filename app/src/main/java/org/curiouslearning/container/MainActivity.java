@@ -665,10 +665,14 @@ public class MainActivity extends BaseActivity {
             ImageView closeButton = dialog.findViewById(R.id.setting_close);
             TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
             AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
-            autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
-            ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
-                    android.R.layout.simple_dropdown_item_1line, new ArrayList<String>());
-            autoCompleteTextView.setAdapter(adapter);
+
+            // Ensure TextInputLayout has transparent background (Material Design can
+            // override XML)
+            textBox.setBackground(null);
+            textBox.setBoxBackgroundMode(com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_NONE);
+
+            autoCompleteTextView.setDropDownBackgroundResource(R.drawable.dropdown_background_transparent);
+            final org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter[] adapterRef = new org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter[1];
 
             homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
                 @Override
@@ -682,27 +686,43 @@ public class MainActivity extends BaseActivity {
 
                     if (!distinctLanguageList.isEmpty()) {
                         Log.d(TAG, "showLanguagePopup: Distinct languages: " + distinctLanguageList);
-                        adapter.clear();
-                        adapter.addAll(distinctLanguageList);
-                        adapter.notifyDataSetChanged();
-                        int standardizedItemHeight = 50;
-                        int itemCount = adapter.getCount();
-                        int dropdownHeight = standardizedItemHeight * itemCount;
+
+                        selectedLanguage = prefs.getString("selectedLanguage", "");
+                        adapterRef[0] = new org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter(
+                                dialog.getContext(), distinctLanguageList, languagesEnglishNameMap);
+                        adapterRef[0].setSelectedLanguage(selectedLanguage);
+                        autoCompleteTextView.setAdapter(adapterRef[0]);
+
+                        // Adjust dropdown height for larger pill-shaped items (64dp min + padding)
+                        float density = getResources().getDisplayMetrics().density;
+                        int itemHeightPx = (int) (80 * density); // ~80dp per item
+                        int itemCount = adapterRef[0].getCount();
+                        int dropdownHeight = itemHeightPx * itemCount;
                         int maxHeight = getResources().getDisplayMetrics().heightPixels / 2;
                         int adjustedDropdownHeight = Math.min(dropdownHeight, maxHeight);
                         autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
 
-                        selectedLanguage = prefs.getString("selectedLanguage", "");
                         if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
-                            textBox.setHint(languagesEnglishNameMap.get(selectedLanguage));
+                            String displayName = languagesEnglishNameMap.get(selectedLanguage);
+//                            textBox.setHint(displayName);
+                            autoCompleteTextView.setText(displayName, false);
                         }
 
                         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                                selectedLanguage = languagesEnglishNameMap
-                                        .get((String) parent.getItemAtPosition(position));
+                                String selectedDisplayName = (String) parent.getItemAtPosition(position);
+                                selectedLanguage = languagesEnglishNameMap.get(selectedDisplayName);
+
+                                // Update adapter to highlight selected item
+                                if (adapterRef[0] != null) {
+                                    adapterRef[0].setSelectedLanguage(selectedLanguage);
+                                }
+
+                                // Update hint and text to show selected language
+//                                textBox.setHint(selectedDisplayName);
+                                autoCompleteTextView.setText(selectedDisplayName, false);
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,

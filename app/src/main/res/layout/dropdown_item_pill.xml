@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="22dp"
+    android:paddingEnd="22dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp"
+    android:minHeight="64dp"
+    android:background="@drawable/dropdown_item_pill_default">
+
+    <TextView
+        android:id="@android:id/text1"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="#FF2D1B47"
+        android:textSize="17sp"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="2"
+        android:ellipsize="none"
+        android:gravity="center_vertical"
+        android:singleLine="false" />
+
+    <ImageView
+        android:id="@+id/checkmark"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="12dp"
+        android:src="@drawable/checkmark_white"
+        android:tint="@android:color/white"
+        android:visibility="gone"
+        android:contentDescription="@string/selected" />
+</LinearLayout>
