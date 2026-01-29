@@ -695,16 +695,42 @@ public class MainActivity extends BaseActivity {
 
                         // Adjust dropdown height for larger pill-shaped items (64dp min + padding)
                         float density = getResources().getDisplayMetrics().density;
-                        int itemHeightPx = (int) (80 * density); // ~80dp per item
+
+// Approx item height
+                        int itemHeightPx = (int) (80 * density);
                         int itemCount = adapterRef[0].getCount();
-                        int dropdownHeight = itemHeightPx * itemCount;
-                        int maxHeight = getResources().getDisplayMetrics().heightPixels / 2;
-                        int adjustedDropdownHeight = Math.min(dropdownHeight, maxHeight);
+                        int contentHeight = itemHeightPx * itemCount;
+
+// Screen metrics
+                        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+
+// Reserve bottom space (20% of screen)
+                        int bottomReservedSpace = (int) (screenHeight * 0.10f);
+
+// Get trigger location on screen
+                        int[] location = new int[2];
+                        autoCompleteTextView.getLocationOnScreen(location);
+                        int triggerBottomY = location[1] + autoCompleteTextView.getHeight();
+
+// Available space below trigger
+                        int availableHeightBelow =
+                                screenHeight - triggerBottomY - bottomReservedSpace;
+
+// Final dropdown height
+                        int adjustedDropdownHeight =
+                                Math.min(contentHeight, availableHeightBelow);
+
+// Safety fallback
+                        if (adjustedDropdownHeight < itemHeightPx * 2) {
+                            adjustedDropdownHeight = itemHeightPx * 2;
+                        }
+
                         autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
+
 
                         if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
                             String displayName = languagesEnglishNameMap.get(selectedLanguage);
-//                            textBox.setHint(displayName);
+                            // textBox.setHint(displayName);
                             autoCompleteTextView.setText(displayName, false);
                         }
 
@@ -721,7 +747,7 @@ public class MainActivity extends BaseActivity {
                                 }
 
                                 // Update hint and text to show selected language
-//                                textBox.setHint(selectedDisplayName);
+                                // textBox.setHint(selectedDisplayName);
                                 autoCompleteTextView.setText(selectedDisplayName, false);
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
