@@ -5,4 +5,6 @@
     <dimen name="monster_size">200dp</dimen>
     <dimen name="monster_margin_start">16dp</dimen>
     <dimen name="monster_margin_bottom">0dp</dimen>
+    <!-- Dropdown: spacing between pill items (kid-friendly touch targets) -->
+    <dimen name="dropdown_item_spacing">10dp</dimen>
 </resources>
