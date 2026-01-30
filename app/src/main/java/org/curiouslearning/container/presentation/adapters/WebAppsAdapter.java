@@ -64,11 +64,11 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         // borderDrawable.setColor(Color.TRANSPARENT);
         // holder.appIconImage.setForeground(borderDrawable);
 
-// Apply glow ONLY for key apps
-        if (webApps.get(position).getTitle().contains("Feed The Monster")
-                && !isAppCached(webApps.get(position).getAppId())) {
+        // Apply glow ONLY for key apps
+        // if (webApps.get(position).getTitle().contains("Feed The Monster")
+        //         && !isAppCached(webApps.get(position).getAppId())) {
 
-        }
+        // }
 
         // Only show and animate pulse effect for Feed The Monster when not cached
         if ( webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
