@@ -56,6 +56,11 @@ public class AnimationUtil {
         float translationY = 20f * root.getResources().getDisplayMetrics().density;
 
         // Cancel any existing animations to prevent conflicts
+        Object tag = root.getTag(R.id.dropdown_animator_tag);
+        if (tag instanceof Animator) {
+            ((Animator) tag).cancel();
+            root.setTag(R.id.dropdown_animator_tag, null);
+        }
         root.animate().cancel();
         root.clearAnimation();
 
