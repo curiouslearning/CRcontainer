@@ -287,6 +287,12 @@ public class WebApp extends BaseActivity {
          */
         private void storeMonsterPhaseForLanguage(String language, int phase, int successStars, long timestamp) {
             try {
+                // Guard against null or empty language keys
+                if (language == null || language.trim().isEmpty()) {
+                    Log.w("WebApp", "Missing language key for monster phase; skipping");
+                    return;
+                }
+                
                 // Get existing map or create new one
                 String mapJson = sharedPref.getString("ftm_monster_phases_map", "{}");
                 org.json.JSONObject phasesMap = new org.json.JSONObject(mapJson);
