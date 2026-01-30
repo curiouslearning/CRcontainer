@@ -10,6 +10,7 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
         // FacebookSdk.sdkInitialize(getApplicationContext());
         FacebookSdk.setAutoInitEnabled(true);
         FacebookSdk.fullyInitialize();
@@ -24,5 +25,7 @@ public class MyApplication extends Application {
             options.setEnvironment(BuildConfig.BUILD_TYPE);
 
         });
+        // RiveInitializer is auto-initialized via AndroidManifest.xml (InitializationProvider)
+
     }
 }

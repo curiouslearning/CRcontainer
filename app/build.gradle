@@ -19,10 +19,15 @@ task printApiUrl {
 android {
     namespace 'org.curiouslearning.container'
     compileSdk 35
-
+    packagingOptions {
+        pickFirst "lib/x86/libc++_shared.so"
+        pickFirst "lib/x86_64/libc++_shared.so"
+        pickFirst "lib/armeabi-v7a/libc++_shared.so"
+        pickFirst "lib/arm64-v8a/libc++_shared.so"
+    }
     defaultConfig {
         applicationId "org.curiouslearning.container"
-        minSdk 28
+        minSdk 24
         targetSdk 35
         versionCode 60
         versionName "2.32"
@@ -34,6 +39,9 @@ android {
             annotationProcessorOptions {
                 arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
             }
+        }
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
     }
 
@@ -108,6 +116,9 @@ dependencies {
     implementation("io.sentry:sentry-android") {
         exclude group: "io.sentry", module: "sentry-android-ndk"
     }
+    implementation 'app.rive:rive-android:5.1.0'
+    // For initialization, you may want to add a dependency on Jetpack Startup
+    implementation "androidx.startup:startup-runtime:1.1.1"
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.10.3'
     testImplementation 'org.mockito:mockito-core:4.11.0'
