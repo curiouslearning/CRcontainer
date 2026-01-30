@@ -3,8 +3,6 @@ package org.curiouslearning.container;
 import android.app.Application;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
-import androidx.startup.AppInitializer;
-import app.rive.runtime.kotlin.RiveInitializer;
 
 import io.sentry.android.core.SentryAndroid;
 
@@ -27,8 +25,7 @@ public class MyApplication extends Application {
             options.setEnvironment(BuildConfig.BUILD_TYPE);
 
         });
-        AppInitializer.getInstance(this)
-                .initializeComponent(RiveInitializer.class);
+        // RiveInitializer is auto-initialized via AndroidManifest.xml (InitializationProvider)
 
     }
 }
