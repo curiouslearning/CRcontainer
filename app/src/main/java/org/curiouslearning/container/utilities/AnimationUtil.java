@@ -287,6 +287,7 @@ public class AnimationUtil {
 
     /**
      * Stops the breathing animation if it's running.
+     * Restores alpha to 1.0 to prevent dimmed appearance.
      * 
      * @param root The root view of the dropdown
      */
@@ -298,6 +299,8 @@ public class AnimationUtil {
         if (tag instanceof Animator) {
             ((Animator) tag).cancel();
             root.setTag(R.id.breathing_animator_tag, null);
+            // Restore full opacity to prevent view from appearing dimmed
+            root.setAlpha(1f);
         }
     }
 }
