@@ -4,4 +4,5 @@
     <dimen name="monster_size">160dp</dimen>
     <dimen name="monster_margin_start">12dp</dimen>
     <dimen name="monster_margin_bottom">8dp</dimen>
+    <dimen name="dropdown_menu_width">200dp</dimen>
 </resources>

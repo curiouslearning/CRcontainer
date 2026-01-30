@@ -57,6 +57,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
 
+        // Add red border to define clickable area: for debugging purposes
+        // GradientDrawable borderDrawable = new GradientDrawable();
+        // borderDrawable.setShape(GradientDrawable.RECTANGLE);
+        // borderDrawable.setStroke(4, Color.RED); // 4px red border
+        // borderDrawable.setColor(Color.TRANSPARENT);
+        // holder.appIconImage.setForeground(borderDrawable);
+
 // Apply glow ONLY for key apps
         if (webApps.get(position).getTitle().contains("Feed The Monster")
                 && !isAppCached(webApps.get(position).getAppId())) {
@@ -94,10 +101,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         //     // holder.downloadIconImage.setImageResource(R.drawable.download_image);
         //     holder.appIconImage.setColorFilter(filter);
         // } else {
-            holder.downloadIconImage.setImageResource(0);
+        holder.downloadIconImage.setImageResource(0);
         // }
 
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
+        // Make icon clickable and set click listener only on the icon to match the border area
+        holder.appIconImage.setClickable(true);
+        holder.appIconImage.setFocusable(true);
+        holder.appIconImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 audioPlayer.play(ctx, R.raw.sound_button_pressed);
@@ -117,6 +127,10 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 });
             }
         });
+
+        // Remove click listener from itemView to prevent clicks outside the icon area
+        holder.itemView.setOnClickListener(null);
+        holder.itemView.setClickable(false);
     }
 
     @Override
@@ -132,6 +146,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         holder.appIconImage.setAlpha(1f);
         holder.appIconImage.setScaleX(1f);
         holder.appIconImage.setScaleY(1f);
+
+        // Clean up click listeners
+        holder.appIconImage.setOnClickListener(null);
+        holder.appIconImage.setClickable(false);
+        holder.appIconImage.setFocusable(false);
+        holder.itemView.setOnClickListener(null);
+        holder.itemView.setClickable(false);
 
 
         // Stop and hide pulse animation when view is recycled

@@ -7,4 +7,5 @@
     <!-- RecyclerView positioning for larger screens -->
     <dimen name="recycler_view_height_large">450dp</dimen>
     <dimen name="recycler_view_margin_bottom_large">32dp</dimen>
+    <dimen name="dropdown_menu_width">300dp</dimen>
 </resources>
