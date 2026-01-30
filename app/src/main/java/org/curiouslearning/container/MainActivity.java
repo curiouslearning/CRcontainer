@@ -1116,8 +1116,13 @@ public class MainActivity extends BaseActivity {
             }
         } catch (org.json.JSONException e) {
             Log.e(TAG, "Error retrieving monster phase for language: " + language, e);
-            // Fallback to old global key
-            return prefs.getInt("ftm_monster_phase", 0);
+            // Fallback to old global key for backward compatibility
+            int oldPhase = prefs.getInt("ftm_monster_phase", -1);
+            if (oldPhase >= 0) {
+                Log.d(TAG, "Using legacy global monster phase after JSON error: " + oldPhase);
+                return oldPhase;
+            }
+            return 0;
         }
     }
 
