@@ -47,6 +47,7 @@ public class WebApp extends BaseActivity {
     ImageView goBack;
     private android.os.Handler monsterStateCheckHandler;
     private Runnable monsterStateCheckRunnable;
+    private boolean isMonsterCheckRunning;
     private boolean isFtmApp;
 
     @Override
@@ -338,24 +339,39 @@ public class WebApp extends BaseActivity {
     }
 
     /**
-     * Starts periodic checking of monster evolution state while FTM is open
+     * Starts periodic checking of monster evolution state while FTM is open.
+     * Uses a guard flag to prevent duplicate polling.
      */
     private void startPeriodicMonsterStateCheck(WebView webView) {
         if (monsterStateCheckHandler == null) {
             monsterStateCheckHandler = new android.os.Handler(android.os.Looper.getMainLooper());
         }
 
-        monsterStateCheckRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (webView != null && isFtmApp) {
-                    queryMonsterEvolutionState(webView);
-                    // Check every 5 seconds for phase updates
-                    monsterStateCheckHandler.postDelayed(this, 5000);
+        // Create runnable only once to prevent leaks
+        if (monsterStateCheckRunnable == null) {
+            monsterStateCheckRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (WebApp.this.webView != null && isFtmApp) {
+                        queryMonsterEvolutionState(WebApp.this.webView);
+                        // Check every 5 seconds for phase updates
+                        monsterStateCheckHandler.postDelayed(this, 5000);
+                    } else {
+                        // Stop if webView is gone
+                        isMonsterCheckRunning = false;
+                    }
                 }
-            }
-        };
+            };
+        }
 
+        // Prevent duplicate polling
+        if (isMonsterCheckRunning) {
+            return;
+        }
+        isMonsterCheckRunning = true;
+
+        // Remove any existing callbacks before scheduling new one
+        monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
         // Start checking after initial delay
         monsterStateCheckHandler.postDelayed(monsterStateCheckRunnable, 5000);
     }
@@ -367,13 +383,14 @@ public class WebApp extends BaseActivity {
         if (monsterStateCheckHandler != null && monsterStateCheckRunnable != null) {
             monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
         }
+        isMonsterCheckRunning = false;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         // Resume periodic state checks if FTM is open
-        if (webView != null && isFtmApp) {
+        if (webView != null && isFtmApp && !isMonsterCheckRunning) {
             startPeriodicMonsterStateCheck(webView);
         }
     }
@@ -385,6 +402,7 @@ public class WebApp extends BaseActivity {
         if (monsterStateCheckHandler != null && monsterStateCheckRunnable != null) {
             monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
         }
+        isMonsterCheckRunning = false;
     }
 
     public void setAppOrientation(String orientationType) {
