@@ -13,4 +13,6 @@
     <string name="select">...</string>
     <string name="offline_mode_icon">Offline mode indicator</string>
     <string name="offline_mode_message">You\'re currently in offline mode</string>
+    <string name="monster_animation">Monster animation</string>
+    <string name="selected">Selected</string>
 </resources>

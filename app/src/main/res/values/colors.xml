@@ -10,4 +10,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="sky_blue">#7FCDF4</color>
     <color name="transparent">#00000000</color>
+    <!-- Dropdown list: soft light purple for kid-friendly look (matches app purple theme) -->
+    <color name="dropdown_list_bg">#FFE8DDF5</color>
+    <color name="dropdown_list_border">#FFC9B0E8</color>
 </resources>

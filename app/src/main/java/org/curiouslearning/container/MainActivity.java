@@ -1,9 +1,13 @@
 package org.curiouslearning.container;
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,6 +15,7 @@ import android.os.Looper;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -45,6 +50,7 @@ import org.curiouslearning.container.utilities.SlackUtils;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -54,14 +60,21 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import android.util.Log;
 import android.content.Intent;
 import android.widget.TextView;
+
 import androidx.core.view.GestureDetectorCompat;
+import app.rive.runtime.kotlin.RiveAnimationView;
+import app.rive.runtime.kotlin.core.Alignment;
+import app.rive.runtime.kotlin.core.Fit;
+import app.rive.runtime.kotlin.core.Loop;
 import io.sentry.Sentry;
 
 public class MainActivity extends BaseActivity {
@@ -96,7 +109,7 @@ public class MainActivity extends BaseActivity {
     private long lastTapTime = 0;
     private static final long TAP_TIMEOUT = 3000; // Reset tap count after 3 seconds
     private static final int REQUIRED_TAPS = 8;
-
+    private ObjectAnimator breathingAnimator;
     private Handler debugOverlayHandler = new Handler(Looper.getMainLooper());
     private static final long DEBUG_OVERLAY_UPDATE_INTERVAL = 1000; // 1 second
 
@@ -116,6 +129,24 @@ public class MainActivity extends BaseActivity {
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        RiveAnimationView monsterView = findViewById(R.id.monsterView);
+        // Update monster animation based on FTM state
+        updateMonsterAnimation(monsterView);
+
+        View lightOverlay = findViewById(R.id.light_overlay);
+        addBreathingEffect(lightOverlay);
+
+        ImageView sky = findViewById(R.id.imageView);
+        ImageView foreground = findViewById(R.id.foreground_foliage);
+
+        applyCartoonEffect(sky);
+        if (foreground != null) {
+            applyCartoonEffect(foreground);
+            addWindEffect(foreground);
+        }
+        // applyCartoonEffect(hills);
+        // applyCartoonEffect(foreground);
+
         dialog = new Dialog(this);
         loadingIndicator = findViewById(R.id.loadingIndicator);
         loadingIndicator.setVisibility(View.GONE);
@@ -247,6 +278,8 @@ public class MainActivity extends BaseActivity {
         settingsButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // Add spinning animation to settings gear
+                spinSettingsGear(view);
                 AnimationUtil.scaleButton(view, new Runnable() {
                     @Override
                     public void run() {
@@ -283,6 +316,122 @@ public class MainActivity extends BaseActivity {
             }
         });
     }
+
+    private void addBreathingEffect(View view) {
+        breathingAnimator = ObjectAnimator.ofFloat(
+                view,
+                "alpha",
+                0.06f,
+                0.1f);
+        breathingAnimator.setDuration(6000);
+        breathingAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        breathingAnimator.setRepeatMode(ValueAnimator.REVERSE);
+        breathingAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        breathingAnimator.start();
+    }
+
+    /**
+     * Adds a subtle wind/sway effect to the foliage layer
+     */
+    private void addWindEffect(ImageView foliageView) {
+        // Create a subtle horizontal translation animation to simulate wind
+        ObjectAnimator windAnimatorX = ObjectAnimator.ofFloat(
+                foliageView,
+                "translationX",
+                -8f, // Slight left movement
+                8f // Slight right movement
+        );
+        windAnimatorX.setDuration(4000); // Slow, gentle movement
+        windAnimatorX.setRepeatCount(ValueAnimator.INFINITE);
+        windAnimatorX.setRepeatMode(ValueAnimator.REVERSE);
+        windAnimatorX.setInterpolator(new AccelerateDecelerateInterpolator());
+
+        // Add slight rotation for more natural wind effect
+        ObjectAnimator windAnimatorRotation = ObjectAnimator.ofFloat(
+                foliageView,
+                "rotation",
+                -1.5f, // Slight counter-clockwise
+                1.5f // Slight clockwise
+        );
+        windAnimatorRotation.setDuration(5000); // Slightly different duration for organic feel
+        windAnimatorRotation.setRepeatCount(ValueAnimator.INFINITE);
+        windAnimatorRotation.setRepeatMode(ValueAnimator.REVERSE);
+        windAnimatorRotation.setInterpolator(new AccelerateDecelerateInterpolator());
+
+        // Start both animations
+        windAnimatorX.start();
+        windAnimatorRotation.start();
+
+        // Store animators for cleanup if needed
+        foliageView.setTag(R.id.wind_animator_x_tag, windAnimatorX);
+        foliageView.setTag(R.id.wind_animator_rotation_tag, windAnimatorRotation);
+    }
+
+    /**
+     * Spins the settings gear when tapped
+     */
+    private void spinSettingsGear(View settingsButton) {
+        ObjectAnimator spinAnimator = ObjectAnimator.ofFloat(
+                settingsButton,
+                "rotation",
+                0f,
+                360f);
+        spinAnimator.setDuration(400); // Quick spin
+        spinAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        spinAnimator.start();
+    }
+
+    /**
+     * Pauses wind effect animations
+     */
+    private void pauseWindEffect(ImageView foliageView) {
+        Object tagX = foliageView.getTag(R.id.wind_animator_x_tag);
+        Object tagRotation = foliageView.getTag(R.id.wind_animator_rotation_tag);
+
+        if (tagX instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagX).pause();
+        }
+        if (tagRotation instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagRotation).pause();
+        }
+    }
+
+    /**
+     * Resumes wind effect animations
+     */
+    private void resumeWindEffect(ImageView foliageView) {
+        Object tagX = foliageView.getTag(R.id.wind_animator_x_tag);
+        Object tagRotation = foliageView.getTag(R.id.wind_animator_rotation_tag);
+
+        if (tagX instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagX).resume();
+        }
+        if (tagRotation instanceof ObjectAnimator) {
+            ((ObjectAnimator) tagRotation).resume();
+        }
+    }
+
+    private void applyCartoonEffect(ImageView imageView) {
+
+        ColorMatrix colorMatrix = new ColorMatrix();
+
+        // 1️⃣ Increase saturation (cartoon look)
+        colorMatrix.setSaturation(1.2f);
+
+        // 2️⃣ Slight brightness boost
+        ColorMatrix brightnessMatrix = new ColorMatrix(new float[] {
+                1, 0, 0, 0, 20,
+                0, 1, 0, 0, 20,
+                0, 0, 1, 0, 20,
+                0, 0, 0, 1, 0
+        });
+
+        colorMatrix.postConcat(brightnessMatrix);
+
+        imageView.setColorFilter(
+                new ColorMatrixColorFilter(colorMatrix));
+    }
+
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density);
     }
@@ -375,11 +524,11 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    public static String convertEpochToDate(long epochTimeMillis) {
-        Instant instant = Instant.ofEpochMilli(epochTimeMillis);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy hh:mm a")
-                .withZone(ZoneId.systemDefault());
-        return formatter.format(instant);
+    public static String convertEpochToDate(long epochMillis) {
+        Date date = new Date(epochMillis);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.getDefault());
+        sdf.setTimeZone(TimeZone.getDefault());
+        return sdf.format(date);
     }
 
     @Override
@@ -392,6 +541,20 @@ public class MainActivity extends BaseActivity {
             updateDebugOverlay();
             debugOverlayHandler.post(debugOverlayUpdater);
         }
+        if (breathingAnimator != null)
+            breathingAnimator.resume();
+
+        // Resume wind animations
+        ImageView foliage = findViewById(R.id.foreground_foliage);
+        if (foliage != null) {
+            resumeWindEffect(foliage);
+        }
+
+        // Refresh monster animation in case it was updated while WebApp was open
+        RiveAnimationView monsterView = findViewById(R.id.monsterView);
+        if (monsterView != null) {
+            updateMonsterAnimation(monsterView);
+        }
     }
 
     @Override
@@ -399,6 +562,14 @@ public class MainActivity extends BaseActivity {
         super.onPause();
         // Stop periodic updates of debug overlay
         debugOverlayHandler.removeCallbacks(debugOverlayUpdater);
+        if (breathingAnimator != null)
+            breathingAnimator.pause();
+
+        // Pause wind animations
+        ImageView foliage = findViewById(R.id.foreground_foliage);
+        if (foliage != null) {
+            pauseWindEffect(foliage);
+        }
     }
 
     private String generatePseudoId() {
@@ -468,6 +639,23 @@ public class MainActivity extends BaseActivity {
         if (!dialog.isShowing()) {
             dialog.setContentView(R.layout.language_popup);
 
+            // Get the root view of the dialog content for animations
+            // The root ConstraintLayout from language_popup.xml
+            // After setContentView, the root is available via window decor view
+            View dialogRoot = null;
+            if (dialog.getWindow() != null) {
+                View decorView = dialog.getWindow().getDecorView();
+                if (decorView != null) {
+                    View contentView = decorView.findViewById(android.R.id.content);
+                    if (contentView instanceof android.view.ViewGroup) {
+                        android.view.ViewGroup contentGroup = (android.view.ViewGroup) contentView;
+                        if (contentGroup.getChildCount() > 0) {
+                            dialogRoot = contentGroup.getChildAt(0); // This is the root ConstraintLayout
+                        }
+                    }
+                }
+            }
+
             dialog.setCanceledOnTouchOutside(false);
             dialog.getWindow().setBackgroundDrawable(null);
 
@@ -477,10 +665,14 @@ public class MainActivity extends BaseActivity {
             ImageView closeButton = dialog.findViewById(R.id.setting_close);
             TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
             AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
-            autoCompleteTextView.setDropDownBackgroundResource(android.R.color.white);
-            ArrayAdapter<String> adapter = new ArrayAdapter<String>(dialog.getContext(),
-                    android.R.layout.simple_dropdown_item_1line, new ArrayList<String>());
-            autoCompleteTextView.setAdapter(adapter);
+
+            // Ensure TextInputLayout has transparent background (Material Design can
+            // override XML)
+            textBox.setBackground(null);
+            textBox.setBoxBackgroundMode(com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_NONE);
+
+            autoCompleteTextView.setDropDownBackgroundResource(R.drawable.dropdown_background_transparent);
+            final org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter[] adapterRef = new org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter[1];
 
             homeViewModal.getAllWebApps().observe(this, new Observer<List<WebApp>>() {
                 @Override
@@ -494,34 +686,98 @@ public class MainActivity extends BaseActivity {
 
                     if (!distinctLanguageList.isEmpty()) {
                         Log.d(TAG, "showLanguagePopup: Distinct languages: " + distinctLanguageList);
-                        adapter.clear();
-                        adapter.addAll(distinctLanguageList);
-                        adapter.notifyDataSetChanged();
-                        int standardizedItemHeight = 50;
-                        int itemCount = adapter.getCount();
-                        int dropdownHeight = standardizedItemHeight * itemCount;
-                        int maxHeight = getResources().getDisplayMetrics().heightPixels / 2;
-                        int adjustedDropdownHeight = Math.min(dropdownHeight, maxHeight);
-                        autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
 
                         selectedLanguage = prefs.getString("selectedLanguage", "");
+                        adapterRef[0] = new org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter(
+                                dialog.getContext(), distinctLanguageList, languagesEnglishNameMap);
+                        adapterRef[0].setSelectedLanguage(selectedLanguage);
+                        autoCompleteTextView.setAdapter(adapterRef[0]);
+
+                        // Adjust dropdown height for larger pill-shaped items (64dp min + padding)
+                        float density = getResources().getDisplayMetrics().density;
+                        // Approx item height
+                        int itemHeightPx = (int) (80 * density);
+                        int itemCount = adapterRef[0].getCount();
+                        int contentHeight = itemHeightPx * itemCount;
+
+// Screen metrics
+                        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+
+// Reserve bottom space (20% of screen)
+                        int bottomReservedSpace = (int) (screenHeight * 0.10f);
+
+// Get trigger location on screen
+                        int[] location = new int[2];
+                        autoCompleteTextView.getLocationOnScreen(location);
+                        int triggerBottomY = location[1] + autoCompleteTextView.getHeight();
+
+// Available space below trigger
+                        int availableHeightBelow =
+                                screenHeight - triggerBottomY - bottomReservedSpace;
+
+// Final dropdown height
+                        int adjustedDropdownHeight =
+                                Math.min(contentHeight, availableHeightBelow);
+
+// Safety fallback
+                        if (adjustedDropdownHeight < itemHeightPx * 2) {
+                            adjustedDropdownHeight = itemHeightPx * 2;
+                        }
+
+                        autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
                         if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
-                            textBox.setHint(languagesEnglishNameMap.get(selectedLanguage));
+                            String displayName = languagesEnglishNameMap.get(selectedLanguage);
+//                            textBox.setHint(displayName);
+                            autoCompleteTextView.setText(displayName, false);
                         }
 
                         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                                selectedLanguage = languagesEnglishNameMap
-                                        .get((String) parent.getItemAtPosition(position));
+                                String selectedDisplayName = (String) parent.getItemAtPosition(position);
+                                selectedLanguage = languagesEnglishNameMap.get(selectedDisplayName);
+
+                                // Update adapter to highlight selected item
+                                if (adapterRef[0] != null) {
+                                    adapterRef[0].setSelectedLanguage(selectedLanguage);
+                                }
+
+                                // Update hint and text to show selected language
+//                                textBox.setHint(selectedDisplayName);
+                                autoCompleteTextView.setText(selectedDisplayName, false);
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
                                 AnalyticsUtils.logLanguageSelectEvent(view.getContext(), "language_selected", pseudoId,
                                         selectedLanguage, manifestVrsn, "false", "");
 
-                                dialog.dismiss();
-                                loadApps(selectedLanguage);
+                                // Animate dropdown exit before dismissing
+                                View dialogRootForDismiss = null;
+                                if (dialog.getWindow() != null) {
+                                    View decorView = dialog.getWindow().getDecorView();
+                                    if (decorView != null) {
+                                        View contentView = decorView.findViewById(android.R.id.content);
+                                        if (contentView instanceof android.view.ViewGroup) {
+                                            android.view.ViewGroup contentGroup = (android.view.ViewGroup) contentView;
+                                            if (contentGroup.getChildCount() > 0) {
+                                                dialogRootForDismiss = contentGroup.getChildAt(0);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (dialogRootForDismiss != null) {
+                                    AnimationUtil.animateDropdownClose(dialogRootForDismiss, new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            dialog.dismiss();
+                                            loadApps(selectedLanguage);
+                                        }
+                                    });
+                                } else {
+                                    dialog.dismiss();
+                                    loadApps(selectedLanguage);
+                                }
                             }
                         });
                     }
@@ -536,33 +792,59 @@ public class MainActivity extends BaseActivity {
                 });
             }
 
+            final View finalDialogRoot = dialogRoot; // Make final for use in inner class
+
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
-                    AnimationUtil.scaleButton(v, new Runnable() {
+                    textView.setVisibility(View.GONE);
+
+                    // Animate close button, then trigger dropdown exit animation
+                    AnimationUtil.animateCloseButton(v, new Runnable() {
                         @Override
                         public void run() {
-                            textView.setVisibility(View.GONE);
-                            dialog.dismiss();
+                            // After close button animation, animate dropdown exit
+                            if (finalDialogRoot != null) {
+                                AnimationUtil.animateDropdownClose(finalDialogRoot, new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        dialog.dismiss();
+                                    }
+                                });
+                            } else {
+                                dialog.dismiss();
+                            }
                         }
                     });
-
                 }
-
             });
+
             try {
-            if (isFinishing() ||  isDestroyed()) {
-                Log.w(TAG, "showLanguagePopup: Activity is finishing or destroyed, not showing dialog.");
-                return;
-            }
-            dialog.show();
-        } catch (Exception e) {
+                if (isFinishing() || isDestroyed()) {
+                    Log.w(TAG, "showLanguagePopup: Activity is finishing or destroyed, not showing dialog.");
+                    return;
+                }
+                dialog.show();
+
+                // Apply entrance animation after dialog is shown
+                final View finalDialogRootForShow = dialogRoot; // Make final for use in post
+                if (finalDialogRootForShow != null) {
+                    // Use post to ensure dialog is fully laid out before animating
+                    finalDialogRootForShow.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            AnimationUtil.animateDropdownOpen(finalDialogRootForShow);
+                            // Optionally add subtle breathing animation
+                            AnimationUtil.addBreathingAnimation(finalDialogRootForShow);
+                        }
+                    });
+                }
+            } catch (Exception e) {
                 FirebaseCrashlytics.getInstance().log("showLanguagePopup: Failed to show dialog");
                 FirebaseCrashlytics.getInstance().recordException(
-                        new RuntimeException("showLanguagePopup: Failed to show dialog", e)
-                );
-            Log.e(TAG, "showLanguagePopup: Failed to show dialog", e);
-        }
+                        new RuntimeException("showLanguagePopup: Failed to show dialog", e));
+                Log.e(TAG, "showLanguagePopup: Failed to show dialog", e);
+            }
         }
     }
 
@@ -668,6 +950,12 @@ public class MainActivity extends BaseActivity {
         editor.apply();
         Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
         updateDebugOverlay(); // Update overlay when language changes
+
+        // Update monster animation when language changes
+        RiveAnimationView monsterView = findViewById(R.id.monsterView);
+        if (monsterView != null) {
+            updateMonsterAnimation(monsterView);
+        }
     }
 
     private void cacheManifestVersion(String versionNumber) {
@@ -688,7 +976,7 @@ public class MainActivity extends BaseActivity {
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         if (offlineOverlay != null) {
             // Don't change visibility here, let it be controlled by the trigger button
-            
+
             // Initialize close button
             ImageButton closeButton = offlineOverlay.findViewById(R.id.debug_overlay_close);
             if (closeButton != null) {
@@ -768,6 +1056,158 @@ public class MainActivity extends BaseActivity {
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
                 "started_in_offline_mode", prefs.getString("pseudoId", ""));
         updateDebugOverlay();
+    }
+
+    /**
+     * Updates the monster animation based on FTM monster phase for the current
+     * language.
+     * Shows egg monster if FTM is not downloaded, otherwise shows phase-appropriate
+     * monster.
+     */
+    private void updateMonsterAnimation(RiveAnimationView monsterView) {
+        // Check if FTM is downloaded by checking if any FTM app is cached
+        boolean isFtmDownloaded = isFtmDownloaded();
+
+        if (!isFtmDownloaded) {
+            // Show egg monster if FTM is not downloaded
+            loadMonsterAnimation(monsterView, 0);
+            Log.d(TAG, "updateMonsterAnimation: FTM not downloaded, showing egg monster");
+            return;
+        }
+
+        // Get stored monster phase for the current selected language
+        int monsterPhase = getMonsterPhaseForLanguage(selectedLanguage);
+        loadMonsterAnimation(monsterView, monsterPhase);
+        Log.d(TAG,
+                "updateMonsterAnimation: Showing monster phase " + monsterPhase + " for language: " + selectedLanguage);
+    }
+
+    /**
+     * Retrieves monster phase for a specific language from the stored map
+     * 
+     * @param language The language name (English name)
+     * @return Monster phase (0-3), or 0 if not found
+     */
+    private int getMonsterPhaseForLanguage(String language) {
+        if (language == null || language.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            // Get the phases map
+            String mapJson = prefs.getString("ftm_monster_phases_map", "{}");
+            org.json.JSONObject phasesMap = new org.json.JSONObject(mapJson);
+
+            // Check if we have data for this language
+            if (phasesMap.has(language)) {
+                org.json.JSONObject languageData = phasesMap.getJSONObject(language);
+                int phase = languageData.optInt("monsterPhase", 0);
+                Log.d(TAG, "Found monster phase " + phase + " for language: " + language);
+                return phase;
+            } else {
+                Log.d(TAG, "No monster phase data found for language: " + language);
+                // Fallback to old global key for backward compatibility
+                int oldPhase = prefs.getInt("ftm_monster_phase", -1);
+                if (oldPhase >= 0) {
+                    Log.d(TAG, "Using legacy global monster phase: " + oldPhase);
+                    return oldPhase;
+                }
+                return 0;
+            }
+        } catch (org.json.JSONException e) {
+            Log.e(TAG, "Error retrieving monster phase for language: " + language, e);
+            // Fallback to old global key for backward compatibility
+            int oldPhase = prefs.getInt("ftm_monster_phase", -1);
+            if (oldPhase >= 0) {
+                Log.d(TAG, "Using legacy global monster phase after JSON error: " + oldPhase);
+                return oldPhase;
+            }
+            return 0;
+        }
+    }
+
+    /**
+     * Checks if Feed the Monster is downloaded by checking cache status
+     */
+    private boolean isFtmDownloaded() {
+        // First check if we have the explicit flag
+        if (prefs.getBoolean("ftm_downloaded", false)) {
+            return true;
+        }
+
+        // Check if we have stored monster phase map (indicates FTM was used before)
+        String mapJson = prefs.getString("ftm_monster_phases_map", "{}");
+        if (!mapJson.equals("{}")) {
+            try {
+                org.json.JSONObject phasesMap = new org.json.JSONObject(mapJson);
+                if (phasesMap.length() > 0) {
+                    return true;
+                }
+            } catch (org.json.JSONException e) {
+                // Ignore, fall through to other checks
+            }
+        }
+
+        // Check legacy global phase for backward compatibility
+        int storedPhase = prefs.getInt("ftm_monster_phase", -1);
+        if (storedPhase >= 0) {
+            return true;
+        }
+
+        // Check if any FTM app is cached by checking app list
+        if (homeViewModal != null && apps != null && apps.webApps != null) {
+            for (WebApp webApp : apps.webApps) {
+                if (webApp.getTitle() != null && webApp.getTitle().contains("Feed The Monster")) {
+                    String appId = String.valueOf(webApp.getAppId());
+                    boolean isCached = prefs.getBoolean(appId, false);
+                    if (isCached) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Loads the appropriate Rive animation based on monster phase
+     * Phase 0: Egg
+     * Phase 1: Hatched (≥12 stars)
+     * Phase 2: Young (≥38 stars)
+     * Phase 3: Adult (≥63 stars)
+     */
+    private void loadMonsterAnimation(RiveAnimationView monsterView, int phase) {
+        int riveResource;
+
+        switch (phase) {
+            case 0:
+                riveResource = R.raw.eggmonster;
+                break;
+            case 1:
+                riveResource = R.raw.hatchedmonster;
+                break;
+            case 2:
+                riveResource = R.raw.youngmonster;
+                break;
+            case 3:
+                riveResource = R.raw.adultmonster;
+                break;
+            default:
+                riveResource = R.raw.eggmonster;
+                break;
+        }
+
+        monsterView.setRiveResource(
+                riveResource,
+                null, // artboard (null = default)
+                null, // animation (null = first)
+                null, // state machine
+                true, // autoplay
+                Fit.CONTAIN, // fit
+                Alignment.CENTER, // alignment
+                Loop.LOOP // loop mode
+        );
     }
 
 }

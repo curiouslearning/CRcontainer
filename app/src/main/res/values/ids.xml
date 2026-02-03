@@ -1,0 +1,7 @@
+<resources>
+    <item name="glow_animator_tag" type="id"/>
+    <item name="wind_animator_x_tag" type="id"/>
+    <item name="wind_animator_rotation_tag" type="id"/>
+    <item name="dropdown_animator_tag" type="id"/>
+    <item name="breathing_animator_tag" type="id"/>
+</resources>
