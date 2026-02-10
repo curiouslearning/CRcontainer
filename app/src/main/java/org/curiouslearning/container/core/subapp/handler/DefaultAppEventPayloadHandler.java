@@ -28,27 +28,18 @@ public class DefaultAppEventPayloadHandler
                         " timestamp=" + payload.timestamp
         );
 
-        // Only store assessment payloads
-        if (isAssessmentPayload(payload)) {
-            storeAssessmentPayload(payload);
-        } else {
-            Log.d(TAG, "Not an assessment payload — skipping Firestore store");
-        }
+        storeSubAppPayload(payload);
     }
 
-    private boolean isAssessmentPayload(AppEventPayload payload) {
-        String appId = payload.app_id != null ? payload.app_id : "";
-        return appId.equals("letter_sounds") || appId.equals("sight_words");
-    }
-
-    private void storeAssessmentPayload(@NonNull AppEventPayload payload) {
+    private void storeSubAppPayload(@NonNull AppEventPayload payload) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
+        // Minimal required fields
         if (payload.cr_user_id == null ||
                 payload.app_id == null ||
                 payload.timestamp == null) {
 
-            Log.e(TAG, "Invalid assessment payload — missing required fields");
+            Log.e(TAG, "Invalid payload — missing required fields");
             return;
         }
 
@@ -74,7 +65,7 @@ public class DefaultAppEventPayloadHandler
             record.put("options", payload.options);
         }
 
-        Log.d(TAG, "Checking for existing summary record | docId=" + documentId);
+        Log.d(TAG, "Checking for existing sub-app payload | docId=" + documentId);
 
         // Idempotent write
         docRef.get()
@@ -82,7 +73,7 @@ public class DefaultAppEventPayloadHandler
                     if (snapshot.exists()) {
                         Log.d(
                                 TAG,
-                                "Duplicate assessment ignored | docId=" + documentId
+                                "Duplicate payload ignored | docId=" + documentId
                         );
                         return;
                     }
@@ -91,16 +82,16 @@ public class DefaultAppEventPayloadHandler
                             .addOnSuccessListener(aVoid ->
                                     Log.d(
                                             TAG,
-                                            "Assessment stored successfully | docId=" + documentId
+                                            "Sub-app payload stored successfully | docId=" + documentId
                                     ))
                             .addOnFailureListener(e ->
                                     Log.e(
                                             TAG,
-                                            "Failed to store assessment payload",
+                                            "Failed to store sub-app payload",
                                             e
                                     ));
                 })
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed to check existing summary record", e));
+                        Log.e(TAG, "Failed to check existing sub-app payload", e));
     }
 }
