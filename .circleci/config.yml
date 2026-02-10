@@ -34,12 +34,12 @@ jobs:
             echo $JSON_KEY_DATA | base64 --decode > app/fastlane/service-account.json
 
       - run:
-          name: Inject Slack Webhook URL
+          name: Inject AES Key for Slack Decryption
           command: |
             if git log -1 --pretty=%B | grep -qi "release" && { [ "$CIRCLE_BRANCH" = "develop" ] || [ "$CIRCLE_BRANCH" = "main" ]; }; then
               mkdir -p app/src/main/assets
-              echo "SLACK_WEBHOOK_URL=$MARKETING_SLACK_URL" > app/src/main/assets/config.properties
-              echo "✅ Slack webhook URL added."
+              echo "SLACK_AES_KEY=$SLACK_AES_KEY" > app/src/main/assets/config.properties
+              echo "🔐 AES key injected (encrypted webhook remains inside APK)"
             else
               echo "⚠️ Skipping Slack webhook URL injection (without release commit)."
             fi
@@ -71,13 +71,7 @@ jobs:
             cd app
             bundle exec fastlane deploy
 
-      # 🟣 Finalize the Sentry release
-      - run:
-          name: Finalize Sentry Release
-          command: |
-            VERSION_NAME=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
-            sentry-cli releases finalize "$VERSION_NAME"
-            echo "✅ Sentry release finalized for version: $VERSION_NAME"
+      
 
 workflows:
   deploy_on_branch:

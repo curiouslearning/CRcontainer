@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     tools:context=".MainActivity">
+
 
     <ImageView
         android:id="@+id/imageView"
@@ -14,7 +16,7 @@
         android:adjustViewBounds="true"
         android:contentDescription="@string/background"
         android:scaleType="fitXY"
-        android:src="@drawable/sky_background"
+        android:src="@drawable/background"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
@@ -22,26 +24,28 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0" />
 
-    <ImageView
-        android:id="@+id/imageView4"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:contentDescription="@string/hill"
-        android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.201"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/imageView"
-        app:layout_constraintVertical_bias="0.829"
-        app:srcCompat="@drawable/hill" />
+    <!--    <ImageView-->
+    <!--        android:id="@+id/imageView4"-->
+    <!--        android:layout_width="0dp"-->
+    <!--        android:layout_height="0dp"-->
+    <!--        android:contentDescription="@string/hill"-->
+    <!--        android:scaleType="centerCrop"-->
+    <!--        app:layout_constraintBottom_toBottomOf="parent"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        app:layout_constraintHorizontal_bias="0.201"-->
+    <!--        app:layout_constraintStart_toStartOf="parent"-->
+    <!--        app:layout_constraintTop_toTopOf="@+id/imageView"-->
+    <!--        app:layout_constraintVertical_bias="0.829"-->
+    <!--        app:srcCompat="@drawable/hill" />-->
 
     <ImageView
-        android:id="@+id/imageView6"
+        android:id="@+id/foreground_foliage"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:contentDescription="@string/foreground"
         android:scaleType="fitXY"
+        android:scaleX="1.2"
+        android:scaleY="1.06"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.201"
@@ -49,6 +53,22 @@
         app:layout_constraintTop_toTopOf="@+id/imageView"
         app:layout_constraintVertical_bias="0.829"
         app:srcCompat="@drawable/foreground_foliage" />
+    <View
+        android:id="@+id/light_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/soft_light_overlay"
+        android:alpha="0.08"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/cartoon_vignette"
+        android:alpha="0.05" />
+
 
     <ProgressBar
         android:id="@+id/loadingIndicator"
@@ -56,21 +76,29 @@
         android:layout_height="300dp"
         android:layout_marginTop="250dp"
         android:layout_marginBottom="120dp"
-        app:layout_constraintBottom_toBottomOf="@+id/imageView6"
         app:layout_constraintTop_toTopOf="@+id/imageView"
         tools:layout_editor_absoluteX="-1dp"
         android:layout_centerInParent="true" />
+    <app.rive.runtime.kotlin.RiveAnimationView
+        android:id="@+id/monsterView"
+        android:layout_width="@dimen/monster_size"
+        android:layout_height="@dimen/monster_size"
+        android:layout_marginStart="@dimen/monster_margin_start"
+        android:layout_marginBottom="@dimen/monster_margin_bottom"
+        android:contentDescription="@string/monster_animation"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintDimensionRatio="1:1" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycleView"
         android:layout_width="match_parent"
         android:layout_height="350dp"
-        android:layout_marginTop="250dp"
+        android:layout_marginTop="160dp"
         android:layout_marginBottom="131dp"
-        app:layout_constraintBottom_toBottomOf="@+id/imageView6"
         app:layout_constraintTop_toTopOf="@+id/imageView"
         tools:layout_editor_absoluteX="-1dp"
-        />
+    />
 
     <Button
         android:id="@+id/settings"
@@ -82,6 +110,7 @@
         android:padding="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
 
     <include
         android:id="@+id/offline_mode_overlay"
@@ -99,5 +128,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

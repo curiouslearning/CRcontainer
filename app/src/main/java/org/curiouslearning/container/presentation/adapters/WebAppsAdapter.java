@@ -1,6 +1,8 @@
 package org.curiouslearning.container.presentation.adapters;
 
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -54,8 +56,24 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
 
         ImageLoader.loadWebAppIcon(ctx, webApps.get(position).getAppIconUrl(), holder.appIconImage);
         holder.appIconImage.clearColorFilter();
-        holder.pulsatorLayout.stopAnimation();
+
+        // Add red border to define clickable area: for debugging purposes
+        // GradientDrawable borderDrawable = new GradientDrawable();
+        // borderDrawable.setShape(GradientDrawable.RECTANGLE);
+        // borderDrawable.setStroke(4, Color.RED); // 4px red border
+        // borderDrawable.setColor(Color.TRANSPARENT);
+        // holder.appIconImage.setForeground(borderDrawable);
+
+        // Apply glow ONLY for key apps
+        // if (webApps.get(position).getTitle().contains("Feed The Monster")
+        //         && !isAppCached(webApps.get(position).getAppId())) {
+
+        // }
+
+        // Only show and animate pulse effect for Feed The Monster when not cached
         if ( webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
+            // Make pulsator visible for FTM
+            holder.pulsatorLayout.setVisibility(View.VISIBLE);
             if(!isAnimated){
                 holder.pulsatorLayout.startAnimation();
                 SharedPreferences.Editor editor = prefs.edit();
@@ -70,10 +88,10 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                     }
                 }, 5000);
             }
-
-
         }else{
+            // Hide and stop pulse animation for all other apps
             holder.pulsatorLayout.stopAnimation();
+            holder.pulsatorLayout.setVisibility(View.GONE);
         }
 
         // if (!isAppCached(webApps.get(position).getAppId())) {
@@ -83,10 +101,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         //     // holder.downloadIconImage.setImageResource(R.drawable.download_image);
         //     holder.appIconImage.setColorFilter(filter);
         // } else {
-            holder.downloadIconImage.setImageResource(0);
+        holder.downloadIconImage.setImageResource(0);
         // }
 
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
+        // Make icon clickable and set click listener only on the icon to match the border area
+        holder.appIconImage.setClickable(true);
+        holder.appIconImage.setFocusable(true);
+        holder.appIconImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 audioPlayer.play(ctx, R.raw.sound_button_pressed);
@@ -106,11 +127,37 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 });
             }
         });
+
+        // Remove click listener from itemView to prevent clicks outside the icon area
+        holder.itemView.setOnClickListener(null);
+        holder.itemView.setClickable(false);
     }
 
     @Override
     public int getItemCount() {
         return webApps.size();
+    }
+    @Override
+    public void onViewRecycled(@NonNull ViewHolder holder) {
+        super.onViewRecycled(holder);
+
+        holder.appIconImage.animate().cancel();
+        holder.appIconImage.clearAnimation();
+        holder.appIconImage.setAlpha(1f);
+        holder.appIconImage.setScaleX(1f);
+        holder.appIconImage.setScaleY(1f);
+
+        // Clean up click listeners
+        holder.appIconImage.setOnClickListener(null);
+        holder.appIconImage.setClickable(false);
+        holder.appIconImage.setFocusable(false);
+        holder.itemView.setOnClickListener(null);
+        holder.itemView.setClickable(false);
+
+
+        // Stop and hide pulse animation when view is recycled
+        holder.pulsatorLayout.stopAnimation();
+        holder.pulsatorLayout.setVisibility(View.GONE);
     }
 
     public boolean isAppCached(int appId) {
@@ -126,6 +173,13 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
             appIconImage = (ImageView) itemView.findViewById(R.id.app_image);
             downloadIconImage = (ImageView) itemView.findViewById(R.id.download_image);
             pulsatorLayout = itemView.findViewById(R.id.pulsing_view);
+
         }
+
+
+
     }
+
+
+
 }
