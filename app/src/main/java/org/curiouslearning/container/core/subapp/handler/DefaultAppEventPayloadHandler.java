@@ -16,7 +16,6 @@ public class DefaultAppEventPayloadHandler
         implements AppEventPayloadHandler {
 
     private static final String TAG = "AppEventHandler";
-    private static final String COLLECTION_SUMMARY_DATA = "posts";
 
     @Override
     public void handle(AppEventPayload payload) {
@@ -37,7 +36,8 @@ public class DefaultAppEventPayloadHandler
         // Minimal required fields
         if (payload.cr_user_id == null ||
                 payload.app_id == null ||
-                payload.timestamp == null) {
+                payload.timestamp == null ||
+                payload.collection == null) {
 
             Log.e(TAG, "Invalid payload — missing required fields");
             return;
@@ -50,7 +50,7 @@ public class DefaultAppEventPayloadHandler
                         payload.timestamp;
 
         DocumentReference docRef = db
-                .collection(COLLECTION_SUMMARY_DATA)
+                .collection(payload.collection)   // ✅ use payload's collection
                 .document(documentId);
 
         // Build Firestore record
@@ -71,25 +71,15 @@ public class DefaultAppEventPayloadHandler
         docRef.get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot.exists()) {
-                        Log.d(
-                                TAG,
-                                "Duplicate payload ignored | docId=" + documentId
-                        );
+                        Log.d(TAG, "Duplicate payload ignored | docId=" + documentId);
                         return;
                     }
 
                     docRef.set(record)
                             .addOnSuccessListener(aVoid ->
-                                    Log.d(
-                                            TAG,
-                                            "Sub-app payload stored successfully | docId=" + documentId
-                                    ))
+                                    Log.d(TAG, "Sub-app payload stored | docId=" + documentId))
                             .addOnFailureListener(e ->
-                                    Log.e(
-                                            TAG,
-                                            "Failed to store sub-app payload",
-                                            e
-                                    ));
+                                    Log.e(TAG, "Failed to store sub-app payload", e));
                 })
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed to check existing sub-app payload", e));
