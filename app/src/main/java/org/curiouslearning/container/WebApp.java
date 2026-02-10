@@ -16,14 +16,22 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 import androidx.appcompat.app.AlertDialog;
-
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import io.sentry.Sentry;
+
+import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
+import org.curiouslearning.container.core.subapp.validation.AppEventPayloadValidator;
+import org.curiouslearning.container.core.subapp.validation.ValidationResult;
+import org.curiouslearning.container.core.subapp.handler.AppEventPayloadHandler;
+import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadHandler;
+
 
 public class WebApp extends BaseActivity {
 
@@ -215,6 +223,11 @@ public class WebApp extends BaseActivity {
 
     public class WebAppInterface {
         private Context mContext;
+        private final Gson gson = new Gson();
+        private final AppEventPayloadValidator validator =
+                new AppEventPayloadValidator();
+        private final AppEventPayloadHandler handler =
+                new DefaultAppEventPayloadHandler();
 
         WebAppInterface(Context context) {
             mContext = context;
@@ -251,6 +264,34 @@ public class WebApp extends BaseActivity {
         }
 
         @JavascriptInterface
+        public void logMessage(String payloadJson) {
+
+            try {
+                if (payloadJson == null || payloadJson.trim().isEmpty()) {
+                    Log.e("WebApp", "Rejected payload: empty JSON");
+                    return;
+                }
+
+                AppEventPayload payload =
+                        gson.fromJson(payloadJson, AppEventPayload.class);
+
+                ValidationResult result = validator.validate(payload);
+
+                if (!result.isValid) {
+                    Log.e("WebApp",
+                            "Payload rejected: " + result.errorMessage);
+                    return;
+                }
+
+                handler.handle(payload);
+
+            } catch (JsonSyntaxException e) {
+                Log.e("WebApp", "Invalid JSON payload", e);
+            } catch (Exception e) {
+                Log.e("WebApp", "Unexpected error handling payload", e);
+            }
+        }
+
         public void onMonsterEvolutionStateReceived(String jsonState) {
             Log.d("WebApp", "Monster evolution state received: " + jsonState);
 
