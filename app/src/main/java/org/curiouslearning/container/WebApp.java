@@ -292,35 +292,112 @@ public class WebApp extends BaseActivity {
             }
         }
 
+        @JavascriptInterface
         public void onMonsterEvolutionStateReceived(String jsonState) {
             Log.d("WebApp", "Monster evolution state received: " + jsonState);
 
             try {
                 // Parse JSON string
                 org.json.JSONObject stateJson = new org.json.JSONObject(jsonState);
-                String app = stateJson.optString("app", "");
-                int monsterPhase = stateJson.optInt("monsterPhase", 0);
-                int successStars = stateJson.optInt("successStars", 0);
                 boolean hasError = stateJson.has("error");
 
-                if ("feed_the_monster".equals(app) && !hasError) {
-                    // Store monster phase per language using a map structure
-                    storeMonsterPhaseForLanguage(languageInEnglishName, monsterPhase, successStars,
-                            stateJson.optLong("timestamp", System.currentTimeMillis()));
+                // NOTE: We only wire this bridge for FTM pages (see isFtmApp), so we should not
+                // hard-fail on an "app" string mismatch. Some FTM builds may omit/rename it.
+                if (!hasError) {
+                    // Try multiple possible JSON key names for phase and stars (tolerant parsing)
+                    int monsterPhase = computeMonsterPhase(stateJson);
+                    Integer stars = optIntFromAnyKey(stateJson,
+                            "successStars", "success_stars", "stars", "totalStars", "total_stars");
+                    int successStars = (stars != null) ? stars : 0;
+
+                    // Store monster phase per language using a map structure.
+                    // We store under the English name (used elsewhere in the container) and also
+                    // under the local language string as a compatibility fallback to prevent key
+                    // mismatches from breaking evolution display.
+                    if (languageInEnglishName != null && !languageInEnglishName.trim().isEmpty()) {
+                        storeMonsterPhaseForLanguage(languageInEnglishName, monsterPhase, successStars,
+                                stateJson.optLong("timestamp", System.currentTimeMillis()));
+                    }
+                    if (language != null && !language.trim().isEmpty()) {
+                        storeMonsterPhaseForLanguage(language, monsterPhase, successStars,
+                                stateJson.optLong("timestamp", System.currentTimeMillis()));
+                    }
 
                     // Also set global downloaded flag
                     SharedPreferences.Editor editor = sharedPref.edit();
                     editor.putBoolean("ftm_downloaded", true);
                     editor.apply();
 
-                    Log.d("WebApp", "Stored monster phase for language '" + languageInEnglishName +
-                            "': phase=" + monsterPhase + ", stars=" + successStars);
+                    Log.d("WebApp", "Stored monster phase. languageInEnglishName='" + languageInEnglishName
+                            + "', language='" + language + "', phase=" + monsterPhase + ", stars=" + successStars);
                 } else if (hasError) {
                     Log.w("WebApp", "Monster state not ready: " + stateJson.optString("error", "UNKNOWN"));
                 }
             } catch (org.json.JSONException e) {
                 Log.e("WebApp", "Error parsing monster evolution state JSON", e);
             }
+        }
+
+        /**
+         * Determine monster phase from available state fields.
+         *
+         * FTM may provide either:
+         * - an explicit phase (e.g. monsterPhase), or
+         * - only success stars, in which case we compute phase using the existing
+         *   progression thresholds used by the container:
+         *   0: Egg
+         *   1: Hatched (≥12 stars)
+         *   2: Young (≥38 stars)
+         *   3: Adult (≥63 stars)
+         *
+         * This logic is intentionally tolerant of different JSON key spellings
+         * to avoid being stuck at phase 0 due to a missing/renamed field.
+         */
+        private int computeMonsterPhase(org.json.JSONObject stateJson) {
+            // Prefer an explicit phase if present under any known key.
+            Integer explicitPhase = optIntFromAnyKey(stateJson,
+                    "monsterPhase", "monster_phase", "phase", "monster_phase_index");
+            if (explicitPhase != null) {
+                // Clamp to the supported range to avoid invalid values breaking UI.
+                return Math.max(0, Math.min(3, explicitPhase));
+            }
+
+            // Otherwise compute from stars using the app's existing thresholds.
+            Integer stars = optIntFromAnyKey(stateJson,
+                    "successStars", "success_stars", "stars", "totalStars", "total_stars");
+            int successStars = (stars != null) ? stars : 0;
+
+            if (successStars >= 63) {
+                return 3;
+            } else if (successStars >= 38) {
+                return 2;
+            } else if (successStars >= 12) {
+                return 1;
+            }
+            return 0;
+        }
+
+        /**
+         * Returns the first present integer value for any of the provided keys.
+         * Returns null if none of the keys exist or values are not parseable.
+         */
+        private Integer optIntFromAnyKey(org.json.JSONObject obj, String... keys) {
+            if (obj == null || keys == null) {
+                return null;
+            }
+            for (String k : keys) {
+                if (k == null) {
+                    continue;
+                }
+                if (obj.has(k)) {
+                    try {
+                        return obj.getInt(k);
+                    } catch (Exception ignored) {
+                        // keep trying other keys
+                    }
+                }
+            }
+            return null;
         }
 
         /**
