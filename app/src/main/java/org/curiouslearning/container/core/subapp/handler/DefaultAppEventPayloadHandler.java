@@ -5,11 +5,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DefaultAppEventPayloadHandler
@@ -43,16 +46,6 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        // 🔑 Deterministic, event-level document ID
-        String documentId =
-                payload.cr_user_id + "_" +
-                        payload.app_id + "_" +
-                        payload.timestamp;
-
-        DocumentReference docRef = db
-                .collection(payload.collection)   // ✅ use payload's collection
-                .document(documentId);
-
         // Build Firestore record
         Map<String, Object> record = new HashMap<>();
         record.put("cr_user_id", payload.cr_user_id);
@@ -61,27 +54,79 @@ public class DefaultAppEventPayloadHandler
         record.put("timestamp", payload.timestamp);
         record.put("data", payload.data);
 
-        if (payload.options != null) {
-            record.put("options", payload.options);
+        // Evaluate options (add vs replace)
+        if (payload.data instanceof Map) {
+            Map<String, Object> dataMap = (Map<String, Object>) payload.data;
+
+            for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
+                String field = entry.getKey();
+                Object newValue = entry.getValue();
+
+                String operation = "replace"; // default
+
+                if (payload.options instanceof Map) {
+                    Map<String, String> optionsMap = (Map<String, String>) payload.options;
+                    if (optionsMap.containsKey(field)) {
+                        operation = optionsMap.get(field);
+                    }
+                }
+
+                Object existingValue = record.get(field);
+
+                if ("add".equals(operation)
+                        && existingValue instanceof Number
+                        && newValue instanceof Number) {
+
+                    double sum =
+                            ((Number) existingValue).doubleValue()
+                                    + ((Number) newValue).doubleValue();
+
+                    record.put(field, sum);
+                } else {
+                    record.put(field, newValue);
+                }
+            }
         }
 
-        Log.d(TAG, "Checking for existing sub-app payload | docId=" + documentId);
+        Log.d(TAG, "Checking for existing summary record");
 
-        // Idempotent write
-        docRef.get()
-                .addOnSuccessListener(snapshot -> {
-                    if (snapshot.exists()) {
-                        Log.d(TAG, "Duplicate payload ignored | docId=" + documentId);
-                        return;
+        // Query by user + app (single summary record model)
+        Query query = db.collection(payload.collection)
+                .whereEqualTo("cr_user_id", payload.cr_user_id)
+                .whereEqualTo("app_id", payload.app_id)
+                .limit(1);
+
+        query.get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        // Update existing document
+                        List<DocumentSnapshot> documents = querySnapshot.getDocuments();
+                        DocumentSnapshot existingDoc = documents.get(0);
+                        String docId = existingDoc.getId();
+
+                        Log.d(TAG, "Existing summary record found. Updating docId=" + docId);
+
+                        db.collection(payload.collection)
+                                .document(docId)
+                                .set(record)
+                                .addOnSuccessListener(aVoid ->
+                                        Log.d(TAG, "Updated summary payload in Firestore"))
+                                .addOnFailureListener(e ->
+                                        Log.e(TAG, "Failed to update summary payload", e));
+
+                    } else {
+                        //Create new document (Firestore generates ID)
+                        Log.d(TAG, "No existing summary record found. Creating new document");
+
+                        db.collection(payload.collection)
+                                .add(record)
+                                .addOnSuccessListener(ref ->
+                                        Log.d(TAG, "Created new summary payload docId=" + ref.getId()))
+                                .addOnFailureListener(e ->
+                                        Log.e(TAG, "Failed to create summary payload", e));
                     }
-
-                    docRef.set(record)
-                            .addOnSuccessListener(aVoid ->
-                                    Log.d(TAG, "Sub-app payload stored | docId=" + documentId))
-                            .addOnFailureListener(e ->
-                                    Log.e(TAG, "Failed to store sub-app payload", e));
                 })
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed to check existing sub-app payload", e));
+                        Log.e(TAG, "Failed querying summary data", e));
     }
 }
