@@ -84,7 +84,7 @@ public class DefaultAppEventPayloadHandler
     ) {
         Map<String, Object> merged = new HashMap<>();
 
-        // Seed from existing nested data
+        // Seed from existing Nested data
         if (existingDoc.exists()) {
             Object existingDataObj = existingDoc.get("data");
             if (existingDataObj instanceof Map) {
