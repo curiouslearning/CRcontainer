@@ -35,13 +35,13 @@ public class DefaultAppEventPayloadHandler
     private void storeSubAppPayload(@NonNull AppEventPayload payload) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Required fields check
-        if (payload.cr_user_id == null ||
-                payload.app_id == null ||
-                payload.timestamp == null ||
-                payload.collection == null) {
+        // ✅ Updated validation: reject null OR blank
+        if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
+                payload.app_id == null || payload.app_id.trim().isEmpty() ||
+                payload.collection == null || payload.collection.trim().isEmpty() ||
+                payload.timestamp == null) {
 
-            Log.e(TAG, "Invalid payload — missing required fields");
+            Log.e(TAG, "Invalid payload — missing or blank required fields");
             return;
         }
 
@@ -55,7 +55,6 @@ public class DefaultAppEventPayloadHandler
         query.get()
                 .addOnSuccessListener(querySnapshot -> {
 
-                    // Build base record
                     Map<String, Object> record = new HashMap<>();
                     record.put("cr_user_id", payload.cr_user_id);
                     record.put("app_id", payload.app_id);
@@ -65,12 +64,10 @@ public class DefaultAppEventPayloadHandler
                     Map<String, Object> mergedData;
 
                     if (!querySnapshot.isEmpty()) {
-                        // ✅ EXISTING DOC → merge properly from Firestore
+                        // Update existing
                         List<DocumentSnapshot> documents = querySnapshot.getDocuments();
                         DocumentSnapshot existingDoc = documents.get(0);
                         String docId = existingDoc.getId();
-
-                        Log.d(TAG, "Existing summary record found. Merging docId=" + docId);
 
                         mergedData = mergeData(existingDoc, payload);
                         record.put("data", mergedData);
@@ -84,9 +81,7 @@ public class DefaultAppEventPayloadHandler
                                         Log.e(TAG, "Failed to update summary payload", e));
 
                     } else {
-                        // ✅ NEW DOC → just use payload data
-                        Log.d(TAG, "No existing summary record found. Creating new document");
-
+                        // Create new
                         mergedData = payload.data instanceof Map
                                 ? new HashMap<>((Map<String, Object>) payload.data)
                                 : new HashMap<>();
@@ -105,16 +100,12 @@ public class DefaultAppEventPayloadHandler
                         Log.e(TAG, "Failed querying summary data", e));
     }
 
-    /**
-     * 🔑 Correct merge implementation
-     */
     private Map<String, Object> mergeData(
             @NonNull DocumentSnapshot existingDoc,
             @NonNull AppEventPayload payload
     ) {
         Map<String, Object> merged = new HashMap<>();
 
-        // Seed from existing Firestore data
         Object existingDataObj = existingDoc.get("data");
         if (existingDataObj instanceof Map) {
             merged.putAll((Map<String, Object>) existingDataObj);
