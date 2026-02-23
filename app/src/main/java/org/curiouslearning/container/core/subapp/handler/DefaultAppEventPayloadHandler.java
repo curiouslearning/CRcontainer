@@ -4,9 +4,9 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
@@ -45,15 +45,15 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        // Deterministic document ID (prevents duplicates)
+        // ✅ Deterministic document ID (prevents duplicates)
         String docId = payload.cr_user_id + "_" + payload.app_id;
 
-        DocumentReference docRef =
+        DocumentReference documentRef =
                 db.collection(payload.collection).document(docId);
 
-        Log.d(TAG, "Upserting summary record with deterministic ID");
+        Log.d(TAG, "Upserting summary record");
 
-        docRef.get()
+        documentRef.get()
                 .addOnSuccessListener(existingDoc -> {
 
                     Map<String, Object> record = new HashMap<>();
@@ -67,7 +67,8 @@ public class DefaultAppEventPayloadHandler
 
                     record.put("data", mergedData);
 
-                    docRef.set(record, SetOptions.merge())
+                    // ✅ Idempotent write
+                    documentRef.set(record, SetOptions.merge())
                             .addOnSuccessListener(aVoid ->
                                     Log.d(TAG, "Summary payload upserted in Firestore"))
                             .addOnFailureListener(e ->
@@ -83,6 +84,7 @@ public class DefaultAppEventPayloadHandler
     ) {
         Map<String, Object> merged = new HashMap<>();
 
+        // Seed from existing nested data
         if (existingDoc.exists()) {
             Object existingDataObj = existingDoc.get("data");
             if (existingDataObj instanceof Map) {
