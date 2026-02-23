@@ -5,13 +5,13 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.SetOptions;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class DefaultAppEventPayloadHandler
@@ -35,7 +35,7 @@ public class DefaultAppEventPayloadHandler
     private void storeSubAppPayload(@NonNull AppEventPayload payload) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Updated validation: reject null OR blank
+        // Reject null OR blank
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
                 payload.app_id == null || payload.app_id.trim().isEmpty() ||
                 payload.collection == null || payload.collection.trim().isEmpty() ||
@@ -45,15 +45,16 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        Log.d(TAG, "Checking for existing summary record");
+        // Deterministic document ID (prevents duplicates)
+        String docId = payload.cr_user_id + "_" + payload.app_id;
 
-        Query query = db.collection(payload.collection)
-                .whereEqualTo("cr_user_id", payload.cr_user_id)
-                .whereEqualTo("app_id", payload.app_id)
-                .limit(1);
+        DocumentReference docRef =
+                db.collection(payload.collection).document(docId);
 
-        query.get()
-                .addOnSuccessListener(querySnapshot -> {
+        Log.d(TAG, "Upserting summary record with deterministic ID");
+
+        docRef.get()
+                .addOnSuccessListener(existingDoc -> {
 
                     Map<String, Object> record = new HashMap<>();
                     record.put("cr_user_id", payload.cr_user_id);
@@ -61,43 +62,19 @@ public class DefaultAppEventPayloadHandler
                     record.put("collection", payload.collection);
                     record.put("timestamp", payload.timestamp);
 
-                    Map<String, Object> mergedData;
+                    Map<String, Object> mergedData =
+                            mergeData(existingDoc, payload);
 
-                    if (!querySnapshot.isEmpty()) {
-                        // Update existing
-                        List<DocumentSnapshot> documents = querySnapshot.getDocuments();
-                        DocumentSnapshot existingDoc = documents.get(0);
-                        String docId = existingDoc.getId();
+                    record.put("data", mergedData);
 
-                        mergedData = mergeData(existingDoc, payload);
-                        record.put("data", mergedData);
-
-                        db.collection(payload.collection)
-                                .document(docId)
-                                .set(record)
-                                .addOnSuccessListener(aVoid ->
-                                        Log.d(TAG, "Updated summary payload in Firestore"))
-                                .addOnFailureListener(e ->
-                                        Log.e(TAG, "Failed to update summary payload", e));
-
-                    } else {
-                        // Create new
-                        mergedData = payload.data instanceof Map
-                                ? new HashMap<>((Map<String, Object>) payload.data)
-                                : new HashMap<>();
-
-                        record.put("data", mergedData);
-
-                        db.collection(payload.collection)
-                                .add(record)
-                                .addOnSuccessListener(ref ->
-                                        Log.d(TAG, "Created new summary payload docId=" + ref.getId()))
-                                .addOnFailureListener(e ->
-                                        Log.e(TAG, "Failed to create summary payload", e));
-                    }
+                    docRef.set(record, SetOptions.merge())
+                            .addOnSuccessListener(aVoid ->
+                                    Log.d(TAG, "Summary payload upserted in Firestore"))
+                            .addOnFailureListener(e ->
+                                    Log.e(TAG, "Failed to upsert summary payload", e));
                 })
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed querying summary data", e));
+                        Log.e(TAG, "Failed fetching existing summary data", e));
     }
 
     private Map<String, Object> mergeData(
@@ -106,9 +83,11 @@ public class DefaultAppEventPayloadHandler
     ) {
         Map<String, Object> merged = new HashMap<>();
 
-        Object existingDataObj = existingDoc.get("data");
-        if (existingDataObj instanceof Map) {
-            merged.putAll((Map<String, Object>) existingDataObj);
+        if (existingDoc.exists()) {
+            Object existingDataObj = existingDoc.get("data");
+            if (existingDataObj instanceof Map) {
+                merged.putAll((Map<String, Object>) existingDataObj);
+            }
         }
 
         if (!(payload.data instanceof Map)) {
