@@ -35,7 +35,7 @@ public class DefaultAppEventPayloadHandler
     private void storeSubAppPayload(@NonNull AppEventPayload payload) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // ✅ Updated validation: reject null OR blank
+        // Updated validation: reject null OR blank
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
                 payload.app_id == null || payload.app_id.trim().isEmpty() ||
                 payload.collection == null || payload.collection.trim().isEmpty() ||
