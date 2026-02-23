@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
@@ -36,7 +35,7 @@ public class DefaultAppEventPayloadHandler
     private void storeSubAppPayload(@NonNull AppEventPayload payload) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Minimal required fields
+        // Required fields check
         if (payload.cr_user_id == null ||
                 payload.app_id == null ||
                 payload.timestamp == null ||
@@ -46,51 +45,8 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        // Build Firestore record
-        Map<String, Object> record = new HashMap<>();
-        record.put("cr_user_id", payload.cr_user_id);
-        record.put("app_id", payload.app_id);
-        record.put("collection", payload.collection);
-        record.put("timestamp", payload.timestamp);
-        record.put("data", payload.data);
-
-        // Evaluate options (add vs replace)
-        if (payload.data instanceof Map) {
-            Map<String, Object> dataMap = (Map<String, Object>) payload.data;
-
-            for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
-                String field = entry.getKey();
-                Object newValue = entry.getValue();
-
-                String operation = "replace"; // default
-
-                if (payload.options instanceof Map) {
-                    Map<String, String> optionsMap = (Map<String, String>) payload.options;
-                    if (optionsMap.containsKey(field)) {
-                        operation = optionsMap.get(field);
-                    }
-                }
-
-                Object existingValue = record.get(field);
-
-                if ("add".equals(operation)
-                        && existingValue instanceof Number
-                        && newValue instanceof Number) {
-
-                    double sum =
-                            ((Number) existingValue).doubleValue()
-                                    + ((Number) newValue).doubleValue();
-
-                    record.put(field, sum);
-                } else {
-                    record.put(field, newValue);
-                }
-            }
-        }
-
         Log.d(TAG, "Checking for existing summary record");
 
-        // Query by user + app (single summary record model)
         Query query = db.collection(payload.collection)
                 .whereEqualTo("cr_user_id", payload.cr_user_id)
                 .whereEqualTo("app_id", payload.app_id)
@@ -98,13 +54,26 @@ public class DefaultAppEventPayloadHandler
 
         query.get()
                 .addOnSuccessListener(querySnapshot -> {
+
+                    // Build base record
+                    Map<String, Object> record = new HashMap<>();
+                    record.put("cr_user_id", payload.cr_user_id);
+                    record.put("app_id", payload.app_id);
+                    record.put("collection", payload.collection);
+                    record.put("timestamp", payload.timestamp);
+
+                    Map<String, Object> mergedData;
+
                     if (!querySnapshot.isEmpty()) {
-                        // Update existing document
+                        // ✅ EXISTING DOC → merge properly from Firestore
                         List<DocumentSnapshot> documents = querySnapshot.getDocuments();
                         DocumentSnapshot existingDoc = documents.get(0);
                         String docId = existingDoc.getId();
 
-                        Log.d(TAG, "Existing summary record found. Updating docId=" + docId);
+                        Log.d(TAG, "Existing summary record found. Merging docId=" + docId);
+
+                        mergedData = mergeData(existingDoc, payload);
+                        record.put("data", mergedData);
 
                         db.collection(payload.collection)
                                 .document(docId)
@@ -115,8 +84,14 @@ public class DefaultAppEventPayloadHandler
                                         Log.e(TAG, "Failed to update summary payload", e));
 
                     } else {
-                        //Create new document (Firestore generates ID)
+                        // ✅ NEW DOC → just use payload data
                         Log.d(TAG, "No existing summary record found. Creating new document");
+
+                        mergedData = payload.data instanceof Map
+                                ? new HashMap<>((Map<String, Object>) payload.data)
+                                : new HashMap<>();
+
+                        record.put("data", mergedData);
 
                         db.collection(payload.collection)
                                 .add(record)
@@ -128,5 +103,54 @@ public class DefaultAppEventPayloadHandler
                 })
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed querying summary data", e));
+    }
+
+    /**
+     * 🔑 Correct merge implementation
+     */
+    private Map<String, Object> mergeData(
+            @NonNull DocumentSnapshot existingDoc,
+            @NonNull AppEventPayload payload
+    ) {
+        Map<String, Object> merged = new HashMap<>();
+
+        // Seed from existing Firestore data
+        Object existingDataObj = existingDoc.get("data");
+        if (existingDataObj instanceof Map) {
+            merged.putAll((Map<String, Object>) existingDataObj);
+        }
+
+        if (!(payload.data instanceof Map)) {
+            return merged;
+        }
+
+        Map<String, Object> newData = (Map<String, Object>) payload.data;
+        Map<String, String> optionsMap =
+                payload.options instanceof Map
+                        ? (Map<String, String>) payload.options
+                        : new HashMap<>();
+
+        for (Map.Entry<String, Object> entry : newData.entrySet()) {
+            String field = entry.getKey();
+            Object newValue = entry.getValue();
+
+            String operation = optionsMap.getOrDefault(field, "replace");
+            Object existingValue = merged.get(field);
+
+            if ("add".equals(operation)
+                    && existingValue instanceof Number
+                    && newValue instanceof Number) {
+
+                double sum =
+                        ((Number) existingValue).doubleValue()
+                                + ((Number) newValue).doubleValue();
+
+                merged.put(field, sum);
+            } else {
+                merged.put(field, newValue);
+            }
+        }
+
+        return merged;
     }
 }
