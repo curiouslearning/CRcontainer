@@ -79,6 +79,7 @@
         app:layout_constraintTop_toTopOf="@+id/imageView"
         tools:layout_editor_absoluteX="-1dp"
         android:layout_centerInParent="true" />
+
     <app.rive.runtime.kotlin.RiveAnimationView
         android:id="@+id/monsterView"
         android:layout_width="@dimen/monster_size"
