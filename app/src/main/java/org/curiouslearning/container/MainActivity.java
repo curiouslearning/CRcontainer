@@ -1204,6 +1204,7 @@ public class MainActivity extends BaseActivity {
                 null, // animation (null = first)
                 null, // state machine
                 true, // autoplay
+                false, // auto bind
                 Fit.CONTAIN, // fit
                 Alignment.CENTER, // alignment
                 Loop.LOOP // loop mode
