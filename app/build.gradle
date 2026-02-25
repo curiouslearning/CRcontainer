@@ -29,7 +29,7 @@ android {
         applicationId "org.curiouslearning.container"
         minSdk 24
         targetSdk 35
-        versionCode 66
+        versionCode 67
         versionName "2.33"
         
 
@@ -116,7 +116,8 @@ dependencies {
     implementation("io.sentry:sentry-android") {
         exclude group: "io.sentry", module: "sentry-android-ndk"
     }
-    implementation 'app.rive:rive-android:5.1.0'
+    // Source: https://mvnrepository.com/artifact/app.rive/rive-android
+    implementation 'app.rive:rive-android:10.4.4'
     // For initialization, you may want to add a dependency on Jetpack Startup
     implementation "androidx.startup:startup-runtime:1.1.1"
     testImplementation 'junit:junit:4.13.2'
