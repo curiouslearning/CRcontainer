@@ -10,7 +10,6 @@
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
-        android:extractNativeLibs="true"
         android:screenOrientation="portrait"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -26,9 +25,12 @@
             android:exported="false"
             tools:node="merge">
 
+            <!-- Disable Rive auto-init; we initialize manually in MyApplication
+                 to handle MissingLibraryException on Android 7 (armeabi-v7a) devices -->
             <meta-data
                 android:name="app.rive.runtime.kotlin.RiveInitializer"
-                android:value="androidx.startup" />
+                android:value="androidx.startup"
+                tools:node="remove" />
         </provider>
         <meta-data android:name="com.facebook.sdk.ApplicationId"
             android:value="@string/facebook_app_id" />
