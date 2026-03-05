@@ -4,12 +4,10 @@ plugins {
     id 'com.google.firebase.crashlytics'
     id 'jacoco'
 
-    id 'io.sentry.android.gradle' version '5.10.0'
+
 }
 def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buildBranch") : "main"
-def apiUrl = buildBranch == "main" ?
-        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/" :
-        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/"
+def apiUrl ="https://partnerdev.curiouscontent.org/manifest/"
 task printApiUrl {
     doLast {
         println(apiUrl)
@@ -63,7 +61,7 @@ android {
     buildTypes {
         debug{
             testCoverageEnabled true
-            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/\""
+            buildConfigField "String", "API_URL", "\"https://partnerdev.curiouscontent.org/manifest/\""
         }
         release {
             signingConfig signingConfigs.release
@@ -113,10 +111,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation(platform("io.sentry:sentry-bom:7.17.0"))
-    implementation("io.sentry:sentry-android") {
-        exclude group: "io.sentry", module: "sentry-android-ndk"
-    }
+
     // Source: https://mvnrepository.com/artifact/app.rive/rive-android
     implementation 'app.rive:rive-android:10.4.4'
     // For initialization, you may want to add a dependency on Jetpack Startup
@@ -196,14 +191,6 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
 }
 
 
-sentry {
-    org = "curious-learning"
-    projectName = "cr-container"
-
-    // this will upload your source code to Sentry to show it as part of the stack traces
-    // disable if you don't want to expose your sources
-    includeSourceContext = true
-}
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)

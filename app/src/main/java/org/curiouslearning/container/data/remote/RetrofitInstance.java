@@ -38,7 +38,7 @@ public class RetrofitInstance {
         if (retrofit == null) {
             retrofitInstance = new RetrofitInstance();
             retrofit = new Retrofit.Builder()
-                    .baseUrl(URL)
+                    .baseUrl("https://partnerdev.curiouscontent.org/manifest/")
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
         }

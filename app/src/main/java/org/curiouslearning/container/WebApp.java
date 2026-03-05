@@ -24,7 +24,6 @@ import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
-import io.sentry.Sentry;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 import org.curiouslearning.container.core.subapp.validation.AppEventPayloadValidator;
@@ -142,13 +141,13 @@ public class WebApp extends BaseActivity {
             if (source != null && !source.isEmpty()) {
                 appUrl = addSourceToUrl(appUrl);
             } else {
-                Sentry.captureMessage("Missing source when building URL for app: " + appUrl);
+
                 Log.w("WebApp", "Missing source parameter for app: " + appUrl);
             }
             if (campaignId != null && !campaignId.isEmpty()) {
                 appUrl = addCampaignIdToUrl(appUrl);
             } else {
-                Sentry.captureMessage("Missing campaign_id when building URL for app: " + appUrl);
+
                 Log.w("WebApp", "Missing campaign_id parameter for app: " + appUrl);
             }
         }
@@ -175,7 +174,7 @@ public class WebApp extends BaseActivity {
         String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" +
                 pseudoId;
         if (pseudoId == null || pseudoId.isEmpty()) {
-            Sentry.captureMessage("Missing cr_user_id for app: " + appUrl);
+
             Log.e("WebApp", "Missing cr_user_id when building URL");
         }
         return modifiedUrl;

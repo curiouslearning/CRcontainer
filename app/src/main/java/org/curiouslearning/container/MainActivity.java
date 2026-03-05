@@ -75,7 +75,7 @@ import app.rive.runtime.kotlin.RiveAnimationView;
 import app.rive.runtime.kotlin.core.Alignment;
 import app.rive.runtime.kotlin.core.Fit;
 import app.rive.runtime.kotlin.core.Loop;
-import io.sentry.Sentry;
+
 
 public class MainActivity extends BaseActivity {
 
@@ -607,7 +607,7 @@ public class MainActivity extends BaseActivity {
                         new IllegalArgumentException(errorMsg));
                 // Slack alert
                 SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-                Sentry.captureMessage("Missing Language when selecting Language ");
+
                 showLanguagePopup();
                 return;
             }
@@ -618,7 +618,6 @@ public class MainActivity extends BaseActivity {
                 if (lowerCaseLanguages != null && lowerCaseLanguages.size() > 0
                         && !lowerCaseLanguages.contains(language.toLowerCase().trim())) {
                     SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-                    Sentry.captureMessage("Incorrect Language when selecting Language ");
                     showLanguagePopup();
                     loadingIndicator.setVisibility(View.GONE);
                     selectedLanguage = "";
@@ -1070,14 +1069,14 @@ public class MainActivity extends BaseActivity {
 
         if (!isFtmDownloaded) {
             // Show egg monster if FTM is not downloaded
-            loadMonsterAnimation(monsterView, 0);
+            loadMonsterAnimation(monsterView, 3);
             Log.d(TAG, "updateMonsterAnimation: FTM not downloaded, showing egg monster");
             return;
         }
 
         // Get stored monster phase for the current selected language
         int monsterPhase = getMonsterPhaseForLanguage(selectedLanguage);
-        loadMonsterAnimation(monsterView, monsterPhase);
+        loadMonsterAnimation(monsterView,3 );
         Log.d(TAG,
                 "updateMonsterAnimation: Showing monster phase " + monsterPhase + " for language: " + selectedLanguage);
     }
