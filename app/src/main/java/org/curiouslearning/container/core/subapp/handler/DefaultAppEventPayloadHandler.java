@@ -36,7 +36,6 @@ public class DefaultAppEventPayloadHandler
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Validate required fields
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
                 payload.app_id == null || payload.app_id.trim().isEmpty() ||
                 payload.collection == null || payload.collection.trim().isEmpty() ||
@@ -46,7 +45,6 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        // ROUTE BASED ON COLLECTION
         if ("user_session_data".equals(payload.collection)) {
 
             Log.d(TAG, "Handling user_session_data payload");
@@ -219,7 +217,25 @@ public class DefaultAppEventPayloadHandler
                 Number n1 = (Number) existingValue;
                 Number n2 = (Number) newValue;
 
-                merged.put(key, n1.doubleValue() + n2.doubleValue());
+                boolean n1Integral =
+                        n1 instanceof Long ||
+                                n1 instanceof Integer ||
+                                n1 instanceof Short ||
+                                n1 instanceof Byte;
+
+                boolean n2Integral =
+                        n2 instanceof Long ||
+                                n2 instanceof Integer ||
+                                n2 instanceof Short ||
+                                n2 instanceof Byte;
+
+                if (n1Integral && n2Integral) {
+                    long result = n1.longValue() + n2.longValue();
+                    merged.put(key, result);
+                } else {
+                    double result = n1.doubleValue() + n2.doubleValue();
+                    merged.put(key, result);
+                }
 
             } else {
                 merged.put(key, newValue);
