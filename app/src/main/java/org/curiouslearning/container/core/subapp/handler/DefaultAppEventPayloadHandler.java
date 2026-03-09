@@ -192,8 +192,38 @@ public class DefaultAppEventPayloadHandler
 
         Map<String, Object> newData = (Map<String, Object>) payload.data;
 
+        Map<String, Object> options = new HashMap<>();
+
+        if (payload.options instanceof Map) {
+            Map<?, ?> raw = (Map<?, ?>) payload.options;
+            for (Map.Entry<?, ?> entry : raw.entrySet()) {
+                options.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
+
         for (Map.Entry<String, Object> entry : newData.entrySet()) {
-            merged.put(entry.getKey(), entry.getValue());
+
+            String key = entry.getKey();
+            Object newValue = entry.getValue();
+            Object existingValue = merged.get(key);
+
+            String operation =
+                    options.get(key) instanceof String
+                            ? (String) options.get(key)
+                            : "replace";
+
+            if ("add".equals(operation)
+                    && newValue instanceof Number
+                    && existingValue instanceof Number) {
+
+                Number n1 = (Number) existingValue;
+                Number n2 = (Number) newValue;
+
+                merged.put(key, n1.doubleValue() + n2.doubleValue());
+
+            } else {
+                merged.put(key, newValue);
+            }
         }
 
         return merged;
