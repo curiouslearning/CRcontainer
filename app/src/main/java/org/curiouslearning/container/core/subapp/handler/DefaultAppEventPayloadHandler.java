@@ -19,6 +19,9 @@ public class DefaultAppEventPayloadHandler
 
     private static final String TAG = "AppEventHandler";
 
+    private static final String COLLECTION_USER_SESSION = "user_session_data";
+    private static final String COLLECTION_SUMMARY = "summary_data";
+
     @Override
     public void handle(AppEventPayload payload) {
 
@@ -45,26 +48,37 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        if ("user_session_data".equals(payload.collection)) {
+        switch (payload.collection) {
 
-            Log.d(TAG, "Handling user_session_data payload");
-            storeUserSessionPayload(db, payload);
+            case COLLECTION_USER_SESSION:
+                Log.d(TAG, "Handling user_session_data payload");
+                storeUserSessionPayload(db, payload);
+                break;
 
-        } else {
+            case COLLECTION_SUMMARY:
+                Log.d(TAG, "Handling summary_data payload");
+                storeSummaryPayload(db, payload);
+                break;
 
-            Log.d(TAG, "Handling summary_data payload");
-            storeSummaryPayload(db, payload);
+            default:
+                Log.e(TAG, "Unsupported collection: " + payload.collection);
+                return;
         }
     }
 
     /**
-     * NEW IMPLEMENTATION
      * Direct save for user_session_data
      */
     private void storeUserSessionPayload(
             FirebaseFirestore db,
             AppEventPayload payload
     ) {
+
+        if (!(payload.data instanceof Map)) {
+            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
+                    + (payload.data == null ? "null" : payload.data.getClass()));
+            return;
+        }
 
         Map<String, Object> record = new HashMap<>();
 
@@ -74,9 +88,7 @@ public class DefaultAppEventPayloadHandler
         record.put("timestamp", payload.timestamp);
 
         Map<String, Object> data =
-                payload.data instanceof Map
-                        ? new HashMap<>((Map<String, Object>) payload.data)
-                        : new HashMap<>();
+                new HashMap<>((Map<String, Object>) payload.data);
 
         record.put("data", data);
 
@@ -89,7 +101,6 @@ public class DefaultAppEventPayloadHandler
     }
 
     /**
-     * OLD IMPLEMENTATION
      * Used for summary_data
      */
     private void storeSummaryPayload(
@@ -157,10 +168,14 @@ public class DefaultAppEventPayloadHandler
             Map<String, Object> record
     ) {
 
+        if (!(payload.data instanceof Map)) {
+            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
+                    + (payload.data == null ? "null" : payload.data.getClass()));
+            return;
+        }
+
         Map<String, Object> newData =
-                payload.data instanceof Map
-                        ? new HashMap<>((Map<String, Object>) payload.data)
-                        : new HashMap<>();
+                new HashMap<>((Map<String, Object>) payload.data);
 
         record.put("data", newData);
 
@@ -185,6 +200,7 @@ public class DefaultAppEventPayloadHandler
         }
 
         if (!(payload.data instanceof Map)) {
+            Log.e(TAG, "Invalid payload.data type during merge");
             return merged;
         }
 
