@@ -4,20 +4,23 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.Query;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DefaultAppEventPayloadHandler
         implements AppEventPayloadHandler {
 
     private static final String TAG = "AppEventHandler";
+
+    private static final String COLLECTION_USER_SESSION = "user_session_data";
+    private static final String COLLECTION_SUMMARY = "summary_data";
 
     @Override
     public void handle(AppEventPayload payload) {
@@ -29,13 +32,13 @@ public class DefaultAppEventPayloadHandler
                         " timestamp=" + payload.timestamp
         );
 
-        storeSubAppPayload(payload);
+        storePayload(payload);
     }
 
-    private void storeSubAppPayload(@NonNull AppEventPayload payload) {
+    private void storePayload(@NonNull AppEventPayload payload) {
+
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Reject null OR blank
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
                 payload.app_id == null || payload.app_id.trim().isEmpty() ||
                 payload.collection == null || payload.collection.trim().isEmpty() ||
@@ -45,16 +48,75 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        // ✅ Deterministic document ID (prevents duplicates)
-        String docId = payload.cr_user_id + "_" + payload.app_id;
+        switch (payload.collection) {
 
-        DocumentReference documentRef =
-                db.collection(payload.collection).document(docId);
+            case COLLECTION_USER_SESSION:
+                Log.d(TAG, "Handling user_session_data payload");
+                storeUserSessionPayload(db, payload);
+                break;
 
-        Log.d(TAG, "Upserting summary record");
+            case COLLECTION_SUMMARY:
+                Log.d(TAG, "Handling summary_data payload");
+                storeSummaryPayload(db, payload);
+                break;
 
-        documentRef.get()
-                .addOnSuccessListener(existingDoc -> {
+            default:
+                Log.e(TAG, "Unsupported collection: " + payload.collection);
+                return;
+        }
+    }
+
+    /**
+     * Direct save for user_session_data
+     */
+    private void storeUserSessionPayload(
+            FirebaseFirestore db,
+            AppEventPayload payload
+    ) {
+
+        if (!(payload.data instanceof Map)) {
+            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
+                    + (payload.data == null ? "null" : payload.data.getClass()));
+            return;
+        }
+
+        Map<String, Object> record = new HashMap<>();
+
+        record.put("cr_user_id", payload.cr_user_id);
+        record.put("app_id", payload.app_id);
+        record.put("collection", payload.collection);
+        record.put("timestamp", payload.timestamp);
+
+        Map<String, Object> data =
+                new HashMap<>((Map<String, Object>) payload.data);
+
+        record.put("data", data);
+
+        db.collection(payload.collection)
+                .add(record)
+                .addOnSuccessListener(ref ->
+                        Log.d(TAG, "User session saved docId=" + ref.getId()))
+                .addOnFailureListener(e ->
+                        Log.e(TAG, "Failed to save user session payload", e));
+    }
+
+    /**
+     * Used for summary_data
+     */
+    private void storeSummaryPayload(
+            FirebaseFirestore db,
+            AppEventPayload payload
+    ) {
+
+        Log.d(TAG, "Querying summary record (offline-first)");
+
+        Query query = db.collection(payload.collection)
+                .whereEqualTo("cr_user_id", payload.cr_user_id)
+                .whereEqualTo("app_id", payload.app_id)
+                .limit(1);
+
+        query.get()
+                .addOnSuccessListener(querySnapshot -> {
 
                     Map<String, Object> record = new HashMap<>();
                     record.put("cr_user_id", payload.cr_user_id);
@@ -62,64 +124,137 @@ public class DefaultAppEventPayloadHandler
                     record.put("collection", payload.collection);
                     record.put("timestamp", payload.timestamp);
 
-                    Map<String, Object> mergedData =
-                            mergeData(existingDoc, payload);
+                    if (!querySnapshot.isEmpty()) {
 
-                    record.put("data", mergedData);
+                        List<DocumentSnapshot> documents = querySnapshot.getDocuments();
+                        DocumentSnapshot existingDoc = documents.get(0);
 
-                    // ✅ Idempotent write
-                    documentRef.set(record, SetOptions.merge())
-                            .addOnSuccessListener(aVoid ->
-                                    Log.d(TAG, "Summary payload upserted in Firestore"))
-                            .addOnFailureListener(e ->
-                                    Log.e(TAG, "Failed to upsert summary payload", e));
+                        Map<String, Object> mergedData =
+                                mergeData(existingDoc, payload);
+
+                        record.put("data", mergedData);
+
+                        db.collection(payload.collection)
+                                .document(existingDoc.getId())
+                                .set(record)
+                                .addOnSuccessListener(aVoid ->
+                                        Log.d(TAG, "Updated summary payload"))
+                                .addOnFailureListener(e ->
+                                        Log.e(TAG, "Failed to update summary payload", e));
+
+                    } else {
+
+                        Log.d(TAG, "No existing summary record — creating new");
+                        createNewSummaryDoc(db, payload, record);
+                    }
                 })
+                .addOnFailureListener(e -> {
+
+                    Log.w(TAG, "Query failed — creating new summary record", e);
+
+                    Map<String, Object> record = new HashMap<>();
+                    record.put("cr_user_id", payload.cr_user_id);
+                    record.put("app_id", payload.app_id);
+                    record.put("collection", payload.collection);
+                    record.put("timestamp", payload.timestamp);
+
+                    createNewSummaryDoc(db, payload, record);
+                });
+    }
+
+    private void createNewSummaryDoc(
+            FirebaseFirestore db,
+            AppEventPayload payload,
+            Map<String, Object> record
+    ) {
+
+        if (!(payload.data instanceof Map)) {
+            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
+                    + (payload.data == null ? "null" : payload.data.getClass()));
+            return;
+        }
+
+        Map<String, Object> newData =
+                new HashMap<>((Map<String, Object>) payload.data);
+
+        record.put("data", newData);
+
+        db.collection(payload.collection)
+                .add(record)
+                .addOnSuccessListener(ref ->
+                        Log.d(TAG, "Created new summary payload docId=" + ref.getId()))
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed fetching existing summary data", e));
+                        Log.e(TAG, "Failed to create summary payload", e));
     }
 
     private Map<String, Object> mergeData(
             @NonNull DocumentSnapshot existingDoc,
             @NonNull AppEventPayload payload
     ) {
+
         Map<String, Object> merged = new HashMap<>();
 
-        // Seed from existing Nested data
-        if (existingDoc.exists()) {
-            Object existingDataObj = existingDoc.get("data");
-            if (existingDataObj instanceof Map) {
-                merged.putAll((Map<String, Object>) existingDataObj);
-            }
+        Object existingDataObj = existingDoc.get("data");
+        if (existingDataObj instanceof Map) {
+            merged.putAll((Map<String, Object>) existingDataObj);
         }
 
         if (!(payload.data instanceof Map)) {
+            Log.e(TAG, "Invalid payload.data type during merge");
             return merged;
         }
 
         Map<String, Object> newData = (Map<String, Object>) payload.data;
-        Map<String, String> optionsMap =
-                payload.options instanceof Map
-                        ? (Map<String, String>) payload.options
-                        : new HashMap<>();
+
+        Map<String, Object> options = new HashMap<>();
+
+        if (payload.options instanceof Map) {
+            Map<?, ?> raw = (Map<?, ?>) payload.options;
+            for (Map.Entry<?, ?> entry : raw.entrySet()) {
+                options.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
 
         for (Map.Entry<String, Object> entry : newData.entrySet()) {
-            String field = entry.getKey();
-            Object newValue = entry.getValue();
 
-            String operation = optionsMap.getOrDefault(field, "replace");
-            Object existingValue = merged.get(field);
+            String key = entry.getKey();
+            Object newValue = entry.getValue();
+            Object existingValue = merged.get(key);
+
+            String operation =
+                    options.get(key) instanceof String
+                            ? (String) options.get(key)
+                            : "replace";
 
             if ("add".equals(operation)
-                    && existingValue instanceof Number
-                    && newValue instanceof Number) {
+                    && newValue instanceof Number
+                    && existingValue instanceof Number) {
 
-                double sum =
-                        ((Number) existingValue).doubleValue()
-                                + ((Number) newValue).doubleValue();
+                Number n1 = (Number) existingValue;
+                Number n2 = (Number) newValue;
 
-                merged.put(field, sum);
+                boolean n1Integral =
+                        n1 instanceof Long ||
+                                n1 instanceof Integer ||
+                                n1 instanceof Short ||
+                                n1 instanceof Byte;
+
+                boolean n2Integral =
+                        n2 instanceof Long ||
+                                n2 instanceof Integer ||
+                                n2 instanceof Short ||
+                                n2 instanceof Byte;
+
+                if (n1Integral && n2Integral) {
+                    long result = n1.longValue() + n2.longValue();
+                    merged.put(key, result);
+                } else {
+                    double result = n1.doubleValue() + n2.doubleValue();
+                    merged.put(key, result);
+                }
+
             } else {
-                merged.put(field, newValue);
+                merged.put(key, newValue);
             }
         }
 
