@@ -19,7 +19,7 @@ public class DefaultAppEventPayloadHandler
 
     private static final String TAG = "AppEventHandler";
 
-    private static final String COLLECTION_USER_SESSION = "user_session_data";
+    private static final String COLLECTION_USER_SESSION = "user_sessions_data";
     private static final String COLLECTION_SUMMARY = "summary_data";
 
     @Override
