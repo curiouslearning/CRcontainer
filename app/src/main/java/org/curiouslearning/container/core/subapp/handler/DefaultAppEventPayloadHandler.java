@@ -12,6 +12,7 @@ import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class DefaultAppEventPayloadHandler
@@ -37,20 +38,24 @@ public class DefaultAppEventPayloadHandler
     private void storePayload(@NonNull AppEventPayload payload) {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String rawCollection = payload.collection;
+        String normalizedCollection = normalizeCollection(rawCollection);
 
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
                 payload.app_id == null || payload.app_id.trim().isEmpty() ||
-                payload.collection == null || payload.collection.trim().isEmpty() ||
+                normalizedCollection == null || normalizedCollection.isEmpty() ||
                 payload.timestamp == null) {
 
             Log.e(TAG, "Invalid payload — missing or blank required fields");
             return;
         }
 
-        switch (payload.collection) {
+        payload.collection = normalizedCollection;
+
+        switch (normalizedCollection) {
 
             case COLLECTION_USER_SESSION:
-                Log.d(TAG, "Handling user_session_data payload");
+                Log.d(TAG, "Handling user_sessions_data payload");
                 storeUserSessionPayload(db, payload);
                 break;
 
@@ -60,13 +65,33 @@ public class DefaultAppEventPayloadHandler
                 break;
 
             default:
-                Log.e(TAG, "Unsupported collection: " + payload.collection);
+                Log.e(
+                        TAG,
+                        "Unsupported collection: raw='" + rawCollection +
+                                "' normalized='" + normalizedCollection +
+                                "' length=" + normalizedCollection.length()
+                );
                 return;
         }
     }
 
+    private String normalizeCollection(String collection) {
+
+        if (collection == null) {
+            return null;
+        }
+
+        String normalized = collection.trim().toLowerCase(Locale.US);
+
+        if ("user_sessions_data".equals(normalized)) {
+            return COLLECTION_USER_SESSION;
+        }
+
+        return normalized;
+    }
+
     /**
-     * Direct save for user_session_data
+     * Direct save for user_sessions_data
      */
     private void storeUserSessionPayload(
             FirebaseFirestore db,
