@@ -87,6 +87,10 @@ public class DefaultAppEventPayloadHandler
             return COLLECTION_USER_SESSION;
         }
 
+        if ("summary_data".equals(normalized)) {
+            return COLLECTION_SUMMARY;
+        }
+
         return normalized;
     }
 
@@ -162,7 +166,7 @@ public class DefaultAppEventPayloadHandler
                                 .document(existingDoc.getId())
                                 .set(record)
                                 .addOnSuccessListener(aVoid ->
-                                        Log.d(TAG, "Updated summary payload"))
+                                        Log.d(TAG, "Updated summary payload with id: "+existingDoc.getId()))
                                 .addOnFailureListener(e ->
                                         Log.e(TAG, "Failed to update summary payload", e));
 
