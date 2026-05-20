@@ -13,30 +13,15 @@
         android:background="@drawable/bg_dialog">
 
         <TextView
-            android:id="@+id/dialog_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="Verify Your ID"
-            android:textColor="@color/white"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:fontFamily="sans-serif-medium"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <TextView
             android:id="@+id/dialog_message"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:text="Would you like to set your Curious Reader User ID to the following value?"
             android:textColor="#E0FFFFFF"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:gravity="center"
             android:lineSpacingMultiplier="1.2"
-            app:layout_constraintTop_toBottomOf="@id/dialog_title"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
@@ -78,9 +63,9 @@
                 android:id="@+id/btn_confirm"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:text="Confirm"
+                android:text="✔"
                 android:textColor="@color/white"
-                android:textSize="15sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:background="@drawable/bg_button_confirm" />

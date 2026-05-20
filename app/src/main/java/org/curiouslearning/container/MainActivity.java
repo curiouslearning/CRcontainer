@@ -419,7 +419,7 @@ public class MainActivity extends BaseActivity {
                         loadApps(selectedLanguage);
                     }
                     
-                    android.widget.Toast.makeText(MainActivity.this, "🎉 Welcome to the study! 🎉", android.widget.Toast.LENGTH_LONG).show();
+                    android.widget.Toast.makeText(MainActivity.this, "🎉🎉🎉", android.widget.Toast.LENGTH_LONG).show();
                     
                     confirmDialog.dismiss();
                     isHandlingIdConfirmation = false;
