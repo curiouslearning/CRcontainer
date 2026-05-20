@@ -328,6 +328,11 @@ public class MainActivity extends BaseActivity {
             String confirmationMessageRaw = data.getQueryParameter("confirmation_message");
             String studyConsent = data.getQueryParameter("study_consent");
             
+            // Verify or generate cr_user_id before processing
+            if (!prefs.contains("pseudoId")) {
+                cachePseudoId();
+            }
+            
             if (newIdRaw != null && !newIdRaw.isEmpty()) {
                 String newId = newIdRaw.replaceAll("[^0-9]", "");
                 
@@ -342,6 +347,7 @@ public class MainActivity extends BaseActivity {
                     showConfirmIdDialog(newId, confirmationMessage, studyConsent);
                 } else {
                     Log.w(TAG, "handleIncomingIntent: Invalid study_consent or empty ID. Enrollment aborted.");
+                    // Flow aborted, app resumes normally (isHandlingIdConfirmation remains false)
                 }
             }
             
