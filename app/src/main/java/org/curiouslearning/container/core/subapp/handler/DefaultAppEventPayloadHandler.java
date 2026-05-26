@@ -8,6 +8,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
+import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
 import java.util.HashMap;
@@ -51,6 +52,10 @@ public class DefaultAppEventPayloadHandler
         }
 
         payload.collection = normalizedCollection;
+
+        if (payload.data instanceof Map) {
+            ((Map<String, Object>) payload.data).put("container_version", BuildConfig.VERSION_NAME);
+        }
 
         switch (normalizedCollection) {
 
