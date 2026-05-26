@@ -321,7 +321,6 @@ public class MainActivity extends BaseActivity {
     private void handleIncomingIntent(Intent intent) {
         if (intent != null && intent.getData() != null) {
             Uri data = intent.getData();
-            Log.d(TAG, "handleIncomingIntent: received URI: " + data);
             
             // Check for set_new_ID
             String newIdRaw = data.getQueryParameter("study_user_id");
@@ -354,8 +353,12 @@ public class MainActivity extends BaseActivity {
             // Existing language parameter logic
             String language = data.getQueryParameter("language");
             if (language != null) {
-                selectedLanguage = Character.toUpperCase(language.charAt(0))
-                        + language.substring(1).toLowerCase();
+                if (language.length() > 0) {
+                    selectedLanguage = Character.toUpperCase(language.charAt(0))
+                            + language.substring(1).toLowerCase();
+                } else {
+                    selectedLanguage = "";
+                }
                 storeSelectLanguage(selectedLanguage);
                 runOnUiThread(() -> {
                     loadApps(selectedLanguage);
@@ -370,6 +373,8 @@ public class MainActivity extends BaseActivity {
                 final Dialog confirmDialog = new Dialog(this);
                 confirmDialog.setContentView(R.layout.dialog_confirm_id);
                 confirmDialog.setCanceledOnTouchOutside(false);
+                confirmDialog.setOnDismissListener(dialogInterface -> isHandlingIdConfirmation = false);
+                confirmDialog.setOnCancelListener(dialogInterface -> isHandlingIdConfirmation = false);
                 if (confirmDialog.getWindow() != null) {
                     confirmDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
                 }
@@ -453,6 +458,7 @@ public class MainActivity extends BaseActivity {
                 }
             } catch (Exception e) {
                 Log.e(TAG, "showConfirmIdDialog: Failed to show confirmation dialog", e);
+                isHandlingIdConfirmation = false;
             }
         });
     }
@@ -610,7 +616,10 @@ public class MainActivity extends BaseActivity {
                     editor.putString("campaign_id", campaign_id);
                     editor.apply();
                     validLanguage(language, "facebook", String.valueOf(deepLinkUri));
-                    String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                    String lang = "";
+                    if (language != null && language.length() > 0) {
+                        lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                    }
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                     selectedLanguage = lang;
                     storeSelectLanguage(lang);
