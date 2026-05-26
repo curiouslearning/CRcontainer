@@ -100,6 +100,7 @@ public class MainActivity extends BaseActivity {
     private String appVersion;
     private boolean isReferrerHandled;
     private boolean isAttributionComplete = false;
+    private boolean isHandlingIdConfirmation = false;
     private long initialSlackAlertTime;
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
@@ -251,14 +252,7 @@ public class MainActivity extends BaseActivity {
         InstallReferrerManager installReferrerManager = new InstallReferrerManager(getApplicationContext(),
                 referrerCallback);
         installReferrerManager.checkPlayStoreAvailability();
-        Intent intent = getIntent();
-        if (intent.getData() != null) {
-            String language = intent.getData().getQueryParameter("language");
-            if (language != null) {
-                selectedLanguage = Character.toUpperCase(language.charAt(0))
-                        + language.substring(1).toLowerCase();
-            }
-        }
+        handleIncomingIntent(getIntent());
         audioPlayer = new AudioPlayer();
         FirebaseApp.initializeApp(this);
         FacebookSdk.setAutoInitEnabled(true);
@@ -313,6 +307,158 @@ public class MainActivity extends BaseActivity {
                         debugOverlayHandler.post(debugOverlayUpdater);
                     }
                 }
+            }
+        });
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingIntent(intent);
+    }
+
+    private void handleIncomingIntent(Intent intent) {
+        if (intent != null && intent.getData() != null) {
+            Uri data = intent.getData();
+            
+            // Check for set_new_ID
+            String newIdRaw = data.getQueryParameter("study_user_id");
+            String confirmationMessageRaw = data.getQueryParameter("confirmation_message");
+            String studyConsent = data.getQueryParameter("study_consent");
+            
+            // Verify or generate cr_user_id before processing
+            if (!prefs.contains("pseudoId")) {
+                cachePseudoId();
+            }
+            
+            if (newIdRaw != null && !newIdRaw.isEmpty()) {
+                String newId = newIdRaw.replaceAll("[^0-9]", "");
+                
+                if ("true".equals(studyConsent) && !newId.isEmpty()) {
+                    isHandlingIdConfirmation = true;
+                    
+                    String confirmationMessage = confirmationMessageRaw;
+                    if (confirmationMessage != null && confirmationMessage.length() > 800) {
+                        confirmationMessage = confirmationMessage.substring(0, 800);
+                    }
+                    
+                    showConfirmIdDialog(newId, confirmationMessage, studyConsent);
+                } else {
+                    Log.w(TAG, "handleIncomingIntent: Invalid study_consent or empty ID. Enrollment aborted.");
+                    // Flow aborted, app resumes normally (isHandlingIdConfirmation remains false)
+                }
+            }
+            
+            // Existing language parameter logic
+            String language = data.getQueryParameter("language");
+            if (language != null) {
+                if (language.length() > 0) {
+                    selectedLanguage = Character.toUpperCase(language.charAt(0))
+                            + language.substring(1).toLowerCase();
+                } else {
+                    selectedLanguage = "";
+                }
+                storeSelectLanguage(selectedLanguage);
+                runOnUiThread(() -> {
+                    loadApps(selectedLanguage);
+                });
+            }
+        }
+    }
+
+    private void showConfirmIdDialog(final String newId, final String confirmationMessage, final String studyConsent) {
+        runOnUiThread(() -> {
+            try {
+                final Dialog confirmDialog = new Dialog(this);
+                confirmDialog.setContentView(R.layout.dialog_confirm_id);
+                confirmDialog.setCanceledOnTouchOutside(false);
+                confirmDialog.setOnDismissListener(dialogInterface -> isHandlingIdConfirmation = false);
+                confirmDialog.setOnCancelListener(dialogInterface -> isHandlingIdConfirmation = false);
+                if (confirmDialog.getWindow() != null) {
+                    confirmDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+                }
+
+                TextView newUserIdTv = confirmDialog.findViewById(R.id.new_user_id);
+                newUserIdTv.setText(newId);
+                
+                if (confirmationMessage != null && !confirmationMessage.isEmpty()) {
+                    TextView dialogMessageTv = confirmDialog.findViewById(R.id.dialog_message);
+                    if (dialogMessageTv != null) {
+                        dialogMessageTv.setText(confirmationMessage);
+                    }
+                }
+
+                Button btnConfirm = confirmDialog.findViewById(R.id.btn_confirm);
+
+                // Add pulse/breathing micro-animation to the Confirm button
+                ObjectAnimator scaleX = ObjectAnimator.ofFloat(btnConfirm, "scaleX", 1f, 1.05f, 1f);
+                ObjectAnimator scaleY = ObjectAnimator.ofFloat(btnConfirm, "scaleY", 1f, 1.05f, 1f);
+                scaleX.setDuration(1500);
+                scaleY.setDuration(1500);
+                scaleX.setRepeatCount(ValueAnimator.INFINITE);
+                scaleY.setRepeatCount(ValueAnimator.INFINITE);
+                scaleX.start();
+                scaleY.start();
+
+                btnConfirm.setOnClickListener(v -> {
+                    scaleX.cancel();
+                    scaleY.cancel();
+                    
+                    // Replace auto-generated cr_user_id with the confirmed one
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putString("pseudoId", newId);
+                    if (studyConsent != null && !studyConsent.isEmpty()) {
+                        editor.putString("studyConsent", studyConsent);
+                    }
+                    editor.apply();
+                    
+                    // Log confirmation event for analytics
+                    AnalyticsUtils.logEvent(
+                        MainActivity.this,
+                        "cr_user_id_confirmed",
+                        "Container",
+                        "",
+                        newId,
+                        selectedLanguage
+                    );
+
+                    updateDebugOverlay();
+                    
+                    // Reload apps with the new ID
+                    if (selectedLanguage != null && !selectedLanguage.isEmpty()) {
+                        loadApps(selectedLanguage);
+                    }
+                    
+                    android.widget.Toast.makeText(MainActivity.this, "🎉🎉🎉", android.widget.Toast.LENGTH_LONG).show();
+                    
+                    confirmDialog.dismiss();
+                    isHandlingIdConfirmation = false;
+                    if (selectedLanguage == null || selectedLanguage.isEmpty()) {
+                        showLanguagePopup();
+                    }
+                });
+
+                confirmDialog.show();
+
+                // Entrance animation (scale up with overshoot)
+                View decorView = confirmDialog.getWindow().getDecorView();
+                View rootLayout = decorView.findViewById(android.R.id.content);
+                if (rootLayout != null) {
+                    rootLayout.setScaleX(0.7f);
+                    rootLayout.setScaleY(0.7f);
+                    rootLayout.setAlpha(0f);
+                    rootLayout.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .alpha(1f)
+                            .setDuration(350)
+                            .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+                            .start();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "showConfirmIdDialog: Failed to show confirmation dialog", e);
+                isHandlingIdConfirmation = false;
             }
         });
     }
@@ -470,7 +616,10 @@ public class MainActivity extends BaseActivity {
                     editor.putString("campaign_id", campaign_id);
                     editor.apply();
                     validLanguage(language, "facebook", String.valueOf(deepLinkUri));
-                    String lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                    String lang = "";
+                    if (language != null && language.length() > 0) {
+                        lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
+                    }
                     Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
                     selectedLanguage = lang;
                     storeSelectLanguage(lang);
@@ -636,6 +785,10 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
+        if (isHandlingIdConfirmation) {
+            Log.d(TAG, "showLanguagePopup: Skipped because we are handling ID confirmation.");
+            return;
+        }
         if (!dialog.isShowing()) {
             dialog.setContentView(R.layout.language_popup);
 

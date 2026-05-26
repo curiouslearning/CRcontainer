@@ -14,5 +14,8 @@
     <string name="offline_mode_icon">Offline mode indicator</string>
     <string name="offline_mode_message">You\'re currently in offline mode</string>
     <string name="monster_animation">Monster animation</string>
-    <string name="selected">Selected</string>
+    <string name="confirm_id_message">Would you like to set your Curious Reader User ID to the following value?</string>
+    <string name="confirm_id_placeholder">[phone]</string>
+    <string name="confirm_id_button_text">✔</string>
+    <string name="confirm_id_button_description">Confirm</string>
 </resources>
