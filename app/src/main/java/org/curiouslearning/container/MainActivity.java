@@ -408,6 +408,7 @@ public class MainActivity extends BaseActivity {
                     // Replace auto-generated cr_user_id with the confirmed one
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putString("pseudoId", newId);
+                    editor.putString(AnalyticsUtils.STUDY_USER_ID, newId);
                     if (studyConsent != null && !studyConsent.isEmpty()) {
                         editor.putString("studyConsent", studyConsent);
                     }

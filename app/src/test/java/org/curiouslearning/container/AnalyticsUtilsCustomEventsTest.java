@@ -2,6 +2,7 @@
 package org.curiouslearning.container;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
@@ -31,6 +32,7 @@ public class AnalyticsUtilsCustomEventsTest {
 
     private Context context;
     private SharedPreferences prefs;
+    private SharedPreferences appPrefs;
 
     @Before
     public void setup() throws Exception {
@@ -43,6 +45,8 @@ public class AnalyticsUtilsCustomEventsTest {
                 .putString("source", "test_source")
                 .putString("campaign_id", "test_campaign")
                 .apply();
+        appPrefs = context.getSharedPreferences(AnalyticsUtils.APP_CACHED_PREFS, Context.MODE_PRIVATE);
+        appPrefs.edit().clear().apply();
 
         // **Reset the cached FirebaseAnalytics** so our static mock takes effect
         Field mFaField = AnalyticsUtils.class.getDeclaredField("mFirebaseAnalytics");
@@ -52,6 +56,8 @@ public class AnalyticsUtilsCustomEventsTest {
 
     @Test
     public void testLogEvent_appLaunch() {
+        appPrefs.edit().putString(AnalyticsUtils.STUDY_USER_ID, "12345").apply();
+
         // Prepare a spy for FirebaseAnalytics
         FirebaseAnalytics spyFA = Mockito.spy(FirebaseAnalytics.getInstance(context));
 
@@ -77,10 +83,34 @@ public class AnalyticsUtilsCustomEventsTest {
             assertEquals("https://example.com/ftm", b.getString("web_app_url"));
             assertEquals("user123", b.getString("cr_user_id"));
             assertEquals("Hindi", b.getString("cr_language"));
+            assertEquals("12345", b.getString("study_user_id"));
 
             // Verify user properties on the same instance
             verify(spyFA).setUserProperty("source", "test_source");
             verify(spyFA).setUserProperty("campaign_id", "test_campaign");
+        }
+    }
+
+    @Test
+    public void testLogEvent_appLaunchWithoutStudyUserId() {
+        FirebaseAnalytics spyFA = Mockito.spy(FirebaseAnalytics.getInstance(context));
+
+        try (MockedStatic<FirebaseAnalytics> faStatic = Mockito.mockStatic(FirebaseAnalytics.class)) {
+            faStatic.when(() -> FirebaseAnalytics.getInstance(context)).thenReturn(spyFA);
+
+            AnalyticsUtils.logEvent(
+                    context,
+                    "app_launch",
+                    "Feed the Monster",
+                    "https://example.com/ftm",
+                    "user123",
+                    "Hindi"
+            );
+
+            ArgumentCaptor<Bundle> captor = ArgumentCaptor.forClass(Bundle.class);
+            verify(spyFA).logEvent(eq("app_launch"), captor.capture());
+            Bundle b = captor.getValue();
+            assertFalse(b.containsKey("study_user_id"));
         }
     }
 
@@ -100,6 +130,15 @@ public class AnalyticsUtilsCustomEventsTest {
 //                    "v1.2.3",
 //                    "false"
 //            );
+            AnalyticsUtils.logLanguageSelectEvent(
+                    context,
+                    "language_selected",
+                    "user456",
+                    "Nepali",
+                    "v1.2.3",
+                    "false",
+                    ""
+            );
 
             // Capture and assert that logEvent was called
             ArgumentCaptor<Bundle> captor = ArgumentCaptor.forClass(Bundle.class);

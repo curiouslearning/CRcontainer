@@ -20,6 +20,8 @@ public class AnalyticsUtils {
 
     private static FirebaseAnalytics mFirebaseAnalytics;
     private static final String PREFS_NAME = "InstallReferrerPrefs";
+    public static final String APP_CACHED_PREFS = "appCached";
+    public static final String STUDY_USER_ID = "study_user_id";
     private static final String SOURCE = "source";
     private static final String CAMPAIGN_ID = "campaign_id";
 
@@ -39,6 +41,18 @@ public class AnalyticsUtils {
         bundle.putString("raw_referrer_url", rawReferrerUrl.isEmpty() ? null : rawReferrerUrl);
     }
 
+    private static void addStudyUserIdForAppLaunch(Context context, String eventName, Bundle bundle) {
+        if (!"app_launch".equals(eventName)) {
+            return;
+        }
+
+        SharedPreferences appPrefs = context.getSharedPreferences(APP_CACHED_PREFS, Context.MODE_PRIVATE);
+        String studyUserId = appPrefs.getString(STUDY_USER_ID, "");
+        if (studyUserId != null && !studyUserId.isEmpty()) {
+            bundle.putString(STUDY_USER_ID, studyUserId);
+        }
+    }
+
     public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId,
             String language) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
@@ -53,6 +67,7 @@ public class AnalyticsUtils {
 
         // Add the raw_referrer_url from install_referrer_prefs as well (only if not empty)
         addRawReferrerUrl(context, bundle);
+        addStudyUserIdForAppLaunch(context, eventName, bundle);
 
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
