@@ -154,4 +154,57 @@ public class AnalyticsUtilsCustomEventsTest {
             verify(spyFA).setUserProperty("campaign_id", "test_campaign");
         }
     }
+
+    @Test
+    public void testLogJoinedStudyEvent() {
+        FirebaseAnalytics spyFA = Mockito.spy(FirebaseAnalytics.getInstance(context));
+        try (MockedStatic<FirebaseAnalytics> faStatic = Mockito.mockStatic(FirebaseAnalytics.class)) {
+            faStatic.when(() -> FirebaseAnalytics.getInstance(context)).thenReturn(spyFA);
+
+            AnalyticsUtils.logJoinedStudyEvent(
+                    context,
+                    "12345",
+                    "Nepali",
+                    "2.34.3",
+                    "12345",
+                    "true"
+            );
+
+            ArgumentCaptor<Bundle> captor = ArgumentCaptor.forClass(Bundle.class);
+            verify(spyFA).logEvent(eq("joined_study"), captor.capture());
+            Bundle b = captor.getValue();
+            assertEquals("Nepali", b.getString("cr_language"));
+            assertEquals("2.34.3", b.getString("app_info.version"));
+            assertEquals("12345", b.getString("cr_user_id"));
+            assertEquals("test_source", b.getString("source"));
+            assertEquals("test_campaign", b.getString("campaign_id"));
+            assertEquals("12345", b.getString("study_user_id"));
+            assertEquals("true", b.getString("study_consent"));
+            verify(spyFA).setUserProperty("source", "test_source");
+            verify(spyFA).setUserProperty("campaign_id", "test_campaign");
+        }
+    }
+
+    @Test
+    public void testLogJoinedStudyEvent_sanitizesStudyIds() {
+        FirebaseAnalytics spyFA = Mockito.spy(FirebaseAnalytics.getInstance(context));
+        try (MockedStatic<FirebaseAnalytics> faStatic = Mockito.mockStatic(FirebaseAnalytics.class)) {
+            faStatic.when(() -> FirebaseAnalytics.getInstance(context)).thenReturn(spyFA);
+
+            AnalyticsUtils.logJoinedStudyEvent(
+                    context,
+                    "abc-123-xyz",
+                    "Hindi",
+                    "2.34.3",
+                    "study:45 6!",
+                    "true"
+            );
+
+            ArgumentCaptor<Bundle> captor = ArgumentCaptor.forClass(Bundle.class);
+            verify(spyFA).logEvent(eq("joined_study"), captor.capture());
+            Bundle b = captor.getValue();
+            assertEquals("123", b.getString("cr_user_id"));
+            assertEquals("456", b.getString("study_user_id"));
+        }
+    }
 }
