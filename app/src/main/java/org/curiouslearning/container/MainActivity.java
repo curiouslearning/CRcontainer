@@ -431,13 +431,16 @@ public class MainActivity extends BaseActivity {
                         loadApps(selectedLanguage);
                     }
                     
-                    android.widget.Toast.makeText(MainActivity.this, "🎉🎉🎉", android.widget.Toast.LENGTH_LONG).show();
+                    Runnable onDismiss = () -> {
+                        if (selectedLanguage == null || selectedLanguage.isEmpty()) {
+                            showLanguagePopup();
+                        }
+                    };
+                    
+                    showSuccessDialog(onDismiss);
                     
                     confirmDialog.dismiss();
                     isHandlingIdConfirmation = false;
-                    if (selectedLanguage == null || selectedLanguage.isEmpty()) {
-                        showLanguagePopup();
-                    }
                 });
 
                 confirmDialog.show();
@@ -460,6 +463,44 @@ public class MainActivity extends BaseActivity {
             } catch (Exception e) {
                 Log.e(TAG, "showConfirmIdDialog: Failed to show confirmation dialog", e);
                 isHandlingIdConfirmation = false;
+            }
+        });
+    }
+
+    private void showSuccessDialog(Runnable onDismissAction) {
+        runOnUiThread(() -> {
+            try {
+                final Dialog successDialog = new Dialog(this);
+                successDialog.setContentView(R.layout.dialog_enrollment_success);
+                successDialog.setCanceledOnTouchOutside(true);
+                successDialog.setOnDismissListener(dialog -> {
+                    if (onDismissAction != null) {
+                        onDismissAction.run();
+                    }
+                });
+                if (successDialog.getWindow() != null) {
+                    successDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+                }
+
+                View container = successDialog.findViewById(R.id.success_container);
+                if (container != null) {
+                    container.setOnClickListener(v -> {
+                        if (successDialog.isShowing()) {
+                            successDialog.dismiss();
+                        }
+                    });
+                }
+
+                successDialog.show();
+
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (successDialog.isShowing()) {
+                        successDialog.dismiss();
+                    }
+                }, 2000);
+
+            } catch (Exception e) {
+                Log.e(TAG, "showSuccessDialog: Failed to show success dialog", e);
             }
         });
     }
