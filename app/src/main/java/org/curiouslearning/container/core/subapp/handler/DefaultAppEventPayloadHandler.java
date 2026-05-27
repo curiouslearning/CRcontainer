@@ -43,8 +43,8 @@ public class DefaultAppEventPayloadHandler
 
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
                 payload.app_id == null || payload.app_id.trim().isEmpty() ||
-                normalizedCollection == null || normalizedCollection.isEmpty() ||
-            ) {
+                normalizedCollection == null || normalizedCollection.isEmpty()
+        ) {
 
             Log.e(TAG, "Invalid payload — missing or blank required fields");
             return;
@@ -144,13 +144,12 @@ public class DefaultAppEventPayloadHandler
                 .whereEqualTo("app_id", payload.app_id)
                 .limit(1);
 
+        Map<String, Object> record = new HashMap<>();
+        record.put("cr_user_id", payload.cr_user_id);
+        record.put("app_id", payload.app_id);
+
         query.get()
                 .addOnSuccessListener(querySnapshot -> {
-
-                    Map<String, Object> record = new HashMap<>();
-                    record.put("cr_user_id", payload.cr_user_id);
-                    record.put("app_id", payload.app_id);
-
                     if (!querySnapshot.isEmpty()) {
 
                         List<DocumentSnapshot> documents = querySnapshot.getDocuments();
@@ -198,9 +197,6 @@ public class DefaultAppEventPayloadHandler
         Map<String, Object> newData =
                 new HashMap<>((Map<String, Object>) payload.data);
 
-        Map<String, Object> record = new HashMap<>();
-        record.put("cr_user_id", payload.cr_user_id);
-        record.put("app_id", payload.app_id);
         record.put("collection", payload.collection);
         record.put("data", newData);
         record.put("created_at", Instant.now().toString());
