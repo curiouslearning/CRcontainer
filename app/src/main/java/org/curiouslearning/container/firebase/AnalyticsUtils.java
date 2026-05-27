@@ -108,6 +108,33 @@ public class AnalyticsUtils {
         firebaseAnalytics.logEvent(eventName, bundle);
     }
 
+    public static void logJoinedStudyEvent(Context context, String crUserId, String language,
+            String appVersion, String studyUserId, String studyConsent) {
+        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String source = prefs.getString(SOURCE, "");
+        String campaignId = prefs.getString(CAMPAIGN_ID, "");
+        String sanitizedCrUserId = sanitizeStudyUserId(crUserId);
+        String sanitizedStudyUserId = sanitizeStudyUserId(studyUserId);
+
+        Bundle bundle = new Bundle();
+        bundle.putString("cr_language", language);
+        bundle.putString("app_info.version", appVersion);
+        bundle.putString("cr_user_id", sanitizedCrUserId);
+        bundle.putString("source", source);
+        bundle.putString("campaign_id", campaignId);
+        bundle.putString(STUDY_USER_ID, sanitizedStudyUserId);
+        bundle.putString("study_consent", studyConsent);
+
+        firebaseAnalytics.setUserProperty("source", source);
+        firebaseAnalytics.setUserProperty("campaign_id", campaignId);
+        firebaseAnalytics.logEvent("joined_study", bundle);
+    }
+
+    private static String sanitizeStudyUserId(String studyUserId) {
+        return studyUserId == null ? "" : studyUserId.replaceAll("[^0-9]", "");
+    }
+
     public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language,
             String manifestVersion, String autoSelected, String deepLinkUri) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);

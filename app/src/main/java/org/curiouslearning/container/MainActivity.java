@@ -414,14 +414,19 @@ public class MainActivity extends BaseActivity {
                     }
                     editor.apply();
                     
-                    // Log confirmation event for analytics
-                    AnalyticsUtils.logEvent(
+                    String joinedStudyAppVersion = appVersion;
+                    if (joinedStudyAppVersion == null || joinedStudyAppVersion.isEmpty()) {
+                        joinedStudyAppVersion = AppUtils.getAppVersionName(MainActivity.this);
+                    }
+
+                    // Log joined-study confirmation event for analytics
+                    AnalyticsUtils.logJoinedStudyEvent(
                         MainActivity.this,
-                        "cr_user_id_confirmed",
-                        "Container",
-                        "",
                         newId,
-                        selectedLanguage
+                        selectedLanguage,
+                        joinedStudyAppVersion,
+                        newId,
+                        studyConsent
                     );
 
                     updateDebugOverlay();
