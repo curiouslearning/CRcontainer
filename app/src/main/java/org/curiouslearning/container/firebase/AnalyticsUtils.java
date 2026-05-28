@@ -119,7 +119,6 @@ public class AnalyticsUtils {
 
         Bundle bundle = new Bundle();
         bundle.putString("cr_language", language);
-        bundle.putString("app_info.version", appVersion);
         bundle.putString("cr_user_id", sanitizedCrUserId);
         bundle.putString("source", source);
         bundle.putString("campaign_id", campaignId);
