@@ -27,7 +27,7 @@ android {
     }
     defaultConfig {
         applicationId "org.curiouslearning.container"
-        minSdk 26
+        minSdk 24
         targetSdk 35
         versionCode 70
         versionName "2.34.2"
