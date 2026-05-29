@@ -114,12 +114,11 @@ public class AnalyticsUtils {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String source = prefs.getString(SOURCE, "");
         String campaignId = prefs.getString(CAMPAIGN_ID, "");
-        String sanitizedCrUserId = sanitizeStudyUserId(crUserId);
         String sanitizedStudyUserId = sanitizeStudyUserId(studyUserId);
 
         Bundle bundle = new Bundle();
         bundle.putString("cr_language", language);
-        bundle.putString("cr_user_id", sanitizedCrUserId);
+        bundle.putString("cr_user_id", crUserId);
         bundle.putString("source", source);
         bundle.putString("campaign_id", campaignId);
         bundle.putString(STUDY_USER_ID, sanitizedStudyUserId);

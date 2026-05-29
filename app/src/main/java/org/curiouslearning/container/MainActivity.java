@@ -16,6 +16,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
+import android.text.method.ScrollingMovementMethod;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -101,6 +102,7 @@ public class MainActivity extends BaseActivity {
     private boolean isReferrerHandled;
     private boolean isAttributionComplete = false;
     private boolean isHandlingIdConfirmation = false;
+    private boolean isShowingEnrollmentSuccess = false;
     private long initialSlackAlertTime;
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
@@ -321,7 +323,8 @@ public class MainActivity extends BaseActivity {
     private void handleIncomingIntent(Intent intent) {
         if (intent != null && intent.getData() != null) {
             Uri data = intent.getData();
-
+            boolean handledStudyEnrollmentLink = false;
+            
             // Check for set_new_ID
             String newIdRaw = data.getQueryParameter("study_user_id");
             String confirmationMessageRaw = data.getQueryParameter("confirmation_message");
@@ -336,14 +339,23 @@ public class MainActivity extends BaseActivity {
                 String newId = newIdRaw.replaceAll("[^0-9]", "");
 
                 if ("true".equals(studyConsent) && !newId.isEmpty()) {
-                    isHandlingIdConfirmation = true;
-
-                    String confirmationMessage = confirmationMessageRaw;
-                    if (confirmationMessage != null && confirmationMessage.length() > 800) {
-                        confirmationMessage = confirmationMessage.substring(0, 800);
+                    handledStudyEnrollmentLink = true;
+                    String storedStudyUserId = prefs.getString(AnalyticsUtils.STUDY_USER_ID, "");
+                    if (storedStudyUserId != null && !storedStudyUserId.isEmpty()) {
+                        Log.d(TAG, "handleIncomingIntent: Study enrollment link ignored because a study user ID is already stored.");
+                    } else if (isHandlingIdConfirmation || isShowingEnrollmentSuccess) {
+                        Log.d(TAG, "handleIncomingIntent: Study enrollment UI already active. Ignoring duplicate link.");
+                    } else {
+                        isHandlingIdConfirmation = true;
+                        dismissLanguagePopupIfShowing();
+                        
+                        String confirmationMessage = confirmationMessageRaw;
+                        if (confirmationMessage != null && confirmationMessage.length() > 800) {
+                            confirmationMessage = confirmationMessage.substring(0, 800);
+                        }
+                        
+                        showConfirmIdDialog(newId, confirmationMessage, studyConsent);
                     }
-
-                    showConfirmIdDialog(newId, confirmationMessage, studyConsent);
                 } else {
                     Log.w(TAG, "handleIncomingIntent: Invalid study_consent or empty ID. Enrollment aborted.");
                     // Flow aborted, app resumes normally (isHandlingIdConfirmation remains false)
@@ -364,6 +376,18 @@ public class MainActivity extends BaseActivity {
                     loadApps(selectedLanguage);
                 });
             }
+
+            if (handledStudyEnrollmentLink) {
+                Intent consumedIntent = new Intent(intent);
+                consumedIntent.setData(null);
+                setIntent(consumedIntent);
+            }
+        }
+    }
+
+    private void dismissLanguagePopupIfShowing() {
+        if (dialog != null && dialog.isShowing()) {
+            dialog.dismiss();
         }
     }
 
@@ -387,6 +411,7 @@ public class MainActivity extends BaseActivity {
                     TextView dialogMessageTv = confirmDialog.findViewById(R.id.dialog_message);
                     if (dialogMessageTv != null) {
                         dialogMessageTv.setText(confirmationMessage);
+                        dialogMessageTv.setMovementMethod(new ScrollingMovementMethod());
                     }
                 }
 
@@ -403,8 +428,17 @@ public class MainActivity extends BaseActivity {
                 scaleY.start();
 
                 btnConfirm.setOnClickListener(v -> {
+                    btnConfirm.setEnabled(false);
                     scaleX.cancel();
                     scaleY.cancel();
+
+                    String storedStudyUserId = prefs.getString(AnalyticsUtils.STUDY_USER_ID, "");
+                    if (storedStudyUserId != null && !storedStudyUserId.isEmpty()) {
+                        Log.d(TAG, "showConfirmIdDialog: Study user ID already stored. Confirmation ignored.");
+                        confirmDialog.dismiss();
+                        isHandlingIdConfirmation = false;
+                        return;
+                    }
 
                     SharedPreferences.Editor editor = prefs.edit();
 
@@ -474,12 +508,18 @@ public class MainActivity extends BaseActivity {
     private void showSuccessDialog(Runnable onDismissAction) {
         runOnUiThread(() -> {
             try {
+                isShowingEnrollmentSuccess = true;
                 final Dialog successDialog = new Dialog(this);
                 successDialog.setContentView(R.layout.dialog_enrollment_success);
-                successDialog.setCanceledOnTouchOutside(true);
+                successDialog.setCanceledOnTouchOutside(false);
+                successDialog.setCancelable(false);
+                Handler successHandler = new Handler(Looper.getMainLooper());
+                final boolean[] dismissActionDelivered = {false};
                 successDialog.setOnDismissListener(dialog -> {
-                    if (onDismissAction != null) {
-                        onDismissAction.run();
+                    isShowingEnrollmentSuccess = false;
+                    if (!dismissActionDelivered[0] && onDismissAction != null) {
+                        dismissActionDelivered[0] = true;
+                        successHandler.post(onDismissAction);
                     }
                 });
                 if (successDialog.getWindow() != null) {
@@ -487,24 +527,16 @@ public class MainActivity extends BaseActivity {
                             new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
                 }
 
-                View container = successDialog.findViewById(R.id.success_container);
-                if (container != null) {
-                    container.setOnClickListener(v -> {
-                        if (successDialog.isShowing()) {
-                            successDialog.dismiss();
-                        }
-                    });
-                }
-
                 successDialog.show();
 
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                successHandler.postDelayed(() -> {
                     if (successDialog.isShowing()) {
                         successDialog.dismiss();
                     }
                 }, 2000);
 
             } catch (Exception e) {
+                isShowingEnrollmentSuccess = false;
                 Log.e(TAG, "showSuccessDialog: Failed to show success dialog", e);
             }
         });
@@ -832,8 +864,8 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
-        if (isHandlingIdConfirmation) {
-            Log.d(TAG, "showLanguagePopup: Skipped because we are handling ID confirmation.");
+        if (isHandlingIdConfirmation || isShowingEnrollmentSuccess) {
+            Log.d(TAG, "showLanguagePopup: Skipped because study enrollment confirmation UI is active.");
             return;
         }
         if (!dialog.isShowing()) {

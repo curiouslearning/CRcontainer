@@ -203,7 +203,7 @@ public class AnalyticsUtilsCustomEventsTest {
             ArgumentCaptor<Bundle> captor = ArgumentCaptor.forClass(Bundle.class);
             verify(spyFA).logEvent(eq("joined_study"), captor.capture());
             Bundle b = captor.getValue();
-            assertEquals("123", b.getString("cr_user_id"));
+            assertEquals("abc-123-xyz", b.getString("cr_user_id"));
             assertEquals("456", b.getString("study_user_id"));
         }
     }

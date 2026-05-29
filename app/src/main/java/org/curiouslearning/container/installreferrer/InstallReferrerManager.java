@@ -300,13 +300,15 @@ public class InstallReferrerManager {
         // as part of a valid URL.
         Uri uri = Uri.parse("http://dummyurl.com/?" + referrerUrl);
         String deeplink = uri.getQueryParameter("deferred_deeplink");
-        if (deeplink != null && deeplink.contains("curiousreader://app?language")) {
-            callback.onReferrerReceived(deeplink.replace("curiousreader://app?language=", ""), referrerUrl);
-        } else if (deeplink != null) {
-            callback.onReferrerReceived("", referrerUrl);
-        } else {
-            callback.onReferrerReceived("", referrerUrl);
+        String deferredLanguage = "";
+        if (!TextUtils.isEmpty(deeplink)) {
+            Uri deeplinkUri = Uri.parse(deeplink);
+            String language = deeplinkUri.getQueryParameter("language");
+            if (!TextUtils.isEmpty(language)) {
+                deferredLanguage = language;
+            }
         }
+        callback.onReferrerReceived(deferredLanguage, referrerUrl);
         
         String source = null;
         String campaign_id = null;
