@@ -321,35 +321,35 @@ public class MainActivity extends BaseActivity {
     private void handleIncomingIntent(Intent intent) {
         if (intent != null && intent.getData() != null) {
             Uri data = intent.getData();
-            
+
             // Check for set_new_ID
             String newIdRaw = data.getQueryParameter("study_user_id");
             String confirmationMessageRaw = data.getQueryParameter("confirmation_message");
             String studyConsent = data.getQueryParameter("study_consent");
-            
+
             // Verify or generate cr_user_id before processing
             if (!prefs.contains("pseudoId")) {
                 cachePseudoId();
             }
-            
+
             if (newIdRaw != null && !newIdRaw.isEmpty()) {
                 String newId = newIdRaw.replaceAll("[^0-9]", "");
-                
+
                 if ("true".equals(studyConsent) && !newId.isEmpty()) {
                     isHandlingIdConfirmation = true;
-                    
+
                     String confirmationMessage = confirmationMessageRaw;
                     if (confirmationMessage != null && confirmationMessage.length() > 800) {
                         confirmationMessage = confirmationMessage.substring(0, 800);
                     }
-                    
+
                     showConfirmIdDialog(newId, confirmationMessage, studyConsent);
                 } else {
                     Log.w(TAG, "handleIncomingIntent: Invalid study_consent or empty ID. Enrollment aborted.");
                     // Flow aborted, app resumes normally (isHandlingIdConfirmation remains false)
                 }
             }
-            
+
             // Existing language parameter logic
             String language = data.getQueryParameter("language");
             if (language != null) {
@@ -376,12 +376,13 @@ public class MainActivity extends BaseActivity {
                 confirmDialog.setOnDismissListener(dialogInterface -> isHandlingIdConfirmation = false);
                 confirmDialog.setOnCancelListener(dialogInterface -> isHandlingIdConfirmation = false);
                 if (confirmDialog.getWindow() != null) {
-                    confirmDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+                    confirmDialog.getWindow().setBackgroundDrawable(
+                            new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
                 }
 
                 TextView newUserIdTv = confirmDialog.findViewById(R.id.new_user_id);
                 newUserIdTv.setText(newId);
-                
+
                 if (confirmationMessage != null && !confirmationMessage.isEmpty()) {
                     TextView dialogMessageTv = confirmDialog.findViewById(R.id.dialog_message);
                     if (dialogMessageTv != null) {
@@ -404,46 +405,44 @@ public class MainActivity extends BaseActivity {
                 btnConfirm.setOnClickListener(v -> {
                     scaleX.cancel();
                     scaleY.cancel();
-                    
-                    // Replace auto-generated cr_user_id with the confirmed one
+
                     SharedPreferences.Editor editor = prefs.edit();
-                    editor.putString("pseudoId", newId);
+
                     editor.putString(AnalyticsUtils.STUDY_USER_ID, newId);
                     if (studyConsent != null && !studyConsent.isEmpty()) {
                         editor.putString("studyConsent", studyConsent);
                     }
                     editor.apply();
-                    
+
                     String joinedStudyAppVersion = appVersion;
                     if (joinedStudyAppVersion == null || joinedStudyAppVersion.isEmpty()) {
                         joinedStudyAppVersion = AppUtils.getAppVersionName(MainActivity.this);
                     }
-
+                    String pseudoId = prefs.getString("pseudoId", "");
                     // Log joined-study confirmation event for analytics
                     AnalyticsUtils.logJoinedStudyEvent(
-                        MainActivity.this,
-                        newId,
-                        selectedLanguage,
-                        joinedStudyAppVersion,
-                        newId,
-                        studyConsent
-                    );
+                            MainActivity.this,
+                            pseudoId,
+                            selectedLanguage,
+                            joinedStudyAppVersion,
+                            newId,
+                            studyConsent);
 
                     updateDebugOverlay();
-                    
+
                     // Reload apps with the new ID
                     if (selectedLanguage != null && !selectedLanguage.isEmpty()) {
                         loadApps(selectedLanguage);
                     }
-                    
+
                     Runnable onDismiss = () -> {
                         if (selectedLanguage == null || selectedLanguage.isEmpty()) {
                             showLanguagePopup();
                         }
                     };
-                    
+
                     showSuccessDialog(onDismiss);
-                    
+
                     confirmDialog.dismiss();
                     isHandlingIdConfirmation = false;
                 });
@@ -484,7 +483,8 @@ public class MainActivity extends BaseActivity {
                     }
                 });
                 if (successDialog.getWindow() != null) {
-                    successDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+                    successDialog.getWindow().setBackgroundDrawable(
+                            new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
                 }
 
                 View container = successDialog.findViewById(R.id.success_container);
@@ -900,26 +900,24 @@ public class MainActivity extends BaseActivity {
                         int itemCount = adapterRef[0].getCount();
                         int contentHeight = itemHeightPx * itemCount;
 
-// Screen metrics
+                        // Screen metrics
                         int screenHeight = getResources().getDisplayMetrics().heightPixels;
 
-// Reserve bottom space (20% of screen)
+                        // Reserve bottom space (20% of screen)
                         int bottomReservedSpace = (int) (screenHeight * 0.10f);
 
-// Get trigger location on screen
+                        // Get trigger location on screen
                         int[] location = new int[2];
                         autoCompleteTextView.getLocationOnScreen(location);
                         int triggerBottomY = location[1] + autoCompleteTextView.getHeight();
 
-// Available space below trigger
-                        int availableHeightBelow =
-                                screenHeight - triggerBottomY - bottomReservedSpace;
+                        // Available space below trigger
+                        int availableHeightBelow = screenHeight - triggerBottomY - bottomReservedSpace;
 
-// Final dropdown height
-                        int adjustedDropdownHeight =
-                                Math.min(contentHeight, availableHeightBelow);
+                        // Final dropdown height
+                        int adjustedDropdownHeight = Math.min(contentHeight, availableHeightBelow);
 
-// Safety fallback
+                        // Safety fallback
                         if (adjustedDropdownHeight < itemHeightPx * 2) {
                             adjustedDropdownHeight = itemHeightPx * 2;
                         }
@@ -927,7 +925,7 @@ public class MainActivity extends BaseActivity {
                         autoCompleteTextView.setDropDownHeight(adjustedDropdownHeight);
                         if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
                             String displayName = languagesEnglishNameMap.get(selectedLanguage);
-//                            textBox.setHint(displayName);
+                            // textBox.setHint(displayName);
                             autoCompleteTextView.setText(displayName, false);
                         }
 
@@ -944,7 +942,7 @@ public class MainActivity extends BaseActivity {
                                 }
 
                                 // Update hint and text to show selected language
-//                                textBox.setHint(selectedDisplayName);
+                                // textBox.setHint(selectedDisplayName);
                                 autoCompleteTextView.setText(selectedDisplayName, false);
                                 String pseudoId = prefs.getString("pseudoId", "");
                                 String manifestVrsn = prefs.getString("manifestVersion", "");
