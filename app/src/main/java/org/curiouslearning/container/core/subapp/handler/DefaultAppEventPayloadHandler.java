@@ -158,6 +158,8 @@ public class DefaultAppEventPayloadHandler
                         Map<String, Object> mergedData =
                                 mergeData(existingDoc, payload);
 
+                        record.put("created_at", existingDoc.get("created_at"));
+                        record.put("schema_version", existingDoc.get("schema_version"));
                         record.put("data", mergedData);
                         record.put("updated_at", Instant.now().toString());
                         
