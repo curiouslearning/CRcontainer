@@ -8,6 +8,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
+import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
 import java.util.HashMap;
@@ -52,6 +53,10 @@ public class DefaultAppEventPayloadHandler
 
         payload.collection = normalizedCollection;
 
+        if (payload.data instanceof Map) {
+            ((Map<String, Object>) payload.data).put("container_version", BuildConfig.VERSION_NAME);
+        }
+
         switch (normalizedCollection) {
 
             case COLLECTION_USER_SESSION:
@@ -85,6 +90,10 @@ public class DefaultAppEventPayloadHandler
 
         if ("user_sessions_data".equals(normalized)) {
             return COLLECTION_USER_SESSION;
+        }
+
+        if ("summary_data".equals(normalized)) {
+            return COLLECTION_SUMMARY;
         }
 
         return normalized;
@@ -162,7 +171,7 @@ public class DefaultAppEventPayloadHandler
                                 .document(existingDoc.getId())
                                 .set(record)
                                 .addOnSuccessListener(aVoid ->
-                                        Log.d(TAG, "Updated summary payload"))
+                                        Log.d(TAG, "Updated summary payload with id: "+existingDoc.getId()))
                                 .addOnFailureListener(e ->
                                         Log.e(TAG, "Failed to update summary payload", e));
 
