@@ -5,12 +5,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
 import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -29,8 +31,7 @@ public class DefaultAppEventPayloadHandler
         Log.d(
                 TAG,
                 "Accepted payload | app_id=" + payload.app_id +
-                        " collection=" + payload.collection +
-                        " timestamp=" + payload.timestamp
+                        " collection=" + payload.collection
         );
 
         storePayload(payload);
@@ -44,8 +45,8 @@ public class DefaultAppEventPayloadHandler
 
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
                 payload.app_id == null || payload.app_id.trim().isEmpty() ||
-                normalizedCollection == null || normalizedCollection.isEmpty() ||
-                payload.timestamp == null) {
+                normalizedCollection == null || normalizedCollection.isEmpty()
+        ) {
 
             Log.e(TAG, "Invalid payload — missing or blank required fields");
             return;
@@ -118,7 +119,8 @@ public class DefaultAppEventPayloadHandler
         record.put("cr_user_id", payload.cr_user_id);
         record.put("app_id", payload.app_id);
         record.put("collection", payload.collection);
-        record.put("timestamp", payload.timestamp);
+        record.put("created_at", Instant.now().toString());
+        record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
 
         Map<String, Object> data =
                 new HashMap<>((Map<String, Object>) payload.data);
@@ -148,15 +150,12 @@ public class DefaultAppEventPayloadHandler
                 .whereEqualTo("app_id", payload.app_id)
                 .limit(1);
 
+        Map<String, Object> record = new HashMap<>();
+        record.put("cr_user_id", payload.cr_user_id);
+        record.put("app_id", payload.app_id);
+
         query.get()
                 .addOnSuccessListener(querySnapshot -> {
-
-                    Map<String, Object> record = new HashMap<>();
-                    record.put("cr_user_id", payload.cr_user_id);
-                    record.put("app_id", payload.app_id);
-                    record.put("collection", payload.collection);
-                    record.put("timestamp", payload.timestamp);
-
                     if (!querySnapshot.isEmpty()) {
 
                         List<DocumentSnapshot> documents = querySnapshot.getDocuments();
@@ -166,10 +165,11 @@ public class DefaultAppEventPayloadHandler
                                 mergeData(existingDoc, payload);
 
                         record.put("data", mergedData);
-
+                        record.put("updated_at", Instant.now().toString());
+                        
                         db.collection(payload.collection)
                                 .document(existingDoc.getId())
-                                .set(record)
+                                .set(record, SetOptions.merge())
                                 .addOnSuccessListener(aVoid ->
                                         Log.d(TAG, "Updated summary payload with id: "+existingDoc.getId()))
                                 .addOnFailureListener(e ->
@@ -184,13 +184,6 @@ public class DefaultAppEventPayloadHandler
                 .addOnFailureListener(e -> {
 
                     Log.w(TAG, "Query failed — creating new summary record", e);
-
-                    Map<String, Object> record = new HashMap<>();
-                    record.put("cr_user_id", payload.cr_user_id);
-                    record.put("app_id", payload.app_id);
-                    record.put("collection", payload.collection);
-                    record.put("timestamp", payload.timestamp);
-
                     createNewSummaryDoc(db, payload, record);
                 });
     }
@@ -210,8 +203,11 @@ public class DefaultAppEventPayloadHandler
         Map<String, Object> newData =
                 new HashMap<>((Map<String, Object>) payload.data);
 
+        record.put("collection", payload.collection);
         record.put("data", newData);
-
+        record.put("created_at", Instant.now().toString());
+        record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
+        
         db.collection(payload.collection)
                 .add(record)
                 .addOnSuccessListener(ref ->

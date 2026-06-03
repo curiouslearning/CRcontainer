@@ -10,4 +10,5 @@ public class AppEventPayload {
     public Object data;
     public Map<String, String> options;
     public String timestamp;
+    public String schema_version;
 }

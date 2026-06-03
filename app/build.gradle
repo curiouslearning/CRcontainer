@@ -73,6 +73,9 @@ android {
         }
     }
     compileOptions {
+        // remove when we move to SDK 26 or higher
+        coreLibraryDesugaringEnabled true
+
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -84,6 +87,9 @@ android {
 }
 
 dependencies {
+
+    // remove when we move to SDK 26 or higher
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 
     //retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
