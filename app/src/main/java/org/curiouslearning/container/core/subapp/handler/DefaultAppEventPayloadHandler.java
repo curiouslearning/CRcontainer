@@ -5,6 +5,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
@@ -158,14 +159,12 @@ public class DefaultAppEventPayloadHandler
                         Map<String, Object> mergedData =
                                 mergeData(existingDoc, payload);
 
-                        record.put("created_at", existingDoc.get("created_at"));
-                        record.put("schema_version", existingDoc.get("schema_version"));
                         record.put("data", mergedData);
                         record.put("updated_at", Instant.now().toString());
                         
                         db.collection(payload.collection)
                                 .document(existingDoc.getId())
-                                .set(record)
+                                .set(record, SetOptions.merge())
                                 .addOnSuccessListener(aVoid ->
                                         Log.d(TAG, "Updated summary payload with id: "+existingDoc.getId()))
                                 .addOnFailureListener(e ->
