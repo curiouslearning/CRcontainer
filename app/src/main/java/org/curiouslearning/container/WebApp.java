@@ -226,11 +226,11 @@ public class WebApp extends BaseActivity {
         private final Gson gson = new Gson();
         private final AppEventPayloadValidator validator =
                 new AppEventPayloadValidator();
-        private final AppEventPayloadHandler handler =
-                new DefaultAppEventPayloadHandler();
+        private final AppEventPayloadHandler handler;
 
         WebAppInterface(Context context) {
             mContext = context;
+            handler = new DefaultAppEventPayloadHandler(pseudoId);
         }
 
         @JavascriptInterface
