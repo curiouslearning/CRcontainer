@@ -152,6 +152,7 @@ public class WebApp extends BaseActivity {
                 Log.w("WebApp", "Missing campaign_id parameter for app: " + appUrl);
             }
         }
+        appUrl = addContainerAppVersionToUrl(appUrl);
         if (appUrl.contains("docs.google.com/forms")) {
             webView.loadUrl(addCrUserIdToFormUrl(appUrl));
         } else if (appUrl.contains("welcome_parent_video")) {
@@ -202,6 +203,12 @@ public class WebApp extends BaseActivity {
         String modifiedUrl = originalUri.toString() + separator + "campaign_id=" +
                 campaignId;
         return modifiedUrl;
+    }
+
+    private String addContainerAppVersionToUrl(String appUrl) {
+        Uri originalUri = Uri.parse(appUrl);
+        String separator = (originalUri.getQuery() == null) ? "?" : "&";
+        return originalUri.toString() + separator + "container_app_version=" + BuildConfig.VERSION_NAME;
     }
 
     private boolean isInternetConnected(Context context) {
