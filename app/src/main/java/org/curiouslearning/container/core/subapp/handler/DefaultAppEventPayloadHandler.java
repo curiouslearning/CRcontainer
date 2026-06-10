@@ -54,9 +54,13 @@ public class DefaultAppEventPayloadHandler
 
         payload.collection = normalizedCollection;
 
-        if (payload.data instanceof Map) {
-            ((Map<String, Object>) payload.data).put("container_version", BuildConfig.VERSION_NAME);
+        // Stamp the container build version into metadata (not data), using the
+        // `container_app_version` naming shared with the WebView URL param and the
+        // Firebase user property set by the sub-apps.
+        if (payload.metadata == null) {
+            payload.metadata = new HashMap<>();
         }
+        payload.metadata.put("container_app_version", BuildConfig.VERSION_NAME);
 
         switch (normalizedCollection) {
 
@@ -121,6 +125,7 @@ public class DefaultAppEventPayloadHandler
         record.put("collection", payload.collection);
         record.put("created_at", Instant.now().toString());
         record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
+        record.put("metadata", payload.metadata);
 
         Map<String, Object> data =
                 new HashMap<>((Map<String, Object>) payload.data);
@@ -153,6 +158,7 @@ public class DefaultAppEventPayloadHandler
         Map<String, Object> record = new HashMap<>();
         record.put("cr_user_id", payload.cr_user_id);
         record.put("app_id", payload.app_id);
+        record.put("metadata", payload.metadata);
 
         query.get()
                 .addOnSuccessListener(querySnapshot -> {
