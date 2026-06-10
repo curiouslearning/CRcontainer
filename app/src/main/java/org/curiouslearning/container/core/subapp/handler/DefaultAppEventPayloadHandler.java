@@ -4,7 +4,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.MetadataChanges;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -25,6 +28,36 @@ public class DefaultAppEventPayloadHandler
     private static final String COLLECTION_USER_SESSION = "user_sessions_data";
     private static final String COLLECTION_SUMMARY = "summary_data";
 
+    private final Map<String, ListenerRegistration> syncListeners = new HashMap<>();
+    private final String crUserId;
+
+    public DefaultAppEventPayloadHandler(@NonNull String crUserId) {
+        this.crUserId = crUserId;
+        attachExistingSyncListeners();
+    }
+
+    private void attachExistingSyncListeners() {
+        if (crUserId.trim().isEmpty()) {
+            Log.w(TAG, "cr_user_id is blank — skipping existing sync listener attachment");
+            return;
+        }
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection(COLLECTION_SUMMARY)
+                .whereEqualTo("cr_user_id", crUserId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<DocumentSnapshot> docs = querySnapshot.getDocuments();
+                    Log.d(TAG, "Attaching sync listeners to " + docs.size() + " existing summary docs");
+                    for (DocumentSnapshot doc : docs) {
+                        attachSyncListener(
+                                db.collection(COLLECTION_SUMMARY).document(doc.getId())
+                        );
+                    }
+                })
+                .addOnFailureListener(e ->
+                        Log.w(TAG, "Failed to fetch existing summary docs for sync listener attachment", e));
+    }
+
     @Override
     public void handle(AppEventPayload payload) {
 
@@ -37,6 +70,7 @@ public class DefaultAppEventPayloadHandler
         storePayload(payload);
     }
 
+    
     private void storePayload(@NonNull AppEventPayload payload) {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -129,8 +163,10 @@ public class DefaultAppEventPayloadHandler
 
         db.collection(payload.collection)
                 .add(record)
-                .addOnSuccessListener(ref ->
-                        Log.d(TAG, "User session saved docId=" + ref.getId()))
+                .addOnSuccessListener(ref -> {
+                    Log.d(TAG, "User session saved docId=" + ref.getId());
+                    attachSyncListener(ref);
+                })
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed to save user session payload", e));
     }
@@ -167,11 +203,14 @@ public class DefaultAppEventPayloadHandler
                         record.put("data", mergedData);
                         record.put("updated_at", Instant.now().toString());
                         
-                        db.collection(payload.collection)
-                                .document(existingDoc.getId())
-                                .set(record, SetOptions.merge())
-                                .addOnSuccessListener(aVoid ->
-                                        Log.d(TAG, "Updated summary payload with id: "+existingDoc.getId()))
+                        DocumentReference existingRef = db.collection(payload.collection)
+                                .document(existingDoc.getId());
+
+                        existingRef.set(record, SetOptions.merge())
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Updated summary payload with id: " + existingDoc.getId());
+                                    attachSyncListener(existingRef);
+                                })
                                 .addOnFailureListener(e ->
                                         Log.e(TAG, "Failed to update summary payload", e));
 
@@ -210,8 +249,10 @@ public class DefaultAppEventPayloadHandler
         
         db.collection(payload.collection)
                 .add(record)
-                .addOnSuccessListener(ref ->
-                        Log.d(TAG, "Created new summary payload docId=" + ref.getId()))
+                .addOnSuccessListener(ref -> {
+                    Log.d(TAG, "Created new summary payload docId=" + ref.getId());
+                    attachSyncListener(ref);
+                })
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed to create summary payload", e));
     }
@@ -288,5 +329,41 @@ public class DefaultAppEventPayloadHandler
         }
 
         return merged;
+    }
+
+    /**
+     * Attaches a one-shot metadata listener that stamps synced_at when the pending write
+     * is confirmed by the Firestore server (offline write flushed on reconnect, or
+     * immediate server confirmation when already online).
+     *
+     * Safe to call multiple times for the same docRef — only one listener is kept active
+     * per document ID at a time.
+     */
+    private void attachSyncListener(@NonNull DocumentReference docRef) {
+        String docId = docRef.getId();
+
+        if (syncListeners.containsKey(docId)) {
+            Log.d(TAG, "Sync listener already active for docId=" + docId);
+            return;
+        }
+
+        ListenerRegistration[] holder = {null};
+        holder[0] = docRef.addSnapshotListener(MetadataChanges.INCLUDE, (snapshot, error) -> {
+            if (snapshot == null || error != null) return;
+            if (!snapshot.getMetadata().hasPendingWrites() && !snapshot.getMetadata().isFromCache()) {
+                syncListeners.remove(docId);
+                if (holder[0] != null) holder[0].remove();
+                Log.d(TAG, "Sync detected for docId=" + docId);
+                Map<String, Object> update = new HashMap<>();
+                update.put("synced_at", Instant.now().toString());
+                docRef.set(update, SetOptions.merge())
+                        .addOnSuccessListener(v ->
+                                Log.d(TAG, "synced_at recorded for docId=" + docId))
+                        .addOnFailureListener(e ->
+                                Log.e(TAG, "Failed to record synced_at for docId=" + docId, e));
+            }
+        });
+
+        syncListeners.put(docId, holder[0]);
     }
 }
