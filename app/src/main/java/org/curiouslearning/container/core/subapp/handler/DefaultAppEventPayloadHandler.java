@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.MetadataChanges;
 import com.google.firebase.firestore.SetOptions;
@@ -184,6 +185,12 @@ public class DefaultAppEventPayloadHandler
             AppEventPayload payload
     ) {
 
+        if (!(payload.data instanceof Map)) {
+            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
+                    + (payload.data == null ? "null" : payload.data.getClass()));
+            return;
+        }
+
         Log.d(TAG, "Querying summary record (offline-first)");
 
         Query query = db.collection(payload.collection)
@@ -191,24 +198,26 @@ public class DefaultAppEventPayloadHandler
                 .whereEqualTo("app_id", payload.app_id)
                 .limit(1);
 
+        // Build the data write map once, using atomic FieldValue.increment sentinels for
+        // "add" fields so concurrent summary writes compose server-side instead of being
+        // read-modified-written (which loses updates when two writes race — e.g. the
+        // PUZZLE_COMPLETED + LEVEL_COMPLETED pair fired on the last puzzle of a level).
+        Map<String, Object> dataWriteMap = buildSummaryDataWriteMap(payload);
+
         Map<String, Object> record = new HashMap<>();
         record.put("cr_user_id", payload.cr_user_id);
         record.put("app_id", payload.app_id);
         record.put("metadata", payload.metadata);
+        record.put("data", dataWriteMap);
 
         query.get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!querySnapshot.isEmpty()) {
 
-                        List<DocumentSnapshot> documents = querySnapshot.getDocuments();
-                        DocumentSnapshot existingDoc = documents.get(0);
+                        DocumentSnapshot existingDoc = querySnapshot.getDocuments().get(0);
 
-                        Map<String, Object> mergedData =
-                                mergeData(existingDoc, payload);
-
-                        record.put("data", mergedData);
                         record.put("updated_at", Instant.now().toString());
-                        
+
                         DocumentReference existingRef = db.collection(payload.collection)
                                 .document(existingDoc.getId());
 
@@ -239,20 +248,13 @@ public class DefaultAppEventPayloadHandler
             Map<String, Object> record
     ) {
 
-        if (!(payload.data instanceof Map)) {
-            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
-                    + (payload.data == null ? "null" : payload.data.getClass()));
-            return;
-        }
-
-        Map<String, Object> newData =
-                new HashMap<>((Map<String, Object>) payload.data);
-
+        // record already carries the atomic-increment data write map built in
+        // storeSummaryPayload. FieldValue.increment treats a missing field as 0, so the
+        // same map is correct for a brand-new document too.
         record.put("collection", payload.collection);
-        record.put("data", newData);
         record.put("created_at", Instant.now().toString());
         record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
-        
+
         db.collection(payload.collection)
                 .add(record)
                 .addOnSuccessListener(ref -> {
@@ -263,21 +265,24 @@ public class DefaultAppEventPayloadHandler
                         Log.e(TAG, "Failed to create summary payload", e));
     }
 
-    private Map<String, Object> mergeData(
-            @NonNull DocumentSnapshot existingDoc,
-            @NonNull AppEventPayload payload
-    ) {
+    /**
+     * Builds the {@code data} write map for a summary_data payload. "add" fields are emitted
+     * as atomic {@link FieldValue#increment} sentinels so concurrent writes compose
+     * server-side rather than being read-modified-written (which loses updates when two
+     * summary writes race). "replace" fields (and "add" on a non-numeric value, matching the
+     * legacy fallback) are written verbatim.
+     *
+     * This does NOT read the existing document: {@code increment} treats a missing field as
+     * 0, so the same map is correct whether the target doc already exists or is being created.
+     * Written with {@link SetOptions#merge}, sibling fields not present here are left intact.
+     */
+    private Map<String, Object> buildSummaryDataWriteMap(@NonNull AppEventPayload payload) {
 
-        Map<String, Object> merged = new HashMap<>();
-
-        Object existingDataObj = existingDoc.get("data");
-        if (existingDataObj instanceof Map) {
-            merged.putAll((Map<String, Object>) existingDataObj);
-        }
+        Map<String, Object> writeMap = new HashMap<>();
 
         if (!(payload.data instanceof Map)) {
-            Log.e(TAG, "Invalid payload.data type during merge");
-            return merged;
+            Log.e(TAG, "Invalid payload.data type during write-map build");
+            return writeMap;
         }
 
         Map<String, Object> newData = (Map<String, Object>) payload.data;
@@ -295,46 +300,33 @@ public class DefaultAppEventPayloadHandler
 
             String key = entry.getKey();
             Object newValue = entry.getValue();
-            Object existingValue = merged.get(key);
 
             String operation =
                     options.get(key) instanceof String
                             ? (String) options.get(key)
                             : "replace";
 
-            if ("add".equals(operation)
-                    && newValue instanceof Number
-                    && existingValue instanceof Number) {
+            if ("add".equals(operation) && newValue instanceof Number) {
 
-                Number n1 = (Number) existingValue;
-                Number n2 = (Number) newValue;
+                Number n = (Number) newValue;
 
-                boolean n1Integral =
-                        n1 instanceof Long ||
-                                n1 instanceof Integer ||
-                                n1 instanceof Short ||
-                                n1 instanceof Byte;
+                boolean integral =
+                        n instanceof Long ||
+                                n instanceof Integer ||
+                                n instanceof Short ||
+                                n instanceof Byte;
 
-                boolean n2Integral =
-                        n2 instanceof Long ||
-                                n2 instanceof Integer ||
-                                n2 instanceof Short ||
-                                n2 instanceof Byte;
-
-                if (n1Integral && n2Integral) {
-                    long result = n1.longValue() + n2.longValue();
-                    merged.put(key, result);
-                } else {
-                    double result = n1.doubleValue() + n2.doubleValue();
-                    merged.put(key, result);
-                }
+                writeMap.put(key, integral
+                        ? FieldValue.increment(n.longValue())
+                        : FieldValue.increment(n.doubleValue()));
 
             } else {
-                merged.put(key, newValue);
+                // "replace" (default), or "add" on a non-numeric value — overwrite.
+                writeMap.put(key, newValue);
             }
         }
 
-        return merged;
+        return writeMap;
     }
 
     /**
