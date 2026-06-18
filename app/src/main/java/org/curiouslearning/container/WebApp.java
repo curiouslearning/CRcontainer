@@ -246,7 +246,7 @@ public class WebApp extends BaseActivity {
             editor.putBoolean(String.valueOf(urlIndex), dataCachedStatus);
             editor.commit();
 
-            if (!isInternetConnected(getApplicationContext()) && dataCachedStatus) {
+            if (!isInternetConnected(getApplicationContext()) && !dataCachedStatus) {
                 showPrompt("Please Connect to the Network");
             }
         }
