@@ -1,15 +1,22 @@
 package org.curiouslearning.container;
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Application;
-import android.content.Context;
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -20,6 +27,7 @@ import com.google.firebase.FirebaseApp;
 
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
+import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
@@ -27,10 +35,10 @@ import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
 import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
-import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.DebugOverlayManager;
 import org.curiouslearning.container.utilities.LanguageDialogManager;
 import org.curiouslearning.container.utilities.ReferralManager;
+import org.curiouslearning.container.utilities.StudyEnrollmentManager;
 import org.curiouslearning.container.utilities.VisualEffectsManager;
 
 import java.util.ArrayList;
@@ -38,18 +46,17 @@ import java.util.List;
 
 import app.rive.runtime.kotlin.RiveAnimationView;
 
-public class MainActivity extends BaseActivity implements ReferralManager.ReferralManagerListener, LanguageDialogManager.LanguageDialogListener {
-
+public class MainActivity extends BaseActivity
+        implements ReferralManager.ReferralManagerListener, LanguageDialogManager.LanguageDialogListener {
     private static final String TAG = "MainActivity";
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private final String isValidLanguage = "notValidLanguage";
-
     public ActivityMainBinding binding;
     public RecyclerView recyclerView;
     public WebAppsAdapter apps;
     public HomeViewModal homeViewModal;
-    
+
     private SharedPreferences prefs;
     private SharedPreferences utmPrefs;
     private String selectedLanguage;
@@ -64,6 +71,9 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
     private ReferralManager referralManager;
     private LanguageDialogManager languageDialogManager;
     private DebugOverlayManager debugOverlayManager;
+    private Dialog dialog;
+
+    private StudyEnrollmentManager studyEnrollmentManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,27 +83,64 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
         utmPrefs = getSharedPreferences(UTM_PREFS_NAME, MODE_PRIVATE);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        
+
         loadingIndicator = findViewById(R.id.loadingIndicator);
         loadingIndicator.setVisibility(View.GONE);
-        
+
         selectedLanguage = prefs.getString("selectedLanguage", "");
         manifestVersion = prefs.getString("manifestVersion", "");
         appVersion = AppUtils.getAppVersionName(this);
-        
+
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
 
         // Initialize Managers
         visualEffectsManager = new VisualEffectsManager();
         referralManager = new ReferralManager(this, homeViewModal, this, this);
-        
+
+        studyEnrollmentManager = new StudyEnrollmentManager(this, prefs, appVersion, new StudyEnrollmentManager.StudyEnrollmentListener() {
+            @Override
+            public void onDismissLanguagePopupIfShowing() {
+                dismissLanguagePopupIfShowing();
+            }
+
+            @Override
+            public void onLoadApps(String language) {
+                runOnUiThread(() -> loadApps(language));
+            }
+
+            @Override
+            public void onShowLanguagePopup() {
+                runOnUiThread(() -> languageDialogManager.showLanguagePopup());
+            }
+
+            @Override
+            public void onUpdateDebugOverlay() {
+                runOnUiThread(() -> {
+                    if (debugOverlayManager != null) {
+                        debugOverlayManager.updateDebugOverlay();
+                    }
+                });
+            }
+
+            @Override
+            public void onCachePseudoId() {
+                cachePseudoId();
+            }
+
+            @Override
+            public String getSelectedLanguage() {
+                return selectedLanguage;
+            }
+        });
+
         audioPlayer = new AudioPlayer(); // Used by LanguageDialogManager
         languageDialogManager = new LanguageDialogManager(this, homeViewModal, prefs, audioPlayer, this);
-        
+
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         View debugTriggerArea = findViewById(R.id.debug_trigger_area);
-        debugOverlayManager = new DebugOverlayManager(this, offlineOverlay, debugTriggerArea, prefs, utmPrefs, referralManager, appVersion);
+        debugOverlayManager = new DebugOverlayManager(this, offlineOverlay, debugTriggerArea, prefs, utmPrefs,
+                referralManager, appVersion);
 
         // Visual Effects
         setupVisualEffects();
@@ -108,7 +155,7 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
 
         // UI Setup
         initRecyclerView();
-        
+
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
         if (manifestVersion != null && !manifestVersion.equals("")) {
@@ -141,13 +188,59 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
 
         // Initialize Referral Handling
         referralManager.init();
+
     }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingIntent(intent);
+    }
+
+    private void handleIncomingIntent(Intent intent) {
+        if (intent != null && intent.getData() != null) {
+            Uri data = intent.getData();
+            boolean handledStudyEnrollmentLink = studyEnrollmentManager.handleStudyEnrollmentLink(data);
+
+            // Existing language parameter logic
+            String language = data.getQueryParameter("language");
+            if (language != null) {
+                if (language.length() > 0) {
+                    selectedLanguage = Character.toUpperCase(language.charAt(0))
+                            + language.substring(1).toLowerCase();
+                } else {
+                    selectedLanguage = "";
+                }
+                storeSelectLanguage(selectedLanguage);
+                runOnUiThread(() -> {
+                    loadApps(selectedLanguage);
+                });
+            }
+
+            if (handledStudyEnrollmentLink) {
+                Intent consumedIntent = new Intent(intent);
+                consumedIntent.setData(null);
+                setIntent(consumedIntent);
+            }
+        }
+    }
+
+    private void dismissLanguagePopupIfShowing() {
+        if (dialog != null && dialog.isShowing()) {
+            dialog.dismiss();
+        }
+    }
+
+
 
     private void setupVisualEffects() {
         RiveAnimationView monsterView = findViewById(R.id.monsterView);
-        // We will update monster animation later when we have data, but initial call is safe if data is ready
+        // We will update monster animation later when we have data, but initial call is
+        // safe if data is ready
         // But better done in onResume or when data changes.
-        // visualEffectsManager.updateMonsterAnimation... called in onResume/storeLanguage
+        // visualEffectsManager.updateMonsterAnimation... called in
+        // onResume/storeLanguage
 
         View lightOverlay = findViewById(R.id.light_overlay);
         visualEffectsManager.addBreathingEffect(lightOverlay);
@@ -166,7 +259,7 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
     public void onResume() {
         super.onResume();
         recyclerView.setAdapter(apps);
-        
+
         debugOverlayManager.onResume();
         visualEffectsManager.resumeBreathingEffect();
 
@@ -197,26 +290,38 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
 
     @Override
     public void onLanguageReceived(String language) {
-        if (selectedLanguage.equals("")) {
-            languageDialogManager.showLanguagePopup();
-        } else {
-            loadApps(language);
-        }
+        runOnUiThread(() -> {
+            if (selectedLanguage.equals("")) {
+                languageDialogManager.showLanguagePopup();
+            } else {
+                loadApps(language);
+            }
+        });
     }
 
     @Override
     public void onShowLanguagePopup() {
-        languageDialogManager.showLanguagePopup();
+        runOnUiThread(() -> {
+            languageDialogManager.showLanguagePopup();
+        });
     }
 
     @Override
     public void onUpdateDebugOverlay() {
-        debugOverlayManager.updateDebugOverlay();
+        runOnUiThread(() -> {
+            if (debugOverlayManager != null) {
+                debugOverlayManager.updateDebugOverlay();
+            }
+        });
     }
 
     @Override
     public void onReferrerStatusUpdate(InstallReferrerManager.ReferrerStatus status) {
-        debugOverlayManager.updateDebugOverlay();
+        runOnUiThread(() -> {
+            if (debugOverlayManager != null) {
+                debugOverlayManager.updateDebugOverlay();
+            }
+        });
     }
 
     // --- LanguageDialogListener Implementation ---
@@ -226,34 +331,35 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
         selectedLanguage = language;
         loadApps(language);
     }
-    
+
     // --- Helper Methods ---
 
     public void loadApps(String selectedLanguageParam) {
         Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguage);
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedLanguageParam;
-        
-        homeViewModal.getSelectedlanguageWebApps(selectedLanguageParam).observe(this, new androidx.lifecycle.Observer<List<WebApp>>() {
-            @Override
-            public void onChanged(List<WebApp> webApps) {
-                loadingIndicator.setVisibility(View.GONE);
-                if (!webApps.isEmpty()) {
-                    apps.webApps = webApps;
-                    apps.notifyDataSetChanged();
-                    storeSelectLanguage(language);
-                } else {
-                    if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
-                        languageDialogManager.showLanguagePopup();
+
+        homeViewModal.getSelectedlanguageWebApps(selectedLanguageParam).observe(this,
+                new androidx.lifecycle.Observer<List<WebApp>>() {
+                    @Override
+                    public void onChanged(List<WebApp> webApps) {
+                        loadingIndicator.setVisibility(View.GONE);
+                        if (!webApps.isEmpty()) {
+                            apps.webApps = webApps;
+                            apps.notifyDataSetChanged();
+                            storeSelectLanguage(language);
+                        } else {
+                            if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
+                                languageDialogManager.showLanguagePopup();
+                            }
+                            if (manifestVersion.equals("")) {
+                                if (!selectedLanguageParam.equals(isValidLanguage))
+                                    loadingIndicator.setVisibility(View.VISIBLE);
+                                homeViewModal.getAllWebApps();
+                            }
+                        }
                     }
-                    if (manifestVersion.equals("")) {
-                        if (!selectedLanguageParam.equals(isValidLanguage))
-                             loadingIndicator.setVisibility(View.VISIBLE);
-                        homeViewModal.getAllWebApps();
-                    }
-                }
-            }
-        });
+                });
     }
 
     private void storeSelectLanguage(String language) {
@@ -261,7 +367,7 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
         editor.putString("selectedLanguage", language);
         editor.apply();
         Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
-        
+
         this.selectedLanguage = language; // Update local field
         debugOverlayManager.updateDebugOverlay();
 
@@ -285,16 +391,16 @@ public class MainActivity extends BaseActivity implements ReferralManager.Referr
         if (!prefs.contains("pseudoId")) {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString("pseudoId",
-                    generatePseudoId() + System.currentTimeMillis()); // Simplified suffix for brevity, original was complex date
+                    generatePseudoId() + System.currentTimeMillis()); // Simplified suffix for brevity, original was
+                                                                      // complex date
             editor.commit();
         }
     }
-    
+
     // Kept for generatePseudoId dependency
     private String generatePseudoId() {
         java.security.SecureRandom random = new java.security.SecureRandom();
         return new java.math.BigInteger(130, random).toString(32);
     }
-
 
 }

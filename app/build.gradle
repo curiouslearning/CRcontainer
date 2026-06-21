@@ -29,8 +29,8 @@ android {
         applicationId "org.curiouslearning.container"
         minSdk 24
         targetSdk 35
-        versionCode 60
-        versionName "2.32"
+        versionCode 85
+        versionName "2.34.3"
         
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -99,6 +99,7 @@ dependencies {
 
     //firebase
     implementation platform('com.google.firebase:firebase-bom:31.2.3')
+    implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-crashlytics:18.6.1'
     implementation 'com.google.firebase:firebase-core:17.5.0'
@@ -116,7 +117,8 @@ dependencies {
     implementation("io.sentry:sentry-android") {
         exclude group: "io.sentry", module: "sentry-android-ndk"
     }
-    implementation 'app.rive:rive-android:5.1.0'
+    // Source: https://mvnrepository.com/artifact/app.rive/rive-android
+    implementation 'app.rive:rive-android:10.4.4'
     // For initialization, you may want to add a dependency on Jetpack Startup
     implementation "androidx.startup:startup-runtime:1.1.1"
     testImplementation 'junit:junit:4.13.2'

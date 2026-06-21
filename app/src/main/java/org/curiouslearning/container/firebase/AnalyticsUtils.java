@@ -20,6 +20,8 @@ public class AnalyticsUtils {
 
     private static FirebaseAnalytics mFirebaseAnalytics;
     private static final String PREFS_NAME = "InstallReferrerPrefs";
+    public static final String APP_CACHED_PREFS = "appCached";
+    public static final String STUDY_USER_ID = "study_user_id";
     private static final String SOURCE = "source";
     private static final String CAMPAIGN_ID = "campaign_id";
 
@@ -39,6 +41,18 @@ public class AnalyticsUtils {
         bundle.putString("raw_referrer_url", rawReferrerUrl.isEmpty() ? null : rawReferrerUrl);
     }
 
+    private static void addStudyUserIdForAppLaunch(Context context, String eventName, Bundle bundle) {
+        if (!"app_launch".equals(eventName)) {
+            return;
+        }
+
+        SharedPreferences appPrefs = context.getSharedPreferences(APP_CACHED_PREFS, Context.MODE_PRIVATE);
+        String studyUserId = appPrefs.getString(STUDY_USER_ID, "");
+        if (studyUserId != null && !studyUserId.isEmpty()) {
+            bundle.putString(STUDY_USER_ID, studyUserId);
+        }
+    }
+
     public static void logEvent(Context context, String eventName, String appName, String appUrl, String pseudoId,
             String language) {
         FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
@@ -53,6 +67,7 @@ public class AnalyticsUtils {
 
         // Add the raw_referrer_url from install_referrer_prefs as well (only if not empty)
         addRawReferrerUrl(context, bundle);
+        addStudyUserIdForAppLaunch(context, eventName, bundle);
 
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
@@ -91,6 +106,31 @@ public class AnalyticsUtils {
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaign_id);
         firebaseAnalytics.logEvent(eventName, bundle);
+    }
+
+    public static void logJoinedStudyEvent(Context context, String crUserId, String language,
+            String appVersion, String studyUserId, String studyConsent) {
+        FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String source = prefs.getString(SOURCE, "");
+        String campaignId = prefs.getString(CAMPAIGN_ID, "");
+        String sanitizedStudyUserId = sanitizeStudyUserId(studyUserId);
+
+        Bundle bundle = new Bundle();
+        bundle.putString("cr_language", language);
+        bundle.putString("cr_user_id", crUserId);
+        bundle.putString("source", source);
+        bundle.putString("campaign_id", campaignId);
+        bundle.putString(STUDY_USER_ID, sanitizedStudyUserId);
+        bundle.putString("study_consent", studyConsent);
+
+        firebaseAnalytics.setUserProperty("source", source);
+        firebaseAnalytics.setUserProperty("campaign_id", campaignId);
+        firebaseAnalytics.logEvent("joined_study", bundle);
+    }
+
+    private static String sanitizeStudyUserId(String studyUserId) {
+        return studyUserId == null ? "" : studyUserId.replaceAll("[^0-9]", "");
     }
 
     public static void logLanguageSelectEvent(Context context, String eventName, String pseudoId, String language,

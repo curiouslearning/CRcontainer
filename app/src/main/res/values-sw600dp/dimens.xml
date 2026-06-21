@@ -6,6 +6,5 @@
     <dimen name="monster_margin_bottom">16dp</dimen>
     <!-- RecyclerView positioning for larger screens -->
     <dimen name="recycler_view_height_large">400dp</dimen>
-    <dimen name="recycler_view_margin_bottom_large">24dp</dimen>
     <dimen name="dropdown_menu_width">220dp</dimen>
 </resources>
