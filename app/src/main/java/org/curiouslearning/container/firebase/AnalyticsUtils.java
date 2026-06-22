@@ -295,14 +295,14 @@ public class AnalyticsUtils {
         try {
             if (encodedString != null) {
                 String decodedString = URLDecoder.decode(encodedString, StandardCharsets.UTF_8.toString());
-                System.out.println("Decoded utm_content: " + decodedString);
+                Log.d("AnalyticsUtils", "Decoded utm_content: " + decodedString);
                 return decodedString;
             } else {
-                System.out.println("Encoded string is null.");
+                Log.w("AnalyticsUtils", "urlDecode: encodedString is null.");
                 return null;
             }
         } catch (UnsupportedEncodingException | IllegalArgumentException e) {
-            e.printStackTrace();
+            Log.e("AnalyticsUtils", "urlDecode failed", e);
             return null;
         }
     }

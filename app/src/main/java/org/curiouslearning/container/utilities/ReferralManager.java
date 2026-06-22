@@ -13,7 +13,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.installreferrer.InstallReferrerManager;
-import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.presentation.viewmodels.HomeViewModel;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,7 +31,7 @@ public class ReferralManager {
         private Context context;
         private SharedPreferences prefs;
         private SharedPreferences utmPrefs;
-        private HomeViewModal homeViewModal;
+        private HomeViewModel homeViewModal;
         private LifecycleOwner lifecycleOwner;
         private ReferralManagerListener listener;
 
@@ -50,7 +50,7 @@ public class ReferralManager {
                 void onReferrerStatusUpdate(InstallReferrerManager.ReferrerStatus status);
         }
 
-        public ReferralManager(Context context, HomeViewModal homeViewModal, LifecycleOwner lifecycleOwner,
+        public ReferralManager(Context context, HomeViewModel homeViewModal, LifecycleOwner lifecycleOwner,
                         ReferralManagerListener listener) {
                 this.context = context;
                 this.homeViewModal = homeViewModal;

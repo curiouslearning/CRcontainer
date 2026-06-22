@@ -9,7 +9,7 @@ plugins {
 def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buildBranch") : "main"
 def apiUrl = buildBranch == "main" ?
         "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/" :
-        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/"
+        "https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/"
 task printApiUrl {
     doLast {
         println(apiUrl)
@@ -19,12 +19,6 @@ task printApiUrl {
 android {
     namespace 'org.curiouslearning.container'
     compileSdk 35
-    packagingOptions {
-        pickFirst "lib/x86/libc++_shared.so"
-        pickFirst "lib/x86_64/libc++_shared.so"
-        pickFirst "lib/armeabi-v7a/libc++_shared.so"
-        pickFirst "lib/arm64-v8a/libc++_shared.so"
-    }
     defaultConfig {
         applicationId "org.curiouslearning.container"
         minSdk 24
@@ -62,8 +56,9 @@ android {
 
     buildTypes {
         debug{
-            testCoverageEnabled true
-            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/\""
+            buildConfigField "String", "API_URL", "\"https://devcuriousreader.wpcomstaging.com/container_app_manifest/prod/\""
+            enableUnitTestCoverage true
+            enableAndroidTestCoverage true
         }
         release {
             signingConfig signingConfigs.release
@@ -79,62 +74,64 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging true
+            pickFirsts += ['lib/x86/libc++_shared.so', 'lib/x86_64/libc++_shared.so', 'lib/armeabi-v7a/libc++_shared.so', 'lib/arm64-v8a/libc++_shared.so']
         }
     }
 }
 
 dependencies {
 
-    //retrofit
-    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    // Retrofit
+    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
 
-    implementation platform("org.jetbrains.kotlin:kotlin-bom:1.8.22")
-    //RoomDatabase
-    implementation "androidx.room:room-runtime:2.3.0"
-    annotationProcessor "androidx.room:room-compiler:2.3.0"
+    implementation platform("org.jetbrains.kotlin:kotlin-bom:1.9.24")
 
-    //lifecycle-Viewmodal
-    implementation "androidx.lifecycle:lifecycle-viewmodel:2.5.1"
+    // Room Database
+    implementation "androidx.room:room-runtime:2.6.1"
+    annotationProcessor "androidx.room:room-compiler:2.6.1"
 
-    //firebase
-    implementation platform('com.google.firebase:firebase-bom:31.2.3')
+    // Lifecycle / ViewModel
+    implementation "androidx.lifecycle:lifecycle-viewmodel:2.8.7"
+    implementation "androidx.lifecycle:lifecycle-livedata:2.8.7"
+
+    // Firebase (firebase-core is deprecated — analytics covers everything)
+    implementation platform('com.google.firebase:firebase-bom:33.1.0')
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-analytics'
-    implementation 'com.google.firebase:firebase-crashlytics:18.6.1'
-    implementation 'com.google.firebase:firebase-core:17.5.0'
+    implementation 'com.google.firebase:firebase-crashlytics'
 
-    //picasso (image caching)
+    // Picasso (image caching)
     implementation 'com.squareup.picasso:picasso:2.71828'
 
-    //install refferal
+    // Install referrer
     implementation "com.android.installreferrer:installreferrer:2.2"
 
-    implementation 'androidx.appcompat:appcompat:1.5.1'
-    implementation 'com.google.android.material:material:1.7.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
     implementation(platform("io.sentry:sentry-bom:7.17.0"))
     implementation("io.sentry:sentry-android") {
         exclude group: "io.sentry", module: "sentry-android-ndk"
     }
-    // Source: https://mvnrepository.com/artifact/app.rive/rive-android
+    // Rive animations
     implementation 'app.rive:rive-android:10.4.4'
-    // For initialization, you may want to add a dependency on Jetpack Startup
-    implementation "androidx.startup:startup-runtime:1.1.1"
+    implementation "androidx.startup:startup-runtime:1.2.0"
+
+    // Test dependencies
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.robolectric:robolectric:4.10.3'
-    testImplementation 'org.mockito:mockito-core:4.11.0'
-    testImplementation 'org.mockito:mockito-inline:4.11.0'
-    testImplementation 'androidx.test:core:1.5.0'
+    testImplementation 'org.robolectric:robolectric:4.13'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+    testImplementation 'androidx.test:core:1.6.1'
 
-
-    androidTestImplementation 'androidx.test:core:1.5.0'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation 'androidx.test:rules:1.5.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
-    androidTestImplementation 'org.mockito:mockito-android:4.11.0'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.6.1'
+    androidTestImplementation 'org.mockito:mockito-android:5.12.0'
 
     implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
 }
@@ -146,7 +143,8 @@ def coverageSourceDirs = [
         "src/main/java"
 ]
 
-task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
+tasks.register("jacocoTestReport", JacocoReport) {
+    dependsOn('testDebugUnitTest')
     group = "Reporting"
     description = "Generate Jacoco coverage reports after running tests."
 
@@ -156,7 +154,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     }
 
     classDirectories.setFrom(fileTree(
-            dir: "$buildDir/intermediates/classes/debug",
+            dir: layout.buildDirectory.dir("intermediates/classes/debug"),
             excludes: [
                     '**/R.class',
                     '**/R$*.class',
@@ -172,7 +170,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     ))
 
     sourceDirectories.setFrom(files(coverageSourceDirs))
-    executionData.setFrom(fileTree(dir: "$buildDir", includes: [
+    executionData.setFrom(fileTree(dir: layout.buildDirectory, includes: [
             "jacoco/testDebugUnitTest.exec",
             "outputs/code-coverage/connected/*coverage.ec"
     ]))

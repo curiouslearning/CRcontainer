@@ -5,6 +5,7 @@ import android.util.Base64;
 import android.util.Log;
 
 import org.curiouslearning.container.R;
+import org.curiouslearning.container.security.CryptoUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
@@ -48,7 +49,7 @@ public class ConfigLoader {
             Log.d(TAG, "Loaded AES key length = " + aesKeyBytes.length);
 
             // Decrypt webhook
-            byte[] decryptedBytes = org.curiouslearning.container.utilities.CryptoUtils.decryptAesCbc(
+            byte[] decryptedBytes = CryptoUtils.decryptAesCbc(
                     aesKeyBytes,
                     iv,
                     encryptedWebhook
