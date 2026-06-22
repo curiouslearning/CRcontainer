@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CuriousReader Container — Refactoring Directory Map</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #0A0E1A;
+  color: #C9D1D9;
+  min-height: 100vh;
+}
+
+/* ── Page header ── */
+.page-header {
+  background: linear-gradient(135deg, #141933 0%, #0D1117 50%, #1A0E2E 100%);
+  border-bottom: 1px solid #21262D;
+  padding: 28px 32px 20px;
+}
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #E6EDF3;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.page-header .subtitle {
+  color: #8B949E;
+  font-size: 0.875rem;
+  margin-bottom: 14px;
+}
+.build-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.build-tag {
+  background: #161B22;
+  border: 1px solid #30363D;
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 0.7rem;
+  color: #79C0FF;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+/* ── Legend ── */
+.legend {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #161B22;
+  border-bottom: 1px solid #21262D;
+  padding: 10px 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.legend-label {
+  color: #8B949E;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 6px;
+}
+
+/* ── Badges ── */
+.b {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.b-new       { background: #0D4429; color: #56D364; border: 1px solid #1B6B36; }
+.b-moved     { background: #0C2D6B; color: #79C0FF; border: 1px solid #1A4A9E; }
+.b-renamed   { background: #3D2800; color: #FFA657; border: 1px solid #6D4400; }
+.b-extracted { background: #2D1B6E; color: #D2A8FF; border: 1px solid #4A2EA0; }
+.b-typo      { background: #0C3A4A; color: #39C5CF; border: 1px solid #1A5A6E; }
+.b-out       { background: #2D0E0E; color: #FF7B72; border: 1px solid #5A1E1E; }
+
+/* ── Comparison layout ── */
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px 20px 40px;
+  align-items: start;
+}
+
+/* ── Panel ── */
+.panel {
+  background: #161B22;
+  border: 1px solid #30363D;
+  border-radius: 10px;
+  overflow: clip;
+}
+.panel-header {
+  background: #21262D;
+  border-bottom: 1px solid #30363D;
+  padding: 11px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-before { background: #FF7B72; }
+.dot-after  { background: #56D364; }
+.panel-header h2 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #E6EDF3;
+  letter-spacing: 0.01em;
+}
+.panel-stat {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: #8B949E;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+}
+
+/* ── Tree ── */
+.tree {
+  padding: 12px 8px 20px 14px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.76rem;
+  line-height: 1.85;
+}
+.root {
+  color: #E6EDF3;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 2px 4px 6px;
+  letter-spacing: -0.01em;
+}
+
+/* ── Node row ── */
+.n {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: background 0.1s;
+  min-height: 24px;
+}
+.n:hover { background: #21262D; }
+
+.p {
+  color: #30363D;
+  user-select: none;
+  flex-shrink: 0;
+  white-space: pre;
+}
+
+/* File / folder name */
+.nm { white-space: nowrap; }
+.nf { color: #8B949E; }       /* neutral file */
+.nd { color: #79C0FF; font-weight: 600; } /* neutral folder */
+
+/* Change-type name colours */
+.c-new      .nm { color: #56D364; font-weight: 600; }
+.c-moved    .nf { color: #79C0FF; }
+.c-moved    .nd { color: #79C0FF; font-weight: 600; }
+.c-renamed  .nm { color: #FFA657; }
+.c-extracted .nm { color: #D2A8FF; }
+.c-typo     .nm { color: #39C5CF; font-weight: 600; }
+.c-out      .nf { color: #4A505A; text-decoration: line-through; text-decoration-color: #4A505A; }
+.c-out      .nd { color: #4A505A; }
+
+/* Note text */
+.nt {
+  color: #484F58;
+  font-size: 0.65rem;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  white-space: nowrap;
+  margin-left: 2px;
+  font-weight: 400;
+}
+
+/* Spacer row */
+.sp { height: 4px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>CuriousReader Container — Refactoring Directory Map</h1>
+  <p class="subtitle">Package structure before and after refactoring &nbsp;·&nbsp; No feature changes &nbsp;·&nbsp; Java source only</p>
+  <div class="build-tags">
+    <span class="build-tag">minSdk 24</span>
+    <span class="build-tag">targetSdk 35</span>
+    <span class="build-tag">compileSdk 35</span>
+    <span class="build-tag">Java 1.8 source</span>
+    <span class="build-tag">Gradle 8.13</span>
+  </div>
+</div>
+
+<div class="legend">
+  <span class="legend-label">Legend</span>
+  <span class="b b-new">new file / package</span>
+  <span class="b b-moved">moved</span>
+  <span class="b b-renamed">renamed</span>
+  <span class="b b-extracted">extracted</span>
+  <span class="b b-typo">typo fixed</span>
+  <span class="b b-out">leaving this location</span>
+</div>
+
+<div class="comparison">
+
+  <!-- ═══════════════════════════════════════════
+       BEFORE
+  ═══════════════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-dot dot-before"></div>
+      <h2>Current Structure</h2>
+      <span class="panel-stat">40 files &nbsp;·&nbsp; 14 packages</span>
+    </div>
+    <div class="tree">
+
+      <div class="root">org.curiouslearning.container/</div>
+
+      <div class="n c-out">
+        <span class="p">├── </span><span class="nm nf">MainActivity.java</span>
+        <span class="b b-out">leaving</span><span class="nt">→ presentation/home/HomeActivity.java</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">├── </span><span class="nm nf">MyApplication.java</span>
+        <span class="b b-out">leaving</span><span class="nt">→ app/</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">├── </span><span class="nm nf">WebApp.java</span>
+        <span class="b b-out">leaving</span><span class="b b-renamed">renamed</span><span class="nt">→ presentation/webapp/WebAppActivity.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- core -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">core/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   └── </span><span class="nm nd">subapp/</span>
+      </div>
+      <div class="n">
+        <span class="p">│       ├── </span><span class="nm nd">handler/</span>
+      </div>
+      <div class="n">
+        <span class="p">│       │   ├── </span><span class="nm nf">AppEventPayloadHandler.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│       │   └── </span><span class="nm nf">DefaultAppEventPayloadHandler.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│       ├── </span><span class="nm nd">payload/</span>
+      </div>
+      <div class="n">
+        <span class="p">│       │   └── </span><span class="nm nf">AppEventPayload.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│       └── </span><span class="nm nd">validation/</span>
+      </div>
+      <div class="n">
+        <span class="p">│           ├── </span><span class="nm nf">AppEventPayloadValidator.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│           └── </span><span class="nm nf">ValidationResult.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- data -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">data/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">database/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   ├── </span><span class="nm nf">DatabaseHelper.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   ├── </span><span class="nm nf">WebAppDao.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">WebAppDatabase.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">local/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">AppManifest.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">model/</span>
+      </div>
+      <div class="n c-renamed">
+        <span class="p">│   │   ├── </span><span class="nm nf">WebApp.java</span>
+        <span class="b b-renamed">renamed</span><span class="nt">→ WebAppModel.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">WebAppResponse.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">remote/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   ├── </span><span class="nm nf">ApiService.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">RetrofitInstance.java</span>
+      </div>
+      <div class="n c-typo">
+        <span class="p">│   └── </span><span class="nm nd">respository/</span>
+        <span class="b b-typo">typo fixed</span><span class="nt">→ repository/</span>
+      </div>
+      <div class="n">
+        <span class="p">│       └── </span><span class="nm nf">WebAppRepository.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- firebase -->
+      <div class="n c-out">
+        <span class="p">├── </span><span class="nm nd">firebase/</span>
+        <span class="b b-out">leaving</span><span class="nt">→ analytics/</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">│   └── </span><span class="nm nf">AnalyticsUtils.java</span>
+        <span class="b b-moved">moved</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- installreferrer -->
+      <div class="n c-out">
+        <span class="p">├── </span><span class="nm nd">installreferrer/</span>
+        <span class="b b-out">leaving</span><span class="nt">→ attribution/</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">│   └── </span><span class="nm nf">InstallReferrerManager.java</span>
+        <span class="b b-moved">moved</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- presentation -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">presentation/</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">│   ├── </span><span class="nm nd">adapters/</span>
+        <span class="b b-out">leaving</span><span class="nt">→ home/adapters/</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">│   │   ├── </span><span class="nm nf">LanguageDropdownAdapter.java</span>
+        <span class="b b-moved">moved</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">│   │   └── </span><span class="nm nf">WebAppsAdapter.java</span>
+        <span class="b b-moved">moved</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">base/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">BaseActivity.java</span>
+      </div>
+      <div class="n c-typo">
+        <span class="p">│   └── </span><span class="nm nd">viewmodals/</span>
+        <span class="b b-typo">typo fixed</span><span class="b b-renamed">renamed</span><span class="nt">→ viewmodels/</span>
+      </div>
+      <div class="n c-renamed">
+        <span class="p">│       └── </span><span class="nm nf">HomeViewModal.java</span>
+        <span class="b b-renamed">renamed</span><span class="nt">→ HomeViewModel.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- security -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">security/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nf">CryptoUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   └── </span><span class="nm nf">KeyStoreManager.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- utilities -->
+      <div class="n c-typo">
+        <span class="p">└── </span><span class="nm nd">utilities/</span>
+        <span class="b b-typo">typo fixed</span><span class="nt">→ util/  (managers removed)</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">AnimationUtil.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">AppUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">AudioPlayer.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">CacheUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">ConfigLoader.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">ConnectionUtils.java</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">    ├── </span><span class="nm nf">DebugOverlayManager.java</span>
+        <span class="b b-out">leaving</span><span class="nt">→ home/managers/</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">DeepLinkHelper.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">FileUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">ImageLoader.java</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">    ├── </span><span class="nm nf">LanguageDialogManager.java</span>
+        <span class="b b-out">leaving</span><span class="nt">→ home/managers/</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">PulsingView.java</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">    ├── </span><span class="nm nf">ReferralManager.java</span>
+        <span class="b b-out">leaving</span><span class="b b-renamed">renamed</span><span class="nt">→ home/managers/ReferralCoordinator.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">SlackUtils.java</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">    ├── </span><span class="nm nf">StudyEnrollmentManager.java</span>
+        <span class="b b-out">leaving</span><span class="nt">→ deeplink/</span>
+      </div>
+      <div class="n c-out">
+        <span class="p">    └── </span><span class="nm nf">VisualEffectsManager.java</span>
+        <span class="b b-out">leaving</span><span class="nt">→ home/managers/</span>
+      </div>
+
+    </div><!-- /tree -->
+  </div><!-- /panel before -->
+
+
+  <!-- ═══════════════════════════════════════════
+       AFTER
+  ═══════════════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-dot dot-after"></div>
+      <h2>After Refactoring</h2>
+      <span class="panel-stat">46 files &nbsp;·&nbsp; 20 packages</span>
+    </div>
+    <div class="tree">
+
+      <div class="root">org.curiouslearning.container/</div>
+
+      <!-- app -->
+      <div class="n c-new">
+        <span class="p">├── </span><span class="nm nd">app/</span>
+        <span class="b b-new">new package</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   └── </span><span class="nm nf">MyApplication.java</span>
+        <span class="b b-moved">moved</span><span class="nt">← root</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- attribution -->
+      <div class="n c-new">
+        <span class="p">├── </span><span class="nm nd">attribution/</span>
+        <span class="b b-new">new package</span><span class="nt">replaces installreferrer/</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   ├── </span><span class="nm nf">InstallReferrerManager.java</span>
+        <span class="b b-moved">moved</span><span class="nt">← installreferrer/</span>
+      </div>
+      <div class="n c-extracted">
+        <span class="p">│   ├── </span><span class="nm nf">ReferrerParser.java</span>
+        <span class="b b-extracted">extracted</span><span class="nt">← InstallReferrerManager</span>
+      </div>
+      <div class="n c-new">
+        <span class="p">│   └── </span><span class="nm nf">AttributionState.java</span>
+        <span class="b b-new">new</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- analytics -->
+      <div class="n c-new">
+        <span class="p">├── </span><span class="nm nd">analytics/</span>
+        <span class="b b-new">new package</span><span class="nt">replaces firebase/</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   ├── </span><span class="nm nf">AnalyticsUtils.java</span>
+        <span class="b b-moved">moved</span><span class="nt">← firebase/</span>
+      </div>
+      <div class="n c-new">
+        <span class="p">│   └── </span><span class="nm nf">ErrorReporter.java</span>
+        <span class="b b-new">new</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- core -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">core/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   └── </span><span class="nm nd">subapp/</span>
+      </div>
+      <div class="n">
+        <span class="p">│       ├── </span><span class="nm nd">handler/</span>
+      </div>
+      <div class="n">
+        <span class="p">│       │   ├── </span><span class="nm nf">AppEventPayloadHandler.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│       │   └── </span><span class="nm nf">DefaultAppEventPayloadHandler.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│       ├── </span><span class="nm nd">payload/</span>
+      </div>
+      <div class="n">
+        <span class="p">│       │   └── </span><span class="nm nf">AppEventPayload.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│       └── </span><span class="nm nd">validation/</span>
+      </div>
+      <div class="n">
+        <span class="p">│           ├── </span><span class="nm nf">AppEventPayloadValidator.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│           └── </span><span class="nm nf">ValidationResult.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- data -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">data/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">database/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   ├── </span><span class="nm nf">DatabaseHelper.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   ├── </span><span class="nm nf">WebAppDao.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">WebAppDatabase.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">local/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">AppManifest.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">model/</span>
+      </div>
+      <div class="n c-renamed">
+        <span class="p">│   │   ├── </span><span class="nm nf">WebAppModel.java</span>
+        <span class="b b-renamed">renamed</span><span class="nt">← WebApp.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">WebAppResponse.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">remote/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   ├── </span><span class="nm nf">ApiService.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">RetrofitInstance.java</span>
+      </div>
+      <div class="n c-typo">
+        <span class="p">│   └── </span><span class="nm nd">repository/</span>
+        <span class="b b-typo">typo fixed</span>
+      </div>
+      <div class="n">
+        <span class="p">│       └── </span><span class="nm nf">WebAppRepository.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- deeplink -->
+      <div class="n c-new">
+        <span class="p">├── </span><span class="nm nd">deeplink/</span>
+        <span class="b b-new">new package</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   ├── </span><span class="nm nf">StudyEnrollmentManager.java</span>
+        <span class="b b-moved">moved</span><span class="nt">← utilities/</span>
+      </div>
+      <div class="n c-new">
+        <span class="p">│   └── </span><span class="nm nf">StudyEnrollmentState.java</span>
+        <span class="b b-new">new</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- presentation -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">presentation/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nd">base/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   │   └── </span><span class="nm nf">BaseActivity.java</span>
+      </div>
+      <div class="n c-new">
+        <span class="p">│   ├── </span><span class="nm nd">home/</span>
+        <span class="b b-new">new sub-package</span>
+      </div>
+      <div class="n c-renamed">
+        <span class="p">│   │   ├── </span><span class="nm nf">HomeActivity.java</span>
+        <span class="b b-renamed">renamed</span><span class="b b-moved">moved</span><span class="nt">← root/MainActivity.java</span>
+      </div>
+      <div class="n c-renamed">
+        <span class="p">│   │   ├── </span><span class="nm nf">HomeViewModel.java</span>
+        <span class="b b-renamed">renamed</span><span class="b b-typo">typo fixed</span><span class="nt">← viewmodals/HomeViewModal.java</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   │   ├── </span><span class="nm nd">adapters/</span>
+        <span class="b b-moved">moved</span><span class="nt">← presentation/adapters/</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   │   │   ├── </span><span class="nm nf">LanguageDropdownAdapter.java</span>
+        <span class="b b-moved">moved</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   │   │   └── </span><span class="nm nf">WebAppsAdapter.java</span>
+        <span class="b b-moved">moved</span>
+      </div>
+      <div class="n c-new">
+        <span class="p">│   │   └── </span><span class="nm nd">managers/</span>
+        <span class="b b-new">new sub-package</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   │       ├── </span><span class="nm nf">DebugOverlayManager.java</span>
+        <span class="b b-moved">moved</span><span class="nt">← utilities/</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   │       ├── </span><span class="nm nf">LanguageDialogManager.java</span>
+        <span class="b b-moved">moved</span><span class="nt">← utilities/</span>
+      </div>
+      <div class="n c-renamed">
+        <span class="p">│   │       ├── </span><span class="nm nf">ReferralCoordinator.java</span>
+        <span class="b b-renamed">renamed</span><span class="b b-moved">moved</span><span class="nt">← utilities/ReferralManager.java</span>
+      </div>
+      <div class="n c-moved">
+        <span class="p">│   │       └── </span><span class="nm nf">VisualEffectsManager.java</span>
+        <span class="b b-moved">moved</span><span class="nt">← utilities/</span>
+      </div>
+      <div class="n c-new">
+        <span class="p">│   └── </span><span class="nm nd">webapp/</span>
+        <span class="b b-new">new sub-package</span>
+      </div>
+      <div class="n c-renamed">
+        <span class="p">│       ├── </span><span class="nm nf">WebAppActivity.java</span>
+        <span class="b b-renamed">renamed</span><span class="b b-moved">moved</span><span class="nt">← root/WebApp.java</span>
+      </div>
+      <div class="n c-extracted">
+        <span class="p">│       ├── </span><span class="nm nf">WebAppJsBridge.java</span>
+        <span class="b b-extracted">extracted</span><span class="nt">← WebAppActivity inner class</span>
+      </div>
+      <div class="n c-extracted">
+        <span class="p">│       └── </span><span class="nm nf">MonsterStateManager.java</span>
+        <span class="b b-extracted">extracted</span><span class="nt">← WebAppActivity</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- security -->
+      <div class="n">
+        <span class="p">├── </span><span class="nm nd">security/</span>
+      </div>
+      <div class="n">
+        <span class="p">│   ├── </span><span class="nm nf">CryptoUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">│   └── </span><span class="nm nf">KeyStoreManager.java</span>
+      </div>
+
+      <div class="sp"></div>
+
+      <!-- util -->
+      <div class="n c-typo">
+        <span class="p">└── </span><span class="nm nd">util/</span>
+        <span class="b b-typo">renamed</span><span class="nt">← utilities/  (pure utilities only)</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">AnimationUtil.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">AppUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">AudioPlayer.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">CacheUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">ConfigLoader.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">ConnectionUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">DeepLinkHelper.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">FileUtils.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">ImageLoader.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    ├── </span><span class="nm nf">PulsingView.java</span>
+      </div>
+      <div class="n">
+        <span class="p">    └── </span><span class="nm nf">SlackUtils.java</span>
+      </div>
+
+    </div><!-- /tree -->
+  </div><!-- /panel after -->
+
+</div><!-- /comparison -->
+
+</body>
+</html>
