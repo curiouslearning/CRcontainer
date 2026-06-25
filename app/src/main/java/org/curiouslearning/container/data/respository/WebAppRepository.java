@@ -7,6 +7,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
+import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.remote.RetrofitInstance;
@@ -31,6 +32,9 @@ public class WebAppRepository {
     }
 
     public void fetchWebApp() {
+        if (!BuildConfig.ENABLE_REMOTE_MANIFEST) {
+            return;
+        }
         if (isFetching) {
             return;
         }
@@ -83,6 +87,9 @@ public class WebAppRepository {
     }
 
     public void getUpdatedAppManifest(String manifestVersion) {
+        if (!BuildConfig.ENABLE_REMOTE_MANIFEST) {
+            return;
+        }
         if (ConnectionUtils.getInstance().isInternetConnected(application)) {
             retrofitInstance.getUpdatedAppManifest(webAppDatabase, manifestVersion);
         }

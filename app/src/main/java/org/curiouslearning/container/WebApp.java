@@ -88,18 +88,24 @@ public class WebApp extends BaseActivity {
         source = utmPrefs.getString("source", "");
         campaignId = utmPrefs.getString("campaign_id", "");
         goBack = findViewById(R.id.button2);
-        goBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                logAppExitEvent();
-                audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
-                finish();
-            }
-        });
+        if (BuildConfig.SHOW_WEBAPP_CLOSE_BUTTON) {
+            goBack.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    logAppExitEvent();
+                    audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
+                    finish();
+                }
+            });
+        } else {
+            goBack.setVisibility(View.GONE);
+        }
     }
 
     private void loadWebView() {
-        if (!isInternetConnected(getApplicationContext()) && !isDataCached) {
+        if (BuildConfig.REQUIRE_INTERNET_FOR_UNCACHED_CONTENT
+                && !isInternetConnected(getApplicationContext())
+                && !isDataCached) {
             showPrompt("Please Connect to the Network");
             return;
         }
@@ -142,13 +148,17 @@ public class WebApp extends BaseActivity {
             if (source != null && !source.isEmpty()) {
                 appUrl = addSourceToUrl(appUrl);
             } else {
-                Sentry.captureMessage("Missing source when building URL for app: " + appUrl);
+                if (BuildConfig.ENABLE_SENTRY) {
+                    Sentry.captureMessage("Missing source when building URL for app: " + appUrl);
+                }
                 Log.w("WebApp", "Missing source parameter for app: " + appUrl);
             }
             if (campaignId != null && !campaignId.isEmpty()) {
                 appUrl = addCampaignIdToUrl(appUrl);
             } else {
-                Sentry.captureMessage("Missing campaign_id when building URL for app: " + appUrl);
+                if (BuildConfig.ENABLE_SENTRY) {
+                    Sentry.captureMessage("Missing campaign_id when building URL for app: " + appUrl);
+                }
                 Log.w("WebApp", "Missing campaign_id parameter for app: " + appUrl);
             }
         }
@@ -176,7 +186,9 @@ public class WebApp extends BaseActivity {
         String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" +
                 pseudoId;
         if (pseudoId == null || pseudoId.isEmpty()) {
-            Sentry.captureMessage("Missing cr_user_id for app: " + appUrl);
+            if (BuildConfig.ENABLE_SENTRY) {
+                Sentry.captureMessage("Missing cr_user_id for app: " + appUrl);
+            }
             Log.e("WebApp", "Missing cr_user_id when building URL");
         }
         return modifiedUrl;
@@ -264,6 +276,9 @@ public class WebApp extends BaseActivity {
 
         @JavascriptInterface
         public void closeWebView() {
+            if (!BuildConfig.SHOW_WEBAPP_CLOSE_BUTTON) {
+                return;
+            }
             goBack.setVisibility(View.GONE);
             logAppExitEvent();
             audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);

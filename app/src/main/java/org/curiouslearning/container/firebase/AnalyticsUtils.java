@@ -9,6 +9,8 @@ import android.util.Log;
 import com.android.installreferrer.api.ReferrerDetails;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
+import org.curiouslearning.container.BuildConfig;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -160,6 +162,9 @@ public class AnalyticsUtils {
     }
 
     public static void logReferrerEvent(Context context, String eventName, ReferrerDetails response) {
+        if (!BuildConfig.ENABLE_INSTALL_REFERRER) {
+            return;
+        }
         if (response != null) {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
             String referrerUrl = response.getInstallReferrer();

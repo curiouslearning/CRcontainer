@@ -51,6 +51,45 @@ android {
         buildConfig = true
     }
 
+    flavorDimensions "mode"
+
+    def standaloneFeatureFlags = [
+            standard  : [
+                    ENABLE_FACEBOOK                     : true,
+                    ENABLE_SENTRY                       : true,
+                    ENABLE_REMOTE_MANIFEST              : true,
+                    ENABLE_INSTALL_REFERRER             : true,
+                    REQUIRE_INTERNET_FOR_UNCACHED_CONTENT: true,
+                    ALLOW_BACK_NAVIGATION               : true,
+                    SHOW_WEBAPP_CLOSE_BUTTON            : true
+            ],
+            standalone: [
+                    ENABLE_FACEBOOK                     : false,
+                    ENABLE_SENTRY                       : false,
+                    ENABLE_REMOTE_MANIFEST              : false,
+                    ENABLE_INSTALL_REFERRER             : false,
+                    REQUIRE_INTERNET_FOR_UNCACHED_CONTENT: false,
+                    ALLOW_BACK_NAVIGATION               : false,
+                    SHOW_WEBAPP_CLOSE_BUTTON            : false
+            ]
+    ]
+
+    productFlavors {
+        standard {
+            dimension "mode"
+            standaloneFeatureFlags.standard.each { flagName, flagValue ->
+                buildConfigField "boolean", flagName, flagValue.toString()
+            }
+        }
+        standalone {
+            dimension "mode"
+            applicationId "org.curiouslearning.allSA_maharishi"
+            standaloneFeatureFlags.standalone.each { flagName, flagValue ->
+                buildConfigField "boolean", flagName, flagValue.toString()
+            }
+        }
+    }
+
     testOptions {
         unitTests.all { test ->
             jacoco {
@@ -203,6 +242,43 @@ sentry {
     // disable if you don't want to expose your sources
     includeSourceContext = true
 }
+
+tasks.register("verifyStandaloneConfiguration") {
+    group = "Verification"
+    description = "Checks the standalone flavor and its feature gates."
+
+    doLast {
+        def standaloneFlavor = android.productFlavors.find { it.name == "standalone" }
+        if (standaloneFlavor == null) {
+            throw new GradleException("Missing standalone product flavor.")
+        }
+
+        def expectedFlags = [
+                ENABLE_FACEBOOK                     : "false",
+                ENABLE_SENTRY                       : "false",
+                ENABLE_REMOTE_MANIFEST              : "false",
+                ENABLE_INSTALL_REFERRER             : "false",
+                REQUIRE_INTERNET_FOR_UNCACHED_CONTENT: "false",
+                ALLOW_BACK_NAVIGATION               : "false",
+                SHOW_WEBAPP_CLOSE_BUTTON            : "false"
+        ]
+
+        expectedFlags.each { flagName, expectedValue ->
+            def actualValue = standaloneFlavor.buildConfigFields[flagName]?.value?.toString()
+            if (actualValue == null) {
+                throw new GradleException("Standalone flavor is missing BuildConfig flag ${flagName}.")
+            }
+            if (actualValue != expectedValue) {
+                throw new GradleException("Standalone flavor flag ${flagName} expected ${expectedValue} but was ${actualValue}.")
+            }
+        }
+
+        if (!file("src/standalone/AndroidManifest.xml").exists()) {
+            throw new GradleException("Missing standalone manifest overlay at app/src/standalone/AndroidManifest.xml.")
+        }
+    }
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
