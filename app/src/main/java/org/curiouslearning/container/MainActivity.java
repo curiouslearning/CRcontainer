@@ -2,7 +2,7 @@ package org.curiouslearning.container;
 
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
-import android.app.Application;
+
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -21,9 +21,6 @@ import android.widget.TextView;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.facebook.FacebookSdk;
-import com.facebook.appevents.AppEventsLogger;
-import com.google.firebase.FirebaseApp;
 
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
@@ -31,11 +28,12 @@ import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
-import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.presentation.viewmodels.HomeViewModel;
 import org.curiouslearning.container.utilities.AnimationUtil;
 import org.curiouslearning.container.utilities.AppUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import org.curiouslearning.container.utilities.DebugOverlayManager;
+import org.curiouslearning.container.utilities.ImageLoader;
 import org.curiouslearning.container.utilities.LanguageDialogManager;
 import org.curiouslearning.container.utilities.ReferralManager;
 import org.curiouslearning.container.utilities.StudyEnrollmentManager;
@@ -44,6 +42,7 @@ import org.curiouslearning.container.utilities.VisualEffectsManager;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.lifecycle.ViewModelProvider;
 import app.rive.runtime.kotlin.RiveAnimationView;
 
 public class MainActivity extends BaseActivity
@@ -55,7 +54,7 @@ public class MainActivity extends BaseActivity
     public ActivityMainBinding binding;
     public RecyclerView recyclerView;
     public WebAppsAdapter apps;
-    public HomeViewModal homeViewModal;
+    public HomeViewModel homeViewModel;
 
     private SharedPreferences prefs;
     private SharedPreferences utmPrefs;
@@ -91,12 +90,13 @@ public class MainActivity extends BaseActivity
         manifestVersion = prefs.getString("manifestVersion", "");
         appVersion = AppUtils.getAppVersionName(this);
 
-        homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
+        // Use ViewModelProvider so the ViewModel survives configuration changes
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         cachePseudoId();
 
         // Initialize Managers
         visualEffectsManager = new VisualEffectsManager();
-        referralManager = new ReferralManager(this, homeViewModal, this, this);
+        referralManager = new ReferralManager(this, homeViewModel, this, this);
 
         studyEnrollmentManager = new StudyEnrollmentManager(this, prefs, appVersion, new StudyEnrollmentManager.StudyEnrollmentListener() {
             @Override
@@ -135,7 +135,7 @@ public class MainActivity extends BaseActivity
         });
 
         audioPlayer = new AudioPlayer(); // Used by LanguageDialogManager
-        languageDialogManager = new LanguageDialogManager(this, homeViewModal, prefs, audioPlayer, this);
+        languageDialogManager = new LanguageDialogManager(this, homeViewModel, prefs, audioPlayer, this);
 
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         View debugTriggerArea = findViewById(R.id.debug_trigger_area);
@@ -145,13 +145,9 @@ public class MainActivity extends BaseActivity
         // Visual Effects
         setupVisualEffects();
 
-        // Firebase & Facebook Init
-        FirebaseApp.initializeApp(this);
-        FacebookSdk.setAutoInitEnabled(true);
-        FacebookSdk.fullyInitialize();
-        FacebookSdk.setAdvertiserIDCollectionEnabled(true);
-        Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
-        AppEventsLogger.activateApp(getApplication());
+        // Firebase is auto-initialized via google-services.json — no manual init needed.
+        // Facebook SDK is initialized in MyApplication.onCreate() — no duplicate init needed here.
+        Log.d(TAG, "onCreate: MainActivity started");
 
         // UI Setup
         initRecyclerView();
@@ -159,7 +155,7 @@ public class MainActivity extends BaseActivity
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
         if (manifestVersion != null && !manifestVersion.equals("")) {
-            homeViewModal.getUpdatedAppManifest(manifestVersion);
+            homeViewModel.getUpdatedAppManifest(manifestVersion);
         }
 
         settingsButton = findViewById(R.id.settings);
@@ -339,7 +335,7 @@ public class MainActivity extends BaseActivity
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedLanguageParam;
 
-        homeViewModal.getSelectedlanguageWebApps(selectedLanguageParam).observe(this,
+        homeViewModel.getSelectedlanguageWebApps(selectedLanguageParam).observe(this,
                 new androidx.lifecycle.Observer<List<WebApp>>() {
                     @Override
                     public void onChanged(List<WebApp> webApps) {
@@ -348,6 +344,15 @@ public class MainActivity extends BaseActivity
                             apps.webApps = webApps;
                             apps.notifyDataSetChanged();
                             storeSelectLanguage(language);
+
+                            // Pre-warm the icon cache for all apps in the selected language
+                            List<String> iconUrls = new ArrayList<>();
+                            for (WebApp webApp : webApps) {
+                                if (webApp.getAppIconUrl() != null && !webApp.getAppIconUrl().isEmpty()) {
+                                    iconUrls.add(webApp.getAppIconUrl());
+                                }
+                            }
+                            ImageLoader.prewarmIconCache(MainActivity.this, iconUrls);
                         } else {
                             if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
                                 languageDialogManager.showLanguagePopup();
@@ -355,7 +360,8 @@ public class MainActivity extends BaseActivity
                             if (manifestVersion.equals("")) {
                                 if (!selectedLanguageParam.equals(isValidLanguage))
                                     loadingIndicator.setVisibility(View.VISIBLE);
-                                homeViewModal.getAllWebApps();
+                                // Trigger network fetch explicitly — Room LiveData will update observers automatically
+                                homeViewModel.triggerRefresh();
                             }
                         }
                     }
@@ -386,14 +392,11 @@ public class MainActivity extends BaseActivity
     }
 
     private void cachePseudoId() {
-        // Keeps logic for generating pseudoId
-        // Assuming shared prefs logic is same or simplified
         if (!prefs.contains("pseudoId")) {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString("pseudoId",
-                    generatePseudoId() + System.currentTimeMillis()); // Simplified suffix for brevity, original was
-                                                                      // complex date
-            editor.commit();
+                    generatePseudoId() + System.currentTimeMillis());
+            editor.apply(); // Never use commit() — apply() is async and safe on main thread
         }
     }
 

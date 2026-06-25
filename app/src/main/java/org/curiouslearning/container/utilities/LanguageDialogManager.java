@@ -23,7 +23,7 @@ import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter;
-import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
+import org.curiouslearning.container.presentation.viewmodels.HomeViewModel;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,7 +38,7 @@ public class LanguageDialogManager {
         private static final String TAG = "LanguageDialogManager";
         private Activity activity;
         private Dialog dialog;
-        private HomeViewModal homeViewModal;
+        private HomeViewModel homeViewModal;
         private SharedPreferences prefs;
         private AudioPlayer audioPlayer;
         private GestureDetectorCompat gestureDetector;
@@ -48,7 +48,7 @@ public class LanguageDialogManager {
                 void onLanguageSelected(String language);
         }
 
-        public LanguageDialogManager(Activity activity, HomeViewModal homeViewModal, SharedPreferences prefs,
+        public LanguageDialogManager(Activity activity, HomeViewModel homeViewModal, SharedPreferences prefs,
                         AudioPlayer audioPlayer, LanguageDialogListener listener) {
                 this.activity = activity;
                 this.homeViewModal = homeViewModal;
@@ -90,14 +90,12 @@ public class LanguageDialogManager {
                                         List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
 
                                         if (!webApps.isEmpty()) {
-                                                CacheUtils.manifestVersionNumber = prefs.getString("manifestVersion",
-                                                                ""); // Simplified
-                                                // Actually in MainActivity it was
-                                                // cacheManifestVersion(CacheUtils.manifestVersionNumber);
-                                                // But CacheUtils.manifestVersionNumber gets updated in WebAppRepository
-                                                // or similar usually.
-                                                // Assuming CacheUtils handles its own state or we don't strictly need
-                                                // to re-cache here if it's already done.
+                                                CacheUtils.manifestVersionNumber = prefs.getString("manifestVersion", "");
+                                        } else {
+                                                // DB is empty — ensure a network fetch is in flight.
+                                                // Room will re-notify this observer once data arrives.
+                                                Log.d(TAG, "getAllWebApps: empty — triggering refresh");
+                                                homeViewModal.triggerRefresh();
                                         }
 
                                         if (!distinctLanguageList.isEmpty()) {
@@ -107,6 +105,13 @@ public class LanguageDialogManager {
                                                                 languagesEnglishNameMap);
                                                 adapterRef[0].setSelectedLanguage(selectedLanguage);
                                                 autoCompleteTextView.setAdapter(adapterRef[0]);
+
+                                                // Prevent free-form keyboard input — this is a
+                                                // dropdown-only selector, not a text field.
+                                                autoCompleteTextView.setInputType(android.text.InputType.TYPE_NULL);
+                                                autoCompleteTextView.setKeyListener(null);
+                                                autoCompleteTextView.setFocusable(true); // keep focusable so dropdown opens on tap
+                                                autoCompleteTextView.setLongClickable(false);  // no paste
 
                                                 setupDropdownHeight(autoCompleteTextView, adapterRef[0]);
 
@@ -130,6 +135,14 @@ public class LanguageDialogManager {
                                                                                                                 position);
                                                                                 String selectedLanguage = languagesEnglishNameMap
                                                                                                 .get(selectedDisplayName);
+
+                                                                                // Guard: only proceed if this display
+                                                                                // name maps to a known language code.
+                                                                                if (selectedLanguage == null
+                                                                                                || selectedLanguage.isEmpty()) {
+                                                                                        Log.w(TAG, "onItemClick: no valid language code for display name '" + selectedDisplayName + "'");
+                                                                                        return;
+                                                                                }
 
                                                                                 if (adapterRef[0] != null) {
                                                                                         adapterRef[0].setSelectedLanguage(

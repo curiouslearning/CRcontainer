@@ -26,6 +26,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitInstance {
 
+    private static final String TAG = "RetrofitInstance";
     private static Retrofit retrofit;
     private static RetrofitInstance retrofitInstance;
     private Map<String, Object> data;
@@ -63,8 +64,9 @@ public class RetrofitInstance {
                         JsonObject jsonObject = jsonElement.getAsJsonObject();
                         JsonElement versionElement = jsonObject.get("version");
                         WebAppResponse webAppResponse = findWebApps(jsonElement);
-                        webAppResponse.setVersion(versionElement.getAsString());
-                        if (webAppResponse != null) {
+                        // Guard against null before usage — findWebApps returns null if key missing
+                        if (webAppResponse != null && versionElement != null) {
+                            webAppResponse.setVersion(versionElement.getAsString());
                             CacheUtils.setManifestVersionNumber(webAppResponse.getVersion());
                             List<WebApp> webApps = webAppResponse.getWebApps();
                             webAppDatabase.deleteWebApps(webApps);
@@ -78,7 +80,7 @@ public class RetrofitInstance {
 
             @Override
             public void onFailure(Call<JsonElement> call, Throwable t) {
-                System.out.println(t.getMessage() + "Something went wrong");
+                Log.e(TAG, "getAppManifest failed: " + t.getMessage());
                 if (callback != null) {
                     callback.onComplete();
                 }
@@ -104,11 +106,14 @@ public class RetrofitInstance {
                         JsonObject jsonObject = jsonElement.getAsJsonObject();
                         JsonElement versionElement = jsonObject.get("version");
                         WebAppResponse webAppResponse = findWebApps(jsonElement);
-                        webAppResponse.setVersion(versionElement.getAsString());
-                        String latestManifestVersion = webAppResponse.getVersion();
-                        if (!Objects.equals(manifestVersion, latestManifestVersion)) {
-                            CacheUtils.setManifestVersionNumber(latestManifestVersion);
-                            webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
+                        // Guard against null before usage — findWebApps returns null if key missing
+                        if (webAppResponse != null && versionElement != null) {
+                            webAppResponse.setVersion(versionElement.getAsString());
+                            String latestManifestVersion = webAppResponse.getVersion();
+                            if (!Objects.equals(manifestVersion, latestManifestVersion)) {
+                                CacheUtils.setManifestVersionNumber(latestManifestVersion);
+                                webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
+                            }
                         }
                     }
                 }
@@ -116,7 +121,7 @@ public class RetrofitInstance {
 
             @Override
             public void onFailure(Call<JsonElement> call, Throwable t) {
-                System.out.println(t.getMessage() + "Something went wrong");
+                Log.e(TAG, "getUpdatedAppManifest failed: " + t.getMessage());
             }
         });
 

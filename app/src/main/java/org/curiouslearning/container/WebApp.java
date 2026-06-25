@@ -137,8 +137,7 @@ public class WebApp extends BaseActivity {
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
         if (isFtmApp) {
-            System.out
-                    .println(">> url source and campaign params added to the subapp url " + source + " " + campaignId);
+            Log.d("WebApp", ">> url source and campaign params added to the subapp url: source=" + source + " campaignId=" + campaignId);
             if (source != null && !source.isEmpty()) {
                 appUrl = addSourceToUrl(appUrl);
             } else {
@@ -160,7 +159,7 @@ public class WebApp extends BaseActivity {
         } else {
             webView.loadUrl(addCrUserIdToUrl(appUrl));
         }
-        System.out.println("subapp url : " + appUrl);
+        Log.d("WebApp", "Loading subapp url: " + appUrl);
         webView.setWebChromeClient(new WebChromeClient() {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 Log.d("WebView", consoleMessage.message());
@@ -237,7 +236,7 @@ public class WebApp extends BaseActivity {
         public void cachedStatus(boolean dataCachedStatus) {
             SharedPreferences.Editor editor = sharedPref.edit();
             editor.putBoolean(String.valueOf(urlIndex), dataCachedStatus);
-            editor.commit();
+            editor.apply(); // apply() is async; commit() would block the JS thread
 
             if (!isInternetConnected(getApplicationContext()) && dataCachedStatus) {
                 showPrompt("Please Connect to the Network");

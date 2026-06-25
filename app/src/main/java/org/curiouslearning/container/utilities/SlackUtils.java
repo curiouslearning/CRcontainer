@@ -1,10 +1,6 @@
 package org.curiouslearning.container.utilities;
 
-import android.content.Context;
-import android.os.AsyncTask;
 import android.util.Log;
-
-import java.nio.charset.StandardCharsets;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -12,81 +8,64 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+/**
+ * Utility for sending messages to a Slack webhook.
+ *
+ * <p>Uses a shared {@link OkHttpClient} instance (thread-safe, expensive to create)
+ * and dispatches each send on a background thread.
+ */
 public class SlackUtils {
 
-    private static final String TAG = "SLACK-DEBUG";
+    private static final String TAG = "SlackUtils";
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
+    /** Shared OkHttpClient — reuse connection pool across all Slack calls. */
+    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
+
     /**
-     * Public API to send a message to Slack asynchronously
+     * Sends a plain-text message to Slack asynchronously.
+     * Does nothing if the webhook URL cannot be resolved.
      */
-    public static void sendMessageToSlack(Context context, String message) {
+    public static void sendMessageToSlack(android.content.Context context, String message) {
         Log.d(TAG, "Preparing to send Slack message...");
 
-        try {
-            new SendSlackMessageTask(context).execute(message);
-        } catch (Exception e) {
-            Log.e(TAG, "Error starting Slack AsyncTask", e);
-        }
-    }
-
-    /**
-     * AsyncTask to send Slack messages in the background
-     */
-    private static class SendSlackMessageTask extends AsyncTask<String, Void, Void> {
-
-        private final Context context;
-
-        SendSlackMessageTask(Context context) {
-            this.context = context;
-        }
-
-        @Override
-        protected Void doInBackground(String... messages) {
-            Log.d(TAG, "AsyncTask started... retrieving webhook");
-
+        // Run network I/O on a background thread (replaces deprecated AsyncTask)
+        new Thread(() -> {
             try {
                 String webhookUrl = ConfigLoader.getSlackWebhookUrl(context);
                 if (webhookUrl == null || webhookUrl.isEmpty()) {
                     Log.e(TAG, "Webhook URL is null or empty, aborting Slack message.");
-                    return null;
+                    return;
                 }
-
-                Log.d(TAG, "Sending Slack message: " + messages[0]);
-                sendToSlack(webhookUrl, messages[0]);
-
+                sendToSlack(webhookUrl, message);
             } catch (Exception e) {
                 Log.e(TAG, "Error sending Slack message", e);
             }
+        }, "slack-sender").start();
+    }
 
-            return null;
-        }
+    /** Internal method: sends message to Slack via HTTP POST. */
+    private static void sendToSlack(String url, String message) {
+        try {
+            // Simple JSON escaping for the message text
+            String safeMessage = message.replace("\\", "\\\\").replace("\"", "\\\"");
+            String jsonPayload = "{\"text\": \"" + safeMessage + "\"}";
 
-        /**
-         * Internal method to send message to Slack via HTTP POST
-         */
-        private void sendToSlack(String url, String message) {
-            try {
-                OkHttpClient client = new OkHttpClient();
-                String jsonPayload = "{\"text\": \"" + message + "\"}";
+            RequestBody body = RequestBody.create(JSON, jsonPayload);
+            Request request = new Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .build();
 
-                RequestBody body = RequestBody.create(JSON, jsonPayload);
-                Request request = new Request.Builder()
-                        .url(url)
-                        .post(body)
-                        .build();
-
-                try (Response response = client.newCall(request).execute()) {
-                    if (response.isSuccessful()) {
-                        Log.d(TAG, "Slack message sent successfully.");
-                    } else {
-                        Log.e(TAG, "Slack request failed: " + response.toString());
-                    }
+            try (Response response = HTTP_CLIENT.newCall(request).execute()) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "Slack message sent successfully.");
+                } else {
+                    Log.e(TAG, "Slack request failed: " + response.code() + " " + response.message());
                 }
-
-            } catch (Exception e) {
-                Log.e(TAG, "Exception while sending Slack message", e);
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Exception while sending Slack message", e);
         }
     }
 }
