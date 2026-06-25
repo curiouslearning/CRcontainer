@@ -45,7 +45,11 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
 node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mjs --language <language> --domain <domain> --download-runtime --download --write-manifest
 ```
 
-5. Inspect the script summary. Stop before Gradle if the CRWebPlayer runtime is missing `index.html`, `manifest.json`, `dist/app.js`, or if any matched book is missing `content/content.json`, `content/audios/`, or `content/images/`.
+5. Inspect the script summary.
+   - If GitHub rate limits or similar API failures stop the remote `BookContent` listing after some content is already on disk, treat that as a partial-success case.
+   - Report the books that were downloaded, the books still missing, and whether the runtime files are complete.
+   - If runtime files are present and at least some matched books are available locally, continue to manifest upsert and the Android build instead of blocking the whole run.
+   - Stop before Gradle only when the runtime is incomplete or there are no usable local books for the requested language.
 6. Run the standalone Android build skill with the requested package name.
    - If the project is already using that package, report it and skip only the rename step.
    - Still run standalone cleanup/validation/build steps from that skill.
@@ -87,6 +91,7 @@ Provide concise ordered updates:
 - `Runtime files`: `already present` or `download index.html`, `download manifest.json`, `download dist`.
 - `Content download`: `already present` or `download <BookName>`.
 - `Manifest`: added N entries, total N.
+- `Fallback`: `remote listing rate-limited; using local books` when applicable.
 - `Standalone build`: package rename/cleanup status.
 - `Gradle`: build command and result.
 

@@ -148,7 +148,17 @@ console.log(`- manifest.json: ${runtimeValidation.manifestJson ? "ok" : "missing
 console.log(`- dist/app.js: ${runtimeValidation.distAppJs ? "ok" : "missing"}`);
 console.log(`- dist/index.html: ${runtimeValidation.distIndexHtml ? "ok" : "missing"}`);
 
-const remoteBooks = await listRemoteBookContent(repo, branch);
+let remoteBooks;
+try {
+  remoteBooks = await listRemoteBookContent(repo, branch);
+} catch (error) {
+  if (isGitHubRateLimit(error)) {
+    console.warn(`GitHub listing rate-limited; falling back to local BookContent folders only.`);
+    remoteBooks = listLocalBookContent(bookContentRoot);
+  } else {
+    throw error;
+  }
+}
 const matchedBooks = dedupeBooks(
   remoteBooks.filter((name) => matchesLanguage(name, languageInfo.aliases)),
   manifestBefore,
@@ -291,7 +301,9 @@ async function listRemoteBookContent(repo, branch) {
   };
   if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const response = await fetch(url, { headers });
-  if (!response.ok) fail(`GitHub API ${response.status} ${response.statusText}: ${url}`);
+  if (!response.ok) {
+    throw new Error(`GitHub API ${response.status} ${response.statusText}: ${url}`);
+  }
   const entries = await response.json();
   return entries
     .filter((entry) => entry.type === "dir")
@@ -475,6 +487,19 @@ function listAssetImages(localRoot) {
     .map((entry) => entry.name)
     .filter((name) => /\.(png|jpe?g|webp)$/i.test(name))
     .sort((a, b) => a.localeCompare(b));
+}
+
+function listLocalBookContent(localRoot) {
+  if (!existsSync(localRoot)) return [];
+  return readdirSync(localRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function isGitHubRateLimit(error) {
+  const message = String(error?.message ?? error);
+  return message.includes("GitHub API 403") || message.includes("GitHub API 429") || message.includes("rate limit exceeded");
 }
 
 
