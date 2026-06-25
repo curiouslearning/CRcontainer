@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="com.android.vending.INSTALL_REFERRER"
+        tools:node="remove" />
+
+    <application>
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            tools:node="remove" />
+        <meta-data
+            android:name="com.facebook.sdk.ClientToken"
+            tools:node="remove" />
+        <meta-data
+            android:name="com.facebook.sdk.AutoLogAppEventsEnabled"
+            tools:node="remove" />
+        <meta-data
+            android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
+            tools:node="remove" />
+
+        <meta-data
+            android:name="io.sentry.dsn"
+            tools:node="remove" />
+        <meta-data
+            android:name="io.sentry.send-default-pii"
+            tools:node="remove" />
+        <meta-data
+            android:name="io.sentry.traces.user-interaction.enable"
+            tools:node="remove" />
+        <meta-data
+            android:name="io.sentry.attach-screenshot"
+            tools:node="remove" />
+        <meta-data
+            android:name="io.sentry.attach-view-hierarchy"
+            tools:node="remove" />
+        <meta-data
+            android:name="io.sentry.traces.sample-rate"
+            tools:node="remove" />
+    </application>
+</manifest>
