@@ -51,6 +51,16 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        unitTests.all { test ->
+            jacoco {
+                includeNoLocationClasses = true
+                excludes = ['jdk.internal.*']
+                destinationFile = file("$buildDir/jacoco/${test.name}.exec")
+            }
+        }
+    }
+
     signingConfigs {
         release {
             storeFile file("keystore/my-release-key.jks")
@@ -162,7 +172,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     }
 
     classDirectories.setFrom(fileTree(
-            dir: "$buildDir/intermediates/classes/debug",
+            dir: "$buildDir/intermediates/classes/debug/transformDebugClassesWithAsm/dirs",
             excludes: [
                     '**/R.class',
                     '**/R$*.class',
@@ -178,27 +188,10 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     ))
 
     sourceDirectories.setFrom(files(coverageSourceDirs))
-    executionData.setFrom(fileTree(dir: "$buildDir", includes: [
-            "jacoco/testDebugUnitTest.exec",
-            "outputs/code-coverage/connected/*coverage.ec"
-    ]))
-
-    doFirst {
-        classDirectories.setFrom(
-                files(classDirectories.files.collect {
-                    fileTree(dir: it, excludes: [
-                            '**/R.class',
-                            '**/R$*.class',
-                            '**/BuildConfig.*',
-                            '**/Manifest*.*',
-                            '**/*Test*.*',
-                            '**/databinding/*',
-                            '**/android/databinding/*',
-                            '**/androidx/**'
-                    ])
-                })
-        )
-    }
+    executionData.setFrom(files(
+            "$buildDir/jacoco/testDebugUnitTest.exec",
+            "$buildDir/outputs/code-coverage/connected/*coverage.ec"
+    ))
 }
 
 
