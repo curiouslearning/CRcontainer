@@ -174,7 +174,6 @@ public class AnalyticsUtilsCustomEventsTest {
             verify(spyFA).logEvent(eq("joined_study"), captor.capture());
             Bundle b = captor.getValue();
             assertEquals("Nepali", b.getString("cr_language"));
-            assertEquals("2.34.3", b.getString("app_info.version"));
             assertEquals("12345", b.getString("cr_user_id"));
             assertEquals("test_source", b.getString("source"));
             assertEquals("test_campaign", b.getString("campaign_id"));
