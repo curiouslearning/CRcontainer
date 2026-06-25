@@ -1,0 +1,4 @@
+interface:
+  display_name: "Standalone Build Orchestrator"
+  short_description: "Prepare content and run standalone Android builds."
+  default_prompt: "Create a standalone Android build for a package name and CRWebPlayer language content."

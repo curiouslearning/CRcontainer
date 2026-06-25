@@ -1,0 +1,4 @@
+interface:
+  display_name: "Standalone Android Build"
+  short_description: "Specialize Curious Reader standalone APKs"
+  default_prompt: "Use $standalone-android-build to specialize this Curious Reader Android repo for a standalone APK with a new package name."
