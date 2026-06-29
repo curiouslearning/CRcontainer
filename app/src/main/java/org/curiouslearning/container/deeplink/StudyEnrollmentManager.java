@@ -1,4 +1,7 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.deeplink;
+
+import org.curiouslearning.container.util.AnimationUtil;
+import org.curiouslearning.container.util.AppUtils;
 
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
@@ -110,19 +113,14 @@ public class StudyEnrollmentManager {
 
                 Button btnConfirm = confirmDialog.findViewById(R.id.btn_confirm);
 
-                ObjectAnimator scaleX = ObjectAnimator.ofFloat(btnConfirm, "scaleX", 1f, 1.05f, 1f);
-                ObjectAnimator scaleY = ObjectAnimator.ofFloat(btnConfirm, "scaleY", 1f, 1.05f, 1f);
-                scaleX.setDuration(1500);
-                scaleY.setDuration(1500);
-                scaleX.setRepeatCount(ValueAnimator.INFINITE);
-                scaleY.setRepeatCount(ValueAnimator.INFINITE);
-                scaleX.start();
-                scaleY.start();
+                ObjectAnimator[] pulseAnimators = AnimationUtil.startPulseAnimation(btnConfirm);
 
                 btnConfirm.setOnClickListener(v -> {
                     btnConfirm.setEnabled(false);
-                    scaleX.cancel();
-                    scaleY.cancel();
+                    if (pulseAnimators != null && pulseAnimators.length == 2) {
+                        pulseAnimators[0].cancel();
+                        pulseAnimators[1].cancel();
+                    }
 
                     String storedStudyUserId = prefs.getString(AnalyticsUtils.STUDY_USER_ID, "");
                     if (storedStudyUserId != null && !storedStudyUserId.isEmpty()) {

@@ -17,10 +17,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
-import org.curiouslearning.container.utilities.AnimationUtil;
-import org.curiouslearning.container.utilities.ImageLoader;
-import org.curiouslearning.container.utilities.AudioPlayer;
-import org.curiouslearning.container.utilities.PulsingView;
+import org.curiouslearning.container.util.AnimationUtil;
+import org.curiouslearning.container.util.ImageLoader;
+import org.curiouslearning.container.util.AudioPlayer;
+import org.curiouslearning.container.util.PulsingView;
 
 import java.util.List;
 
@@ -114,7 +114,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 AnimationUtil.scaleButton(v, new Runnable() {
                     @Override
                     public void run() {
-                        Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
+                        Intent intent = new Intent(ctx, org.curiouslearning.container.presentation.webapp.WebAppActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
                         intent.putExtra("appUrl", webApps.get(position).getAppUrl());

@@ -155,33 +155,9 @@ public class InstallReferrerManager {
                 Log.d("referrer", "Using cached campaign_id: " + campaignId);
             }
 
-            // Check if this is an organic install
-            // (utm_source=google-play&utm_medium=organic)
-            // Also check for invalid referrer URLs like utm_source=(not
-            // set)&utm_medium=(not set)
-            boolean isOrganicInstall = false;
-            boolean isInvalidReferrer = false;
-            if (!TextUtils.isEmpty(referrerUrl)) {
-                Uri uri = Uri.parse("http://dummyurl.com/?" + referrerUrl);
-                String utmSource = uri.getQueryParameter("utm_source");
-                String utmMedium = uri.getQueryParameter("utm_medium");
-
-                // Check for invalid/not set values
-                if (utmSource != null && (utmSource.equals("(not set)") || utmSource.equals("(not%20set)"))) {
-                    isInvalidReferrer = true;
-                    Log.d("referrer", "Detected invalid referrer with utm_source=(not set)");
-                }
-                if (utmMedium != null && (utmMedium.equals("(not set)") || utmMedium.equals("(not%20set)"))) {
-                    isInvalidReferrer = true;
-                    Log.d("referrer", "Detected invalid referrer with utm_medium=(not set)");
-                }
-
-                // Check for valid organic install
-                if ("google-play".equalsIgnoreCase(utmSource) && "organic".equalsIgnoreCase(utmMedium)) {
-                    isOrganicInstall = true;
-                    Log.d("referrer", "Detected organic install from Google Play");
-                }
-            }
+            ReferrerParser.ParsedReferrer parsedData = ReferrerParser.parse(referrerUrl);
+            boolean isOrganicInstall = parsedData.isOrganicInstall;
+            boolean isInvalidReferrer = parsedData.isInvalidReferrer;
 
             // Determine status based on final source and campaignId (from current
             // extraction with fallback, or cache)
@@ -209,83 +185,18 @@ public class InstallReferrerManager {
     }
 
     private Map<String, String> extractReferrerParameters(String referrerUrl) {
-        Map<String, String> params = new HashMap<>();
-        // Using a dummy URL to ensure `Uri.parse` correctly processes the referrerUrl
-        // as part of a valid URL.
-        Uri uri = Uri.parse("http://dummyurl.com/?" + referrerUrl);
-        String deeplink = uri.getQueryParameter("deferred_deeplink");
-        String deferredLanguage = "";
-        if (!TextUtils.isEmpty(deeplink)) {
-            Uri deeplinkUri = Uri.parse(deeplink);
-            String language = deeplinkUri.getQueryParameter("language");
-            if (!TextUtils.isEmpty(language)) {
-                deferredLanguage = language;
-            }
-        }
-        callback.onReferrerReceived(deferredLanguage, referrerUrl);
+        ReferrerParser.ParsedReferrer parsed = ReferrerParser.parse(referrerUrl);
+        callback.onReferrerReceived(parsed.deferredLanguage, referrerUrl);
 
-        String source = null;
-        String campaign_id = null;
-
-        // First, try to extract source and campaign_id from deferred_deeplink (highest
-        // priority)
-        if (deeplink != null && !deeplink.isEmpty()) {
-            Uri deeplinkUri = Uri.parse(deeplink);
-            source = deeplinkUri.getQueryParameter("source");
-            campaign_id = deeplinkUri.getQueryParameter("campaign_id");
-            if (!TextUtils.isEmpty(source) || !TextUtils.isEmpty(campaign_id)) {
-                Log.d("referrer",
-                        "Extracted from deferred_deeplink - source: " + source + ", campaign_id: " + campaign_id);
-            }
-        }
-
-        // If not found in deferred_deeplink, try top-level parameters in referrer URL
-        if (TextUtils.isEmpty(source)) {
-            source = uri.getQueryParameter("source");
-            if (!TextUtils.isEmpty(source)) {
-                Log.d("referrer", "Extracted source from top-level referrer URL: " + source);
-            }
-        }
-        if (TextUtils.isEmpty(campaign_id)) {
-            campaign_id = uri.getQueryParameter("campaign_id");
-            if (!TextUtils.isEmpty(campaign_id)) {
-                Log.d("referrer", "Extracted campaign_id from top-level referrer URL: " + campaign_id);
-            }
-        }
-
-        // Fallback to utm_source and utm_medium ONLY if source/campaign_id are still
-        // not available
-        // if (TextUtils.isEmpty(source)) {
-        // String utmSource = uri.getQueryParameter("utm_source");
-        // if (!TextUtils.isEmpty(utmSource)) {
-        // source = utmSource;
-        // Log.d("referrer", "Using utm_source as fallback for source: " + source);
-        // }
-        // }
-        // if (TextUtils.isEmpty(campaign_id)) {
-        // String utmMedium = uri.getQueryParameter("utm_medium");
-        // if (!TextUtils.isEmpty(utmMedium)) {
-        // campaign_id = utmMedium;
-        // Log.d("referrer", "Using utm_medium as fallback for campaign_id: " +
-        // campaign_id);
-        // }
-        // }
-
-        String content = uri.getQueryParameter("utm_content");
-        Log.d("data without decode", deeplink + " " + campaign_id + " " + source + " " + content);
-        content = urlDecode(content);
-
-        Log.d("referral data", uri + " " + campaign_id + " " + source + " " + content + " " + referrerUrl);
         SharedPreferences prefs = context.getSharedPreferences(UTM_PREFS_NAME, Context.MODE_PRIVATE);
-
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(SOURCE, source);
-        editor.putString(CAMPAIGN_ID, campaign_id);
+        editor.putString(SOURCE, parsed.source);
+        editor.putString(CAMPAIGN_ID, parsed.campaignId);
         editor.apply();
-        params.put("source", source);
-        params.put("campaign_id", campaign_id);
-        // params.put("content", content);
 
+        Map<String, String> params = new HashMap<>();
+        params.put("source", parsed.source);
+        params.put("campaign_id", parsed.campaignId);
         return params;
     }
 
@@ -388,18 +299,9 @@ public class InstallReferrerManager {
         boolean isOrganicInstall = false;
         boolean isInvalidReferrer = false;
         if (!TextUtils.isEmpty(rawReferrerUrl)) {
-            Uri uri = Uri.parse("http://dummyurl.com/?" + rawReferrerUrl);
-            String utmSource = uri.getQueryParameter("utm_source");
-            String utmMedium = uri.getQueryParameter("utm_medium");
-            if (utmSource != null && (utmSource.equals("(not set)") || utmSource.equals("(not%20set)"))) {
-                isInvalidReferrer = true;
-            }
-            if (utmMedium != null && (utmMedium.equals("(not set)") || utmMedium.equals("(not%20set)"))) {
-                isInvalidReferrer = true;
-            }
-            if ("google-play".equalsIgnoreCase(utmSource) && "organic".equalsIgnoreCase(utmMedium)) {
-                isOrganicInstall = true;
-            }
+            ReferrerParser.ParsedReferrer parsedData = ReferrerParser.parse(rawReferrerUrl);
+            isOrganicInstall = parsedData.isOrganicInstall;
+            isInvalidReferrer = parsedData.isInvalidReferrer;
         }
 
         Log.d(TAG, "resolveAttributionFromCache: context='" + errorContext
@@ -445,21 +347,7 @@ public class InstallReferrerManager {
                 + (referrerUrl != null && !referrerUrl.isEmpty() ? referrerUrl : "(empty)"));
     }
 
-    public static String urlDecode(String encodedString) {
-        try {
-            if (encodedString != null) {
-                String decodedString = URLDecoder.decode(encodedString, StandardCharsets.UTF_8.toString());
-                Log.d(TAG, "Decoded utm_content: " + decodedString);
-                return decodedString;
-            } else {
-                Log.w(TAG, "urlDecode: encodedString is null.");
-                return null;
-            }
-        } catch (UnsupportedEncodingException | IllegalArgumentException e) {
-            Log.e(TAG, "urlDecode failed", e);
-            return null;
-        }
-    }
+
 
     private void logAttributionStatus(String status, String referralUrl, String source, String campaignId) {
         Map<String, Object> eventData = new HashMap<>();

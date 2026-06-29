@@ -29,15 +29,15 @@ import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodels.HomeViewModel;
-import org.curiouslearning.container.utilities.AnimationUtil;
-import org.curiouslearning.container.utilities.AppUtils;
-import org.curiouslearning.container.utilities.AudioPlayer;
-import org.curiouslearning.container.utilities.DebugOverlayManager;
-import org.curiouslearning.container.utilities.ImageLoader;
-import org.curiouslearning.container.utilities.LanguageDialogManager;
-import org.curiouslearning.container.utilities.ReferralManager;
-import org.curiouslearning.container.utilities.StudyEnrollmentManager;
-import org.curiouslearning.container.utilities.VisualEffectsManager;
+import org.curiouslearning.container.util.AnimationUtil;
+import org.curiouslearning.container.util.AppUtils;
+import org.curiouslearning.container.util.AudioPlayer;
+import org.curiouslearning.container.presentation.home.managers.DebugOverlayManager;
+import org.curiouslearning.container.util.ImageLoader;
+import org.curiouslearning.container.presentation.home.managers.LanguageDialogManager;
+import org.curiouslearning.container.presentation.home.managers.ReferralManager;
+import org.curiouslearning.container.deeplink.StudyEnrollmentManager;
+import org.curiouslearning.container.presentation.home.managers.VisualEffectsManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -335,7 +335,7 @@ public class MainActivity extends BaseActivity
         loadingIndicator.setVisibility(View.VISIBLE);
         final String language = selectedLanguageParam;
 
-        homeViewModel.getSelectedlanguageWebApps(selectedLanguageParam).observe(this,
+        homeViewModel.getSelectedLanguageWebApps(selectedLanguageParam).observe(this,
                 new androidx.lifecycle.Observer<List<WebApp>>() {
                     @Override
                     public void onChanged(List<WebApp> webApps) {

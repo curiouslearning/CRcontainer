@@ -35,8 +35,8 @@ public class HomeViewModel extends AndroidViewModel {
      * Returns a LiveData stream of WebApps filtered by the given language code.
      * Callers (Activities/Fragments) must observe this with {@code this} as LifecycleOwner.
      */
-    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
-        return webAppRepository.getSelectedlanguageWebApps(selectedLanguage);
+    public LiveData<List<WebApp>> getSelectedLanguageWebApps(String selectedLanguage) {
+        return webAppRepository.getSelectedLanguageWebApps(selectedLanguage);
     }
 
     /** Returns a LiveData stream of all WebApps in the local database. */

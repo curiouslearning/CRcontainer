@@ -1,4 +1,4 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.util;
 
 import android.animation.Animator;
 import android.animation.AnimatorSet;
@@ -39,6 +39,18 @@ public class AnimationUtil {
                     }
                 })
                 .start();
+    }
+
+    public static ObjectAnimator[] startPulseAnimation(View view) {
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(view, "scaleX", 1f, 1.05f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(view, "scaleY", 1f, 1.05f, 1f);
+        scaleX.setDuration(1500);
+        scaleY.setDuration(1500);
+        scaleX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        scaleY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        scaleX.start();
+        scaleY.start();
+        return new ObjectAnimator[]{scaleX, scaleY};
     }
 
     /**

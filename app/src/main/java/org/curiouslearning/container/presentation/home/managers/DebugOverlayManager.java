@@ -1,4 +1,7 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.presentation.home.managers;
+
+import org.curiouslearning.container.util.ConnectionUtils;
+import org.curiouslearning.container.util.AppUtils;
 
 import android.animation.ObjectAnimator;
 import android.content.Context;

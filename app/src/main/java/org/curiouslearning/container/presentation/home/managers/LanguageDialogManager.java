@@ -1,4 +1,4 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.presentation.home.managers;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -24,6 +24,8 @@ import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.adapters.LanguageDropdownAdapter;
 import org.curiouslearning.container.presentation.viewmodels.HomeViewModel;
+import org.curiouslearning.container.util.AudioPlayer;
+import org.curiouslearning.container.util.AnimationUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,28 +40,54 @@ public class LanguageDialogManager {
         private static final String TAG = "LanguageDialogManager";
         private Activity activity;
         private Dialog dialog;
-        private HomeViewModel homeViewModal;
+        private HomeViewModel homeViewModel;
         private SharedPreferences prefs;
         private AudioPlayer audioPlayer;
         private GestureDetectorCompat gestureDetector;
         private LanguageDialogListener listener;
+        
+        // Cache for language data
+        private List<String> distinctLanguageList = new ArrayList<>();
+        private Map<String, String> languagesEnglishNameMap = new TreeMap<>();
+        private LanguageDropdownAdapter currentAdapter;
 
         public interface LanguageDialogListener {
                 void onLanguageSelected(String language);
         }
 
-        public LanguageDialogManager(Activity activity, HomeViewModel homeViewModal, SharedPreferences prefs,
+        public LanguageDialogManager(Activity activity, HomeViewModel homeViewModel, SharedPreferences prefs,
                         AudioPlayer audioPlayer, LanguageDialogListener listener) {
                 this.activity = activity;
-                this.homeViewModal = homeViewModal;
+                this.homeViewModel = homeViewModel;
                 this.prefs = prefs;
                 this.audioPlayer = audioPlayer;
                 this.listener = listener;
                 this.dialog = new Dialog(activity);
+
+                // Observe once in constructor to avoid memory leaks
+                homeViewModel.getAllWebApps().observe((LifecycleOwner) activity, new Observer<List<WebApp>>() {
+                        @Override
+                        public void onChanged(List<WebApp> webApps) {
+                                Set<String> distinctLanguages = sortLanguages(webApps);
+                                languagesEnglishNameMap = MapLanguagesEnglishName(webApps);
+                                distinctLanguageList = new ArrayList<>(distinctLanguages);
+
+                                if (webApps.isEmpty()) {
+                                        Log.d(TAG, "getAllWebApps: empty — triggering refresh");
+                                        homeViewModel.triggerRefresh();
+                                }
+
+                                // If the dialog happens to be showing when data arrives, update it
+                                if (dialog.isShowing() && !distinctLanguageList.isEmpty()) {
+                                        setupDropdown();
+                                }
+                        }
+                });
         }
 
         public void showLanguagePopup() {
                 if (!dialog.isShowing()) {
+                        // Inflate a fresh view every time to ensure AutoCompleteTextView popup window works correctly
                         dialog.setContentView(R.layout.language_popup);
 
                         View dialogRoot = getDialogRoot();
@@ -80,101 +108,6 @@ public class LanguageDialogManager {
                         textBox.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_NONE);
 
                         autoCompleteTextView.setDropDownBackgroundResource(R.drawable.dropdown_background_transparent);
-                        final LanguageDropdownAdapter[] adapterRef = new LanguageDropdownAdapter[1];
-
-                        homeViewModal.getAllWebApps().observe((LifecycleOwner) activity, new Observer<List<WebApp>>() {
-                                @Override
-                                public void onChanged(List<WebApp> webApps) {
-                                        Set<String> distinctLanguages = sortLanguages(webApps);
-                                        Map<String, String> languagesEnglishNameMap = MapLanguagesEnglishName(webApps);
-                                        List<String> distinctLanguageList = new ArrayList<>(distinctLanguages);
-
-                                        if (!webApps.isEmpty()) {
-                                                CacheUtils.manifestVersionNumber = prefs.getString("manifestVersion", "");
-                                        } else {
-                                                // DB is empty — ensure a network fetch is in flight.
-                                                // Room will re-notify this observer once data arrives.
-                                                Log.d(TAG, "getAllWebApps: empty — triggering refresh");
-                                                homeViewModal.triggerRefresh();
-                                        }
-
-                                        if (!distinctLanguageList.isEmpty()) {
-                                                String selectedLanguage = prefs.getString("selectedLanguage", "");
-                                                adapterRef[0] = new LanguageDropdownAdapter(
-                                                                dialog.getContext(), distinctLanguageList,
-                                                                languagesEnglishNameMap);
-                                                adapterRef[0].setSelectedLanguage(selectedLanguage);
-                                                autoCompleteTextView.setAdapter(adapterRef[0]);
-
-                                                // Prevent free-form keyboard input — this is a
-                                                // dropdown-only selector, not a text field.
-                                                autoCompleteTextView.setInputType(android.text.InputType.TYPE_NULL);
-                                                autoCompleteTextView.setKeyListener(null);
-                                                autoCompleteTextView.setFocusable(true); // keep focusable so dropdown opens on tap
-                                                autoCompleteTextView.setLongClickable(false);  // no paste
-
-                                                setupDropdownHeight(autoCompleteTextView, adapterRef[0]);
-
-                                                if (!selectedLanguage.isEmpty() && languagesEnglishNameMap
-                                                                .containsValue(selectedLanguage)) {
-                                                        String displayName = languagesEnglishNameMap
-                                                                        .get(selectedLanguage);
-                                                        autoCompleteTextView.setText(displayName, false);
-                                                }
-
-                                                autoCompleteTextView.setOnItemClickListener(
-                                                                new AdapterView.OnItemClickListener() {
-                                                                        @Override
-                                                                        public void onItemClick(AdapterView<?> parent,
-                                                                                        View view, int position,
-                                                                                        long id) {
-                                                                                audioPlayer.play(activity,
-                                                                                                R.raw.sound_button_pressed);
-                                                                                String selectedDisplayName = (String) parent
-                                                                                                .getItemAtPosition(
-                                                                                                                position);
-                                                                                String selectedLanguage = languagesEnglishNameMap
-                                                                                                .get(selectedDisplayName);
-
-                                                                                // Guard: only proceed if this display
-                                                                                // name maps to a known language code.
-                                                                                if (selectedLanguage == null
-                                                                                                || selectedLanguage.isEmpty()) {
-                                                                                        Log.w(TAG, "onItemClick: no valid language code for display name '" + selectedDisplayName + "'");
-                                                                                        return;
-                                                                                }
-
-                                                                                if (adapterRef[0] != null) {
-                                                                                        adapterRef[0].setSelectedLanguage(
-                                                                                                        selectedLanguage);
-                                                                                }
-
-                                                                                autoCompleteTextView.setText(
-                                                                                                selectedDisplayName,
-                                                                                                false);
-                                                                                String pseudoId = prefs.getString(
-                                                                                                "pseudoId", "");
-                                                                                String manifestVrsn = prefs.getString(
-                                                                                                "manifestVersion", "");
-                                                                                AnalyticsUtils.logLanguageSelectEvent(
-                                                                                                view.getContext(),
-                                                                                                "language_selected",
-                                                                                                pseudoId,
-                                                                                                selectedLanguage,
-                                                                                                manifestVrsn, "false",
-                                                                                                "");
-
-                                                                                dismissDialogWithAnimation(dialogRoot,
-                                                                                                () -> {
-                                                                                                        if (listener != null)
-                                                                                                                listener.onLanguageSelected(
-                                                                                                                                selectedLanguage);
-                                                                                                });
-                                                                        }
-                                                                });
-                                        }
-                                }
-                        });
 
                         setupGestureDetector(textView);
                         if (invisibleBox != null) {
@@ -199,6 +132,10 @@ public class LanguageDialogManager {
                                 }
                         });
 
+                        if (!distinctLanguageList.isEmpty()) {
+                                setupDropdown();
+                        }
+
                         try {
                                 if (activity.isFinishing() || activity.isDestroyed()) {
                                         return;
@@ -217,6 +154,69 @@ public class LanguageDialogManager {
                                                 new RuntimeException("showLanguagePopup: Failed to show dialog", e));
                         }
                 }
+        }
+        
+        private void setupDropdown() {
+                AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
+                if (autoCompleteTextView == null) return;
+                
+                String selectedLanguage = prefs.getString("selectedLanguage", "");
+                currentAdapter = new LanguageDropdownAdapter(
+                                dialog.getContext(), distinctLanguageList,
+                                languagesEnglishNameMap);
+                currentAdapter.setSelectedLanguage(selectedLanguage);
+                autoCompleteTextView.setAdapter(currentAdapter);
+
+                // Prevent free-form keyboard input
+                autoCompleteTextView.setInputType(android.text.InputType.TYPE_NULL);
+                autoCompleteTextView.setKeyListener(null);
+                autoCompleteTextView.setFocusable(true); 
+                autoCompleteTextView.setLongClickable(false);
+
+                // We need to wait for layout to get accurate height for dropdown
+                autoCompleteTextView.post(() -> {
+                        setupDropdownHeight(autoCompleteTextView, currentAdapter);
+                });
+
+                if (!selectedLanguage.isEmpty() && languagesEnglishNameMap.containsValue(selectedLanguage)) {
+                        String displayName = languagesEnglishNameMap.get(selectedLanguage);
+                        autoCompleteTextView.setText(displayName, false);
+                }
+
+                autoCompleteTextView.setOnItemClickListener(
+                                new AdapterView.OnItemClickListener() {
+                                        @Override
+                                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                                audioPlayer.play(activity, R.raw.sound_button_pressed);
+                                                String selectedDisplayName = (String) parent.getItemAtPosition(position);
+                                                String selectedLanguage = languagesEnglishNameMap.get(selectedDisplayName);
+
+                                                if (selectedLanguage == null || selectedLanguage.isEmpty()) {
+                                                        Log.w(TAG, "onItemClick: no valid language code for display name '" + selectedDisplayName + "'");
+                                                        return;
+                                                }
+
+                                                if (currentAdapter != null) {
+                                                        currentAdapter.setSelectedLanguage(selectedLanguage);
+                                                }
+
+                                                autoCompleteTextView.setText(selectedDisplayName, false);
+                                                String pseudoId = prefs.getString("pseudoId", "");
+                                                String manifestVrsn = prefs.getString("manifestVersion", "");
+                                                AnalyticsUtils.logLanguageSelectEvent(
+                                                                view.getContext(),
+                                                                "language_selected",
+                                                                pseudoId,
+                                                                selectedLanguage,
+                                                                manifestVrsn, "false",
+                                                                "");
+
+                                                dismissDialogWithAnimation(getDialogRoot(), () -> {
+                                                        if (listener != null)
+                                                                listener.onLanguageSelected(selectedLanguage);
+                                                });
+                                        }
+                                });
         }
 
         private void dismissDialogWithAnimation(View dialogRoot, Runnable onComplete) {

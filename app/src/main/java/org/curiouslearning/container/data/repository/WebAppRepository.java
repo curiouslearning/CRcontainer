@@ -7,7 +7,7 @@ import androidx.lifecycle.LiveData;
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.remote.RetrofitInstance;
-import org.curiouslearning.container.utilities.ConnectionUtils;
+import org.curiouslearning.container.util.ConnectionUtils;
 
 import java.util.List;
 
@@ -36,8 +36,8 @@ public class WebAppRepository {
      * Returns a LiveData stream of WebApps filtered by language.
      * Room will automatically re-emit when the underlying table changes.
      */
-    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
-        return webAppDatabase.getSelectedlanguageWebApps(selectedLanguage);
+    public LiveData<List<WebApp>> getSelectedLanguageWebApps(String selectedLanguage) {
+        return webAppDatabase.getSelectedLanguageWebApps(selectedLanguage);
     }
 
     /**
