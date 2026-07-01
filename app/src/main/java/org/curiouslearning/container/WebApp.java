@@ -237,7 +237,9 @@ public class WebApp extends BaseActivity {
 
         WebAppInterface(Context context) {
             mContext = context;
-            handler = new DefaultAppEventPayloadHandler(pseudoId);
+            // Shared process-level instance (also warmed on container open in MainActivity) — reused here so
+            // there is exactly one sync listener per summary doc across the container and all sub-apps.
+            handler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
         }
 
         @JavascriptInterface

@@ -35,6 +35,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
+import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadHandler;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -98,6 +99,9 @@ public class MainActivity extends BaseActivity {
     private String manifestVersion;
     private static final String TAG = "MainActivity";
     private AudioPlayer audioPlayer;
+    // Warms Firestore and attaches summary_data sync listeners on container open (shared instance also used
+    // by WebApp). The static getInstance holds the canonical reference; this field is kept for readability.
+    private DefaultAppEventPayloadHandler summaryHandler;
     private String appVersion;
     private boolean isReferrerHandled;
     private boolean isAttributionComplete = false;
@@ -257,6 +261,7 @@ public class MainActivity extends BaseActivity {
         handleIncomingIntent(getIntent());
         audioPlayer = new AudioPlayer();
         FirebaseApp.initializeApp(this);
+        warmFirestoreDataSync();
         FacebookSdk.setAutoInitEnabled(true);
         FacebookSdk.fullyInitialize();
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
@@ -752,6 +757,10 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    private void warmFirestoreDataSync() {
+        String pseudoId = prefs.getString("pseudoId", "");
+        summaryHandler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
+    }
     public static String convertEpochToDate(long epochMillis) {
         Date date = new Date(epochMillis);
         SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.getDefault());
