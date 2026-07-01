@@ -32,9 +32,43 @@ public class DefaultAppEventPayloadHandler
     private final Map<String, ListenerRegistration> syncListeners = new HashMap<>();
     private final String crUserId;
 
+    // Process-level shared instance so the container (MainActivity) and every sub-app (WebApp) resolve to
+    // one handler. A single syncListeners map makes the per-doc dedup guard in attachSyncListener effective
+    // process-wide (exactly one sync listener per summary doc), and lets MainActivity warm Firestore /
+    // attach listeners on container open, before any sub-app is launched.
+    private static DefaultAppEventPayloadHandler instance;
+
+    /**
+     * Returns the shared handler for {@code crUserId}, constructing it on first use. Rebuilds (detaching the
+     * previous instance's listeners) only when the id changes — which in practice happens only under the
+     * DEBUG {@code custom_cr_user_id} override; the production {@code pseudoId} is stable for the process.
+     */
+    public static synchronized DefaultAppEventPayloadHandler getInstance(@NonNull String crUserId) {
+        if (instance == null || !instance.crUserId.equals(crUserId)) {
+            if (instance != null) {
+                instance.detachListeners();
+            }
+            instance = new DefaultAppEventPayloadHandler(crUserId);
+        }
+        return instance;
+    }
+
     public DefaultAppEventPayloadHandler(@NonNull String crUserId) {
         this.crUserId = crUserId;
         attachExistingSyncListeners();
+    }
+
+    /**
+     * Removes any active sync listeners and clears the registry. Used when the shared instance is replaced
+     * for a new {@code crUserId} so stale registrations are not leaked.
+     */
+    private void detachListeners() {
+        for (ListenerRegistration reg : syncListeners.values()) {
+            if (reg != null) {
+                reg.remove();
+            }
+        }
+        syncListeners.clear();
     }
 
     private void attachExistingSyncListeners() {
