@@ -152,6 +152,7 @@ public class WebApp extends BaseActivity {
                 Log.w("WebApp", "Missing campaign_id parameter for app: " + appUrl);
             }
         }
+        appUrl = addContainerAppVersionToUrl(appUrl);
         if (appUrl.contains("docs.google.com/forms")) {
             webView.loadUrl(addCrUserIdToFormUrl(appUrl));
         } else if (appUrl.contains("welcome_parent_video")) {
@@ -204,6 +205,12 @@ public class WebApp extends BaseActivity {
         return modifiedUrl;
     }
 
+    private String addContainerAppVersionToUrl(String appUrl) {
+        Uri originalUri = Uri.parse(appUrl);
+        String separator = (originalUri.getQuery() == null) ? "?" : "&";
+        return originalUri.toString() + separator + "container_app_version=" + BuildConfig.VERSION_NAME;
+    }
+
     private boolean isInternetConnected(Context context) {
         return ConnectionUtils.getInstance().isInternetConnected(context);
     }
@@ -226,11 +233,13 @@ public class WebApp extends BaseActivity {
         private final Gson gson = new Gson();
         private final AppEventPayloadValidator validator =
                 new AppEventPayloadValidator();
-        private final AppEventPayloadHandler handler =
-                new DefaultAppEventPayloadHandler();
+        private final AppEventPayloadHandler handler;
 
         WebAppInterface(Context context) {
             mContext = context;
+            // Shared process-level instance (also warmed on container open in MainActivity) — reused here so
+            // there is exactly one sync listener per summary doc across the container and all sub-apps.
+            handler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
         }
 
         @JavascriptInterface
@@ -239,7 +248,7 @@ public class WebApp extends BaseActivity {
             editor.putBoolean(String.valueOf(urlIndex), dataCachedStatus);
             editor.commit();
 
-            if (!isInternetConnected(getApplicationContext()) && dataCachedStatus) {
+            if (!isInternetConnected(getApplicationContext()) && !dataCachedStatus) {
                 showPrompt("Please Connect to the Network");
             }
         }

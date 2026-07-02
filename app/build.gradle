@@ -29,9 +29,8 @@ android {
         applicationId "org.curiouslearning.container"
         minSdk 24
         targetSdk 35
-        versionCode 85
-        versionName "2.34.3"
-        
+        versionCode 86
+        versionName "2.34.11"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -49,6 +48,16 @@ android {
         dataBinding true
         viewBinding true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests.all { test ->
+            jacoco {
+                includeNoLocationClasses = true
+                excludes = ['jdk.internal.*']
+                destinationFile = file("$buildDir/jacoco/${test.name}.exec")
+            }
+        }
     }
 
     signingConfigs {
@@ -73,6 +82,9 @@ android {
         }
     }
     compileOptions {
+        // remove when we move to SDK 26 or higher
+        coreLibraryDesugaringEnabled true
+
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -84,6 +96,9 @@ android {
 }
 
 dependencies {
+
+    // remove when we move to SDK 26 or higher
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 
     //retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
@@ -156,7 +171,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     }
 
     classDirectories.setFrom(fileTree(
-            dir: "$buildDir/intermediates/classes/debug",
+            dir: "$buildDir/intermediates/classes/debug/transformDebugClassesWithAsm/dirs",
             excludes: [
                     '**/R.class',
                     '**/R$*.class',
@@ -172,27 +187,10 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     ))
 
     sourceDirectories.setFrom(files(coverageSourceDirs))
-    executionData.setFrom(fileTree(dir: "$buildDir", includes: [
-            "jacoco/testDebugUnitTest.exec",
-            "outputs/code-coverage/connected/*coverage.ec"
-    ]))
-
-    doFirst {
-        classDirectories.setFrom(
-                files(classDirectories.files.collect {
-                    fileTree(dir: it, excludes: [
-                            '**/R.class',
-                            '**/R$*.class',
-                            '**/BuildConfig.*',
-                            '**/Manifest*.*',
-                            '**/*Test*.*',
-                            '**/databinding/*',
-                            '**/android/databinding/*',
-                            '**/androidx/**'
-                    ])
-                })
-        )
-    }
+    executionData.setFrom(files(
+            "$buildDir/jacoco/testDebugUnitTest.exec",
+            "$buildDir/outputs/code-coverage/connected/*coverage.ec"
+    ))
 }
 
 
