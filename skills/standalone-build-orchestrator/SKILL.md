@@ -367,14 +367,24 @@ be present there and will correctly fall back to the GitHub walk.
 
 ## Progress Style
 
-Provide concise ordered updates:
+`prepare-crwebplayer-content.mjs` now prints its own running stats natively — relay them rather
+than reconstructing this by hand:
 
-- `Content discovery`: matched N folders.
-- `Runtime files`: `already present` or `download index.html`, `download manifest.json`, `download dist`.
-- `Content download`: `already present` or `download <BookName>` — note `via CDN content.json` vs. `content.json fast path unavailable; falling back to GitHub walk` per book.
-- `Manifest`: added N entries, total N.
-- `Fallback`: `remote listing rate-limited; using local books` when applicable.
-- `Standalone build`: package rename/cleanup status.
-- `Gradle`: build command and result.
+- After each book: `progress: N/M books processed (X cdn, Y fallback, Z skipped) — F file(s),
+  <size> so far, <elapsed> elapsed`.
+- A final `=== Summary ===` block: elapsed time, runtime file count/size, books matched (via
+  CDN / via GitHub fallback / already present), total book content file count/size, validation
+  pass count, manifest added/total counts.
 
-Be explicit about blockers such as GitHub API rate limits, missing content folders, manifest mismatches, or Gradle wrapper lock permissions. Note whether content came via the CDN fast path or the GitHub fallback — a run that's entirely GitHub-fallback for every book is a sign the CDN is unreachable or doesn't have that language's content yet, worth surfacing to the user rather than treating as routine.
+When reporting back to the user, quote or closely paraphrase that final summary block rather than
+re-deriving the numbers — it's already accurate and already aggregates both the CDN fast path and
+the GitHub-fallback subprocess's own counts.
+
+Still call out explicitly, since the summary block alone won't flag it as unusual:
+
+- `Fallback`: `remote listing rate-limited; using local books` when the initial BookContent listing itself is rate-limited.
+- A run where `via GitHub fallback` is non-zero for most/all books — a sign the CDN is unreachable or doesn't have that language's content yet, worth surfacing rather than treating as routine.
+- `Standalone build`: package rename/cleanup status (not covered by the content script's summary).
+- `Gradle`: build command and result (not covered by the content script's summary).
+
+Be explicit about blockers such as GitHub API rate limits, missing content folders, manifest mismatches, or Gradle wrapper lock permissions.

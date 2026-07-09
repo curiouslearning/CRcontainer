@@ -122,6 +122,17 @@ const runtimeTargets = [
   { repoPath: "dist", localPath: path.join(playerRoot, "dist"), flattenRoot: false, singleFile: false },
 ];
 
+const startTime = Date.now();
+const stats = {
+  runtimeFiles: 0,
+  runtimeBytes: 0,
+  booksAlreadyPresent: 0,
+  booksViaCdn: 0,
+  booksViaFallback: 0,
+  bookFiles: 0,
+  bookBytes: 0,
+};
+
 await mkdir(bookContentRoot, { recursive: true });
 const manifestBefore = readManifest(manifestPath);
 const assetImages = listAssetImages(imagesRoot);
@@ -130,6 +141,7 @@ console.log(`Target repository: ${repo}#${branch}`);
 console.log(`Language match: ${args.language} (${languageInfo.aliases.join(", ")})`);
 console.log(`Assets root: ${assetsRoot}`);
 console.log(`Available manifest images: ${assetImages.length}`);
+console.log(`Content source: ${contentCdnBase ? `CDN-first (${contentCdnBase}), GitHub fallback` : "GitHub only (--no-content-cdn)"}`);
 
 if (args.downloadRuntime) {
   if (!existsSync(githubSkill)) fail(`Missing github-s3-content-pull script: ${githubSkill}`);
@@ -145,13 +157,15 @@ if (args.downloadRuntime) {
       if (buffer) {
         await mkdir(path.dirname(target.localPath), { recursive: true });
         await writeFile(target.localPath, buffer);
-        console.log(`download ${target.repoPath} (via cdn)`);
+        stats.runtimeFiles += 1;
+        stats.runtimeBytes += buffer.length;
+        console.log(`download ${target.repoPath} (via cdn, ${formatBytes(buffer.length)})`);
         continue;
       }
       console.log(`cdn miss for ${target.repoPath}; falling back to GitHub`);
     }
     console.log(`download ${target.repoPath}`);
-    downloadRepoPath({
+    const outcome = downloadRepoPath({
       githubSkill,
       repo,
       branch,
@@ -160,7 +174,10 @@ if (args.downloadRuntime) {
       flattenRoot: target.flattenRoot,
       cdnBaseUrl: contentCdnBase,
     });
+    stats.runtimeFiles += outcome.files;
+    stats.runtimeBytes += outcome.bytes;
   }
+  console.log(`Runtime totals so far: ${stats.runtimeFiles} file(s), ${formatBytes(stats.runtimeBytes)}`);
 }
 
 const runtimeValidation = validateRuntime(playerRoot);
@@ -192,20 +209,24 @@ for (const book of matchedBooks) console.log(`- ${book} -> icon ${iconForBook(bo
 
 if (args.download) {
   if (!existsSync(githubSkill)) fail(`Missing github-s3-content-pull script: ${githubSkill}`);
-  for (const book of matchedBooks) {
+  for (const [index, book] of matchedBooks.entries()) {
     const localBookPath = path.join(bookContentRoot, book);
     if (existsSync(localBookPath)) {
       console.log(`already present ${book}`);
+      stats.booksAlreadyPresent += 1;
       continue;
     }
     console.log(`download ${book}`);
-    let viaCdn = false;
-    if (contentCdnBase) {
-      viaCdn = await downloadBookViaContentJson(book, { contentCdnBase, bookContentRoot });
-    }
-    if (!viaCdn) {
+    const cdnResult = contentCdnBase
+      ? await downloadBookViaContentJson(book, { contentCdnBase, bookContentRoot })
+      : null;
+    if (cdnResult) {
+      stats.booksViaCdn += 1;
+      stats.bookFiles += cdnResult.files;
+      stats.bookBytes += cdnResult.bytes;
+    } else {
       if (contentCdnBase) console.log(`  content.json fast path unavailable for ${book}; falling back to GitHub walk`);
-      downloadRepoPath({
+      const outcome = downloadRepoPath({
         githubSkill,
         repo,
         branch,
@@ -214,7 +235,15 @@ if (args.download) {
         flattenRoot: false,
         cdnBaseUrl: contentCdnBase,
       });
+      stats.booksViaFallback += 1;
+      stats.bookFiles += outcome.files;
+      stats.bookBytes += outcome.bytes;
     }
+    console.log(
+      `  progress: ${index + 1}/${matchedBooks.length} books processed ` +
+        `(${stats.booksViaCdn} cdn, ${stats.booksViaFallback} fallback, ${stats.booksAlreadyPresent} skipped) — ` +
+        `${stats.bookFiles} file(s), ${formatBytes(stats.bookBytes)} so far, ${formatDuration(Date.now() - startTime)} elapsed`
+    );
   }
 }
 
@@ -234,6 +263,7 @@ for (const [label, values] of Object.entries({
   if (values.length) console.log(`${label}: ${values.join(", ")}`);
 }
 
+let manifestSummary = null;
 if (args.writeManifest) {
   const manifest = readManifest(manifestPath);
   const before = manifest.web_apps.length;
@@ -248,6 +278,25 @@ if (args.writeManifest) {
   console.log(`- existing entries before: ${before}`);
   console.log(`- added entries: ${added}`);
   console.log(`- total entries now: ${manifest.web_apps.length}`);
+  manifestSummary = { added, total: manifest.web_apps.length };
+}
+
+console.log("");
+console.log("=== Summary ===");
+console.log(`Elapsed: ${formatDuration(Date.now() - startTime)}`);
+if (args.downloadRuntime) {
+  console.log(`Runtime files: ${stats.runtimeFiles} file(s), ${formatBytes(stats.runtimeBytes)}`);
+}
+if (args.download) {
+  console.log(
+    `Books matched: ${matchedBooks.length} ` +
+      `(${stats.booksViaCdn} via CDN, ${stats.booksViaFallback} via GitHub fallback, ${stats.booksAlreadyPresent} already present)`
+  );
+  console.log(`Book content downloaded: ${stats.bookFiles} file(s), ${formatBytes(stats.bookBytes)}`);
+}
+console.log(`Validation: ${validation.valid.length}/${matchedBooks.length} book(s) valid`);
+if (manifestSummary) {
+  console.log(`Manifest: ${manifestSummary.added} added, ${manifestSummary.total} total`);
 }
 
 function dedupeBooks(bookNames, manifest, localRoot) {
@@ -308,8 +357,14 @@ function downloadRepoPath({ githubSkill, repo, branch, repoPath, out, flattenRoo
   ];
   if (flattenRoot) command.push("--flatten-root");
   if (cdnBaseUrl) command.push("--cdn-base-url", cdnBaseUrl);
-  const result = spawnSync(process.execPath, command, { stdio: "inherit" });
+  // Capture stdout (instead of inheriting it) so the per-file/per-dir lines can still be echoed to
+  // the terminal here while also parsing the trailing "Downloaded N files, M bytes total" summary
+  // back into this script's own running tally. stderr stays inherited so failures are still visible.
+  const result = spawnSync(process.execPath, command, { stdio: ["ignore", "pipe", "inherit"], encoding: "utf8" });
+  if (result.stdout) process.stdout.write(result.stdout);
   if (result.status !== 0) fail(`Download failed for ${repoPath}`);
+  const match = result.stdout?.match(/Downloaded (\d+) files, (\d+) bytes total/);
+  return match ? { files: Number(match[1]), bytes: Number(match[2]) } : { files: 0, bytes: 0 };
 }
 
 // Fast path: a book's own content/content.json (mirrored on the CDN, same as the runtime files)
@@ -321,13 +376,13 @@ async function downloadBookViaContentJson(book, { contentCdnBase, bookContentRoo
   const base = contentCdnBase.replace(/\/+$/, "");
   const contentJsonUrl = `${base}/BookContent/${book}/content/content.json`;
   const contentJsonBuffer = await tryFetchBytes(contentJsonUrl);
-  if (!contentJsonBuffer) return false;
+  if (!contentJsonBuffer) return null;
 
   let parsed;
   try {
     parsed = JSON.parse(contentJsonBuffer.toString("utf8"));
   } catch {
-    return false;
+    return null;
   }
 
   const assetPaths = collectAssetPaths(parsed);
@@ -346,7 +401,7 @@ async function downloadBookViaContentJson(book, { contentCdnBase, bookContentRoo
     }
     return { relPath, buffer: assetBuffer };
   });
-  if (missed) return false;
+  if (missed) return null;
   const downloadedFiles = results;
 
   await writeFile(path.join(contentDir, "content.json"), contentJsonBuffer);
@@ -356,8 +411,10 @@ async function downloadBookViaContentJson(book, { contentCdnBase, bookContentRoo
     await writeFile(targetPath, buffer);
   }
 
-  console.log(`  via CDN content.json: ${downloadedFiles.length + 1} file(s) for ${book}`);
-  return true;
+  const totalBytes = contentJsonBuffer.length + downloadedFiles.reduce((sum, f) => sum + f.buffer.length, 0);
+  const fileCount = downloadedFiles.length + 1;
+  console.log(`  via CDN content.json: ${fileCount} file(s), ${formatBytes(totalBytes)} for ${book}`);
+  return { files: fileCount, bytes: totalBytes };
 }
 
 // Recursively collects relative asset paths from a content.json tree. A "path" string counts as an
@@ -404,6 +461,21 @@ async function tryFetchBytes(url) {
   } catch {
     return null;
   }
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const exponent = Math.min(Math.floor(Math.log2(bytes) / 10), units.length - 1);
+  const value = bytes / 2 ** (10 * exponent);
+  return `${exponent === 0 ? value : value.toFixed(1)} ${units[exponent]}`;
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes}m${seconds}s` : `${seconds}s`;
 }
 
 function validateRuntime(root) {
