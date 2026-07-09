@@ -57,6 +57,7 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
    - If the standalone variant uses bundled `web_apps_manifest.json`, confirm the asset manifest is parsed in the same shape it is written (`{ version, web_apps }`) and seeded into Room before the UI reads from `getAllWebApps()`.
    - If the UI groups languages from seeded content, ensure missing `language` or `languageInEnglishName` values are skipped rather than inserted into sorted maps.
    - Standalone builds have `SHOW_LANGUAGE_POPUP=false` and `SHOW_SETTINGS_BUTTON=false` (see `docs/standalone-feature-flags.md`): the popup and the settings-gear button that opens it are both gated off, so the app must load a language automatically instead. After `--write-manifest` runs, read back `languageInEnglishName` for the matched entries in `web_apps_manifest.json` — do not assume it equals the alias table's `englishName` (`--local-name`/`--english-name` can be passed as the same value, and the current bundled manifest uses `isiZulu` for both fields, not `Zulu`). Use that exact manifest value in step 7.
+   - Confirm `WebApp.java`'s `loadWebView()` still derives its `WebViewAssetLoader` domain from each entry's own `appUrl` host (see "Web app URL loading" below) rather than a hardcoded domain, and that `androidx.webkit:webkit` is still declared — both are required for bundled content to actually load in offline mode, and `:app:verifyStandaloneConfiguration` (run in step 7) only catches the dependency being missing, not a hardcoded/stale domain.
 7. Run the final standalone build, passing the manifest's actual `languageInEnglishName` value so the app has a language to load without the popup:
 
 ```powershell
@@ -81,7 +82,8 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
   - `web_apps_manifest.json` must be inserted into Room or returned through the same repository path the UI observes.
   - `AppManifest` must handle the object-shaped manifest with a top-level `web_apps` array.
   - `WebAppRepository.fetchWebApp()` should seed bundled assets when remote manifest loading is disabled.
-  - Also check `BuildConfig.DEFAULT_LANGUAGE`: since `SHOW_LANGUAGE_POPUP=false` in standalone, there is no popup fallback. If the build did not pass `-PstandaloneDefaultLanguage=<englishName>`, or the value does not exactly match a `languageInEnglishName` in the manifest, the app has no language to load and shows an empty grid.
+  - Also check `BuildConfig.DEFAULT_LANGUAGE`: since `SHOW_LANGUAGE_POPUP=false` in standalone, there is no popup fallback. If the build did not pass `-PstandaloneDefaultLanguage=<languageInEnglishName>`, or the value does not exactly match a `languageInEnglishName` in the manifest, the app has no language to load and shows an empty grid.
+- If a specific sub-app's content never loads (blank/erroring WebView, network error toast) while others in the same build work, check `WebApp.java`'s `loadWebView()` `WebViewAssetLoader` setup: it must derive its domain from that entry's own `appUrl` host, not a hardcoded domain. A hardcoded domain from an earlier build/language only intercepts requests to that one host; every other host falls through to the network, which fails offline. Also confirm `androidx.webkit:webkit` is still an `implementation` dependency — `:app:verifyStandaloneConfiguration` fails the build if it was removed during SDK cleanup, but check directly if that task was skipped.
 - If the app crashes in `sortLanguages()` or `MapLanguagesEnglishName()`, inspect the seeded `WebApp` rows for null or blank language fields and skip them before inserting into `TreeMap`.
 - If logcat shows checksum mismatch or `No package ID` warnings after a fresh APK, uninstall the app from the device before re-installing. Treat those as stale-install warnings unless a `FATAL EXCEPTION` follows.
 
@@ -128,6 +130,11 @@ Add AndroidX WebKit so `WebViewAssetLoader` compiles:
 ```groovy
 implementation 'androidx.webkit:webkit:1.15.0'
 ```
+
+Do not remove this one during SDK cleanup even though it sits next to the Facebook/Sentry/Install-Referrer
+dependencies that step 6 does strip for standalone: standalone has no network fallback, so
+`WebApp.java`'s asset-loading WebView depends on it directly (see "Web app URL loading" below).
+`:app:verifyStandaloneConfiguration` fails the build if it's missing.
 
 If Sentry is standard-only, scope it to the standard flavor:
 
@@ -245,15 +252,28 @@ public static void loadWebAppIcon(Context context, String imageUrl, ImageView im
 
 ### Web app URL loading
 
-The `appUrl` should be the manifest URL, but the app should route it through `WebViewAssetLoader` so the content is served from assets.
+Implemented today in `WebApp.java`'s `loadWebView()`. The `appUrl` should be the manifest URL, but the
+app should route it through `WebViewAssetLoader` so the content is served from bundled assets instead of
+the network.
 
-Example:
+**Do not hardcode a single language's domain here.** An earlier version of this template hardcoded
+`hindi-cr-ftm-standalone.androidplatform.net` as the `WebViewAssetLoader` domain, which silently broke
+asset interception for every other language once that copy-pasted code shipped for a different domain.
+`WebViewAssetLoader` only intercepts requests whose host matches the configured domain — the domain the
+loader is built with must equal the manifest's own `appUrl` host for the entry currently being opened,
+and that host varies per orchestrator run (`--domain`, default `maharishi_cr-ftm-standalone.androidplatform.net`).
+Derive it from `appUrl` each time instead:
 
 ```java
-WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-        .setDomain("hindi-cr-ftm-standalone.androidplatform.net")
-        .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
-        .build();
+// The domain only has to match this activity's own appUrl host so WebViewAssetLoader
+// intercepts requests for it; it is never dereferenced over the network.
+String urlHost = appUrl != null ? Uri.parse(appUrl).getHost() : null;
+WebViewAssetLoader.Builder assetLoaderBuilder = new WebViewAssetLoader.Builder()
+        .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this));
+if (urlHost != null) {
+    assetLoaderBuilder.setDomain(urlHost);
+}
+WebViewAssetLoader assetLoader = assetLoaderBuilder.build();
 
 webView.setWebViewClient(new WebViewClient() {
     @Override

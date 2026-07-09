@@ -38,6 +38,7 @@ If `new_package_name` is missing, ask for it before editing.
    - Remove `implementation "com.android.installreferrer:installreferrer:2.2"` if install referrer code is deleted or moved out of the standalone source path.
    - If `remove_sentry` is true, remove Sentry dependency, Sentry Gradle plugin, Sentry config block, imports, initialization, and capture calls.
    - Do not remove Firebase unless explicitly requested.
+   - Do not remove `implementation 'androidx.webkit:webkit:1.15.0'`. It looks like the other SDK dependencies being stripped here, but standalone's offline content loading (`WebApp.java`'s `WebViewAssetLoader`) depends on it directly — `:app:verifyStandaloneConfiguration` fails the build if it's gone.
 
 4. Clean manifest for standalone.
    - Remove Facebook metadata.
@@ -53,7 +54,7 @@ If `new_package_name` is missing, ask for it before editing.
 
 6. Configure local content when requested.
    - Ensure `app/src/main/assets/web_apps_manifest.json` has `appUrl` domains matching `standalone_domain`.
-   - Confirm `WebViewAssetLoader` derives its domain from the manifest `appUrl` host and serves `/assets/` from app assets.
+   - Confirm `WebViewAssetLoader` in `WebApp.java`'s `loadWebView()` derives its domain from each entry's own `appUrl` host at request time and serves `/assets/` from app assets — never hardcode a fixed domain there, since it would only intercept requests for that one host and leave every other manifest entry hitting the (offline) network.
    - Confirm bundled manifest loading is wired through `WebAppRepository` when `ENABLE_REMOTE_MANIFEST` is false.
    - Verify every local URL path maps to a real file under `app/src/main/assets/`.
    - Do not invent content folders; ask for missing bundled asset locations.
@@ -75,6 +76,7 @@ If `new_package_name` is missing, ask for it before editing.
 - Do not mass-delete SDK files until all references are either removed or moved into flavor-specific source sets.
 - Do not change signing credentials.
 - Do not modify generated build outputs.
+- Do not remove the `androidx.webkit:webkit` dependency or hardcode a fixed domain in `WebViewAssetLoader` — both break offline content loading for any language other than whichever one a hardcoded domain happened to match.
 
 ## Final Response
 

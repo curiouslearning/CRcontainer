@@ -90,6 +90,8 @@ app/src/main/assets/CRWebPlayerJs/
 app/src/main/assets/images/
 ```
 
+`WebApp.java`'s `loadWebView()` is where the bundled content is actually served into the WebView: it builds an `androidx.webkit.WebViewAssetLoader` (path handler `/assets/` → app assets) and intercepts `shouldInterceptRequest` so `https://<host>/assets/...` URLs resolve locally instead of over the network. The loader's domain is derived per-request from that entry's own `appUrl` host (`Uri.parse(appUrl).getHost()`) — it must not be hardcoded, since a fixed domain only intercepts requests for that one host and lets every other manifest entry's requests fall through to the network (which fails offline). The `androidx.webkit:webkit` Gradle dependency that provides this class is required for both flavors; `:app:verifyStandaloneConfiguration` fails the build if it's missing.
+
 Current manifest validation:
 
 - 14 web app entries.
@@ -145,7 +147,7 @@ The standalone `applicationId` must be present in `app/google-services.json` for
 
 - `WebApp.java`
   - Standalone builds do not block launch on missing internet.
-  - Standalone builds map `/assets/` WebView requests through bundled app assets.
+  - Standalone builds map `/assets/` WebView requests through bundled app assets, via a `WebViewAssetLoader` whose domain is derived per-request from that entry's own `appUrl` host (not hardcoded — see Offline Content above).
   - The close button and JavaScript close bridge are disabled when `SHOW_WEBAPP_CLOSE_BUTTON` is false.
   - Sentry capture calls run only when `ENABLE_SENTRY` is true.
 
