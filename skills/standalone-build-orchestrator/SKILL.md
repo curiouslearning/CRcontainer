@@ -56,10 +56,11 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
    - If Sentry is disabled for the standalone build, make sure the dependency and provider are removed from the standalone variant while keeping any standard-flavor implementation isolated behind flavor-specific source sets or wrappers.
    - If the standalone variant uses bundled `web_apps_manifest.json`, confirm the asset manifest is parsed in the same shape it is written (`{ version, web_apps }`) and seeded into Room before the UI reads from `getAllWebApps()`.
    - If the UI groups languages from seeded content, ensure missing `language` or `languageInEnglishName` values are skipped rather than inserted into sorted maps.
-7. Run the final standalone build:
+   - Standalone builds have `SHOW_LANGUAGE_POPUP=false` and `SHOW_SETTINGS_BUTTON=false` (see `docs/standalone-feature-flags.md`): the popup and the settings-gear button that opens it are both gated off, so the app must load a language automatically instead. After `--write-manifest` runs, read back `languageInEnglishName` for the matched entries in `web_apps_manifest.json` — do not assume it equals the alias table's `englishName` (`--local-name`/`--english-name` can be passed as the same value, and the current bundled manifest uses `isiZulu` for both fields, not `Zulu`). Use that exact manifest value in step 7.
+7. Run the final standalone build, passing the manifest's actual `languageInEnglishName` value so the app has a language to load without the popup:
 
 ```powershell
-.\gradlew.bat assembleStandaloneDebug
+.\gradlew.bat assembleStandaloneDebug -PstandaloneDefaultLanguage=<languageInEnglishName>
 ```
 
 8. Final response must include:
@@ -67,6 +68,7 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
    - Matched/downloaded books.
    - Manifest entries added or already present.
    - Standalone build skill actions performed.
+   - Default language passed to the build (`-PstandaloneDefaultLanguage` value).
    - Gradle result and APK path.
 
 ## Troubleshooting Notes
@@ -79,6 +81,7 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
   - `web_apps_manifest.json` must be inserted into Room or returned through the same repository path the UI observes.
   - `AppManifest` must handle the object-shaped manifest with a top-level `web_apps` array.
   - `WebAppRepository.fetchWebApp()` should seed bundled assets when remote manifest loading is disabled.
+  - Also check `BuildConfig.DEFAULT_LANGUAGE`: since `SHOW_LANGUAGE_POPUP=false` in standalone, there is no popup fallback. If the build did not pass `-PstandaloneDefaultLanguage=<englishName>`, or the value does not exactly match a `languageInEnglishName` in the manifest, the app has no language to load and shows an empty grid.
 - If the app crashes in `sortLanguages()` or `MapLanguagesEnglishName()`, inspect the seeded `WebApp` rows for null or blank language fields and skip them before inserting into `TreeMap`.
 - If logcat shows checksum mismatch or `No package ID` warnings after a fresh APK, uninstall the app from the device before re-installing. Treat those as stale-install warnings unless a `FATAL EXCEPTION` follows.
 

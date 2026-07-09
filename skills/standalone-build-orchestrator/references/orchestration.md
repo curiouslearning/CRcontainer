@@ -36,17 +36,20 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
    - Read `skills/standalone-android-build/SKILL.md`.
    - Use its package rename and SDK cleanup workflow with the requested package name.
    - If the package is already renamed, report that and continue with validation/build steps.
-6. Run:
+6. Run, passing the manifest's actual `languageInEnglishName` value (read it back from `web_apps_manifest.json` after the manifest write — don't assume it matches the alias table's English form) as the standalone default language:
 
 ```powershell
-.\gradlew.bat assembleStandaloneDebug
+.\gradlew.bat assembleStandaloneDebug -PstandaloneDefaultLanguage=isiZulu
 ```
+
+   `SHOW_LANGUAGE_POPUP` and `SHOW_SETTINGS_BUTTON` are both `false` in the standalone flavor, so this is the only way the app knows which language to load on first launch.
 
 7. Summarize:
    - Matched/downloaded book folders.
    - Manifest entries added or already present.
    - Package rename result.
    - SDK removals/gates applied by standalone build skill.
+   - Default language passed to Gradle.
    - Gradle build status and APK path.
 
 Progress output style:
