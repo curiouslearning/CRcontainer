@@ -84,7 +84,7 @@ This repo carries three Claude Code Skills (`SKILL.md` + scripts) used to automa
 
 - `skills/standalone-build-orchestrator/` — top-level orchestrator: given a package name + CRWebPlayer content language, downloads content, upserts the bundled manifest, and drives the other two skills through a full `assembleStandaloneDebug`.
 - `skills/standalone-android-build/` — specializes the repo into a given package (Java package rename, standalone SDK removal, manifest cleanup, asset wiring) via `scripts/rename_android_package.py`.
-- `skills/github-content-folder/` — fetches individual content folders from `curiouslearning/CRWebPlayer` (default) or another public GitHub repo without cloning, via `scripts/github-folder.mjs`.
+- `skills/github-s3-content-pull/` — fetches individual content folders from `curiouslearning/CRWebPlayer` (default) or another public GitHub repo without cloning, via `scripts/github-s3-content-pull.mjs`. GitHub's API is used for directory listing; file bytes prefer a mirrored CDN/S3 host when `--cdn-base-url` is passed, falling back to GitHub only on a miss — this is what lets the orchestrator download many-book content runs without exhausting GitHub's rate limit.
 
 Because these skills perform repo-wide package renames, `git status` may show large in-flight renames (`org.curiouslearning.container` → some other package) when a standalone build run is mid-flight or was left uncommitted — check `git status`/`git diff` before assuming the checked-out package name matches what's documented above.
 
