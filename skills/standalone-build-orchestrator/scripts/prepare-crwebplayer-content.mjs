@@ -117,9 +117,21 @@ const playerRoot = path.join(assetsRoot, "CRWebPlayerJs");
 const bookContentRoot = path.join(playerRoot, "BookContent");
 const imagesRoot = path.join(assetsRoot, "images");
 const runtimeTargets = [
-  { repoPath: "index.html", localPath: path.join(playerRoot, "index.html"), flattenRoot: true, singleFile: true },
-  { repoPath: "manifest.json", localPath: path.join(playerRoot, "manifest.json"), flattenRoot: true, singleFile: true },
-  { repoPath: "dist", localPath: path.join(playerRoot, "dist"), flattenRoot: false, singleFile: false },
+  {
+    repoPath: "index.html", localPath: path.join(playerRoot, "index.html"), flattenRoot: true, singleFile: true,
+    isPresent: () => existsSync(path.join(playerRoot, "index.html")),
+  },
+  {
+    repoPath: "manifest.json", localPath: path.join(playerRoot, "manifest.json"), flattenRoot: true, singleFile: true,
+    isPresent: () => existsSync(path.join(playerRoot, "manifest.json")),
+  },
+  {
+    // A "dist exists" check alone can't tell a complete runtime from a partial one left behind by
+    // an earlier rate-limited/interrupted run — check for the two files validateRuntime() actually
+    // requires, not just the directory.
+    repoPath: "dist", localPath: path.join(playerRoot, "dist"), flattenRoot: false, singleFile: false,
+    isPresent: () => existsSync(path.join(playerRoot, "dist", "app.js")) && existsSync(path.join(playerRoot, "dist", "index.html")),
+  },
 ];
 
 const startTime = Date.now();
@@ -148,7 +160,7 @@ if (args.downloadRuntime) {
   await mkdir(playerRoot, { recursive: true });
   console.log("Runtime files:");
   for (const target of runtimeTargets) {
-    if (existsSync(target.localPath)) {
+    if (target.isPresent()) {
       console.log(`already present ${target.repoPath}`);
       continue;
     }
@@ -211,7 +223,10 @@ if (args.download) {
   if (!existsSync(githubSkill)) fail(`Missing github-s3-content-pull script: ${githubSkill}`);
   for (const [index, book] of matchedBooks.entries()) {
     const localBookPath = path.join(bookContentRoot, book);
-    if (existsSync(localBookPath)) {
+    // Same reasoning as the runtime targets above: a book folder can exist but be incomplete
+    // (e.g. audios/images present from an earlier interrupted run, but no content.json) — check
+    // for the file validateBooks() actually requires, not just the folder.
+    if (existsSync(path.join(localBookPath, "content", "content.json"))) {
       console.log(`already present ${book}`);
       stats.booksAlreadyPresent += 1;
       continue;
