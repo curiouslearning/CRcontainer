@@ -25,10 +25,12 @@ The `mode` flavor dimension is defined in `app/build.gradle`.
 ```powershell
 .\gradlew.bat assembleStandardDebug
 .\gradlew.bat assembleStandardRelease
-.\gradlew.bat assembleStandaloneDebug
-.\gradlew.bat assembleStandaloneRelease
+.\gradlew.bat assembleStandaloneDebug -PstandaloneDefaultLanguage=isiZulu
+.\gradlew.bat assembleStandaloneRelease -PstandaloneDefaultLanguage=isiZulu
 .\gradlew.bat :app:verifyStandaloneConfiguration
 ```
+
+`-PstandaloneDefaultLanguage` sets `BuildConfig.DEFAULT_LANGUAGE` (see `SHOW_LANGUAGE_POPUP` above). It must equal the `languageInEnglishName` of the content bundled for that build — currently `isiZulu` for this manifest's Zulu content (see `grep languageInEnglishName app/src/main/assets/web_apps_manifest.json` to confirm for a given build). Omitting it builds successfully but `verifyStandaloneConfiguration` will warn, and the app will show an empty app list on first launch since there is no popup to fall back to.
 
 Expected APK output paths:
 
@@ -50,6 +52,10 @@ app/build/outputs/apk/standalone/release/
 | `REQUIRE_INTERNET_FOR_UNCACHED_CONTENT` | `true` | `false` | Controls the WebApp internet prompt before launching uncached content. |
 | `ALLOW_BACK_NAVIGATION` | `true` | `false` | Controls Android back press behavior. |
 | `SHOW_WEBAPP_CLOSE_BUTTON` | `true` | `false` | Controls the WebApp close button and JavaScript close bridge. |
+| `SHOW_LANGUAGE_POPUP` | `true` | `false` | Controls whether `MainActivity` ever shows the language-selection dialog. When disabled, every call site that would have opened the popup instead loads `BuildConfig.DEFAULT_LANGUAGE`. |
+| `SHOW_SETTINGS_BUTTON` | `true` | `false` | Controls visibility of the settings-gear button on the home screen (the entry point to the language popup). |
+
+There is also a string field, `DEFAULT_LANGUAGE`, empty for `standard` and set per-build for `standalone` via the `standaloneDefaultLanguage` Gradle project property (see below). It must exactly match (case-insensitive) a `languageInEnglishName` value already present in the bundled `web_apps_manifest.json`, since `WebAppDao.getSelectedlanguageWebApps` filters on that column — check the manifest rather than assuming a value, since `languageInEnglishName` isn't always the English form (the current bundled manifest uses `"isiZulu"` for both `language` and `languageInEnglishName`).
 
 ## Package Rename
 
@@ -134,6 +140,8 @@ The standalone `applicationId` must be present in `app/google-services.json` for
   - Startup proceeds directly into the selected-language or language-picker flow without attribution startup.
   - Sentry capture calls run only when `ENABLE_SENTRY` is true.
   - Language popup and selected-language observers are de-duplicated before new observers are attached.
+  - `showLanguagePopup()` is a no-op when `SHOW_LANGUAGE_POPUP` is false; every call site (first-launch fallback, invalid/missing referrer language, empty stored language) instead calls `loadDefaultLanguage()`, which loads and persists `BuildConfig.DEFAULT_LANGUAGE`.
+  - The settings-gear button is hidden and unclickable when `SHOW_SETTINGS_BUTTON` is false.
 
 - `WebApp.java`
   - Standalone builds do not block launch on missing internet.
@@ -187,3 +195,5 @@ For standalone builds:
 - Remote manifest update calls no-op.
 - WebApp close button and JavaScript close bridge do not exit the screen.
 - Android back presses are consumed.
+- Language popup never appears; the app loads `BuildConfig.DEFAULT_LANGUAGE` directly on first launch.
+- Settings-gear button is not visible on the home screen.
