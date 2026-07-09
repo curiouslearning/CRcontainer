@@ -15,7 +15,7 @@ task printApiUrl {
 }
 
 android {
-    namespace 'org.curiouslearning.allSA_maharishi'
+    namespace 'org.curiouslearning.container'
     compileSdk 35
     packagingOptions {
         pickFirst "lib/x86/libc++_shared.so"
@@ -24,7 +24,7 @@ android {
         pickFirst "lib/arm64-v8a/libc++_shared.so"
     }
     defaultConfig {
-        applicationId "org.curiouslearning.allSA_maharishi"
+        applicationId "org.curiouslearning.container"
         minSdk 24
         targetSdk 35
         versionCode 83
@@ -94,7 +94,7 @@ android {
         }
         standalone {
             dimension "mode"
-            applicationId "org.curiouslearning.allSA_maharishi"
+            applicationId "org.curiouslearning.container"
             standaloneFeatureFlags.standalone.each { flagName, flagValue ->
                 buildConfigField "boolean", flagName, flagValue.toString()
             }
@@ -288,6 +288,18 @@ tasks.register("verifyStandaloneConfiguration") {
 
         if (!file("src/standalone/AndroidManifest.xml").exists()) {
             throw new GradleException("Missing standalone manifest overlay at app/src/standalone/AndroidManifest.xml.")
+        }
+
+        // WebApp.java's loadWebView() uses androidx.webkit.WebViewAssetLoader to serve bundled
+        // CRWebPlayerJs/BookContent from app assets. Standalone has no network fallback, so this
+        // dependency is required (not optional) even though it looks similar to the
+        // Facebook/Sentry/Install-Referrer dependencies that standalone cleanup removes.
+        def webkitDependency = configurations.getByName("implementation").allDependencies.find {
+            it.group == "androidx.webkit" && it.name == "webkit"
+        }
+        if (webkitDependency == null) {
+            throw new GradleException("Missing androidx.webkit:webkit dependency required by WebApp.java's " +
+                    "WebViewAssetLoader for standalone offline content loading.")
         }
     }
 }
