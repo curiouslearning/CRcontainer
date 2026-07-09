@@ -9,6 +9,10 @@ Current repo already has a `mode` flavor dimension with `standard` and `standalo
 - `REQUIRE_INTERNET_FOR_UNCACHED_CONTENT=false`
 - `ALLOW_BACK_NAVIGATION=false`
 - `SHOW_WEBAPP_CLOSE_BUTTON=false`
+- `SHOW_LANGUAGE_POPUP=false`
+- `SHOW_SETTINGS_BUTTON=false`
+
+Standalone also sets a string `DEFAULT_LANGUAGE` BuildConfig field (via the `standaloneDefaultLanguage` Gradle project property) since `SHOW_LANGUAGE_POPUP=false` means the app never gives the user a chance to pick one. This must equal the `languageInEnglishName` value used in the bundled `web_apps_manifest.json` entries for that build — check the manifest rather than assuming the English form, since `prepare-crwebplayer-content.mjs` can be run with `--local-name`/`--english-name` set to the same value (the current bundled manifest uses `"isiZulu"` for both fields, not `"Zulu"`).
 
 Known standalone follow-up work:
 
