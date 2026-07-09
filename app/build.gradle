@@ -3,8 +3,6 @@ plugins {
     id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
     id 'jacoco'
-
-    id 'io.sentry.android.gradle' version '5.10.0'
 }
 def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buildBranch") : "main"
 def apiUrl = buildBranch == "main" ?
@@ -17,7 +15,7 @@ task printApiUrl {
 }
 
 android {
-    namespace 'org.curiouslearning.container'
+    namespace 'org.curiouslearning.allSA_maharishi'
     compileSdk 35
     packagingOptions {
         pickFirst "lib/x86/libc++_shared.so"
@@ -26,7 +24,7 @@ android {
         pickFirst "lib/arm64-v8a/libc++_shared.so"
     }
     defaultConfig {
-        applicationId "org.curiouslearning.container"
+        applicationId "org.curiouslearning.allSA_maharishi"
         minSdk 24
         targetSdk 35
         versionCode 83
@@ -61,7 +59,9 @@ android {
                     ENABLE_INSTALL_REFERRER             : true,
                     REQUIRE_INTERNET_FOR_UNCACHED_CONTENT: true,
                     ALLOW_BACK_NAVIGATION               : true,
-                    SHOW_WEBAPP_CLOSE_BUTTON            : true
+                    SHOW_WEBAPP_CLOSE_BUTTON            : true,
+                    SHOW_LANGUAGE_POPUP                 : true,
+                    SHOW_SETTINGS_BUTTON                : true
             ],
             standalone: [
                     ENABLE_FACEBOOK                     : false,
@@ -70,9 +70,19 @@ android {
                     ENABLE_INSTALL_REFERRER             : false,
                     REQUIRE_INTERNET_FOR_UNCACHED_CONTENT: false,
                     ALLOW_BACK_NAVIGATION               : false,
-                    SHOW_WEBAPP_CLOSE_BUTTON            : false
+                    SHOW_WEBAPP_CLOSE_BUTTON            : false,
+                    SHOW_LANGUAGE_POPUP                 : false,
+                    SHOW_SETTINGS_BUTTON                : false
             ]
     ]
+
+    // Standalone builds skip the language popup entirely, so they need a language to load
+    // by default. Set by the standalone build orchestrator skill via
+    // -PstandaloneDefaultLanguage=<languageInEnglishName>, matching the manifest's
+    // languageInEnglishName (e.g. "Zulu"), which is what WebAppDao.getSelectedlanguageWebApps
+    // matches against.
+    def standaloneDefaultLanguage = project.hasProperty("standaloneDefaultLanguage") ?
+            project.getProperty("standaloneDefaultLanguage") : ""
 
     productFlavors {
         standard {
@@ -80,6 +90,7 @@ android {
             standaloneFeatureFlags.standard.each { flagName, flagValue ->
                 buildConfigField "boolean", flagName, flagValue.toString()
             }
+            buildConfigField "String", "DEFAULT_LANGUAGE", "\"\""
         }
         standalone {
             dimension "mode"
@@ -87,6 +98,7 @@ android {
             standaloneFeatureFlags.standalone.each { flagName, flagValue ->
                 buildConfigField "boolean", flagName, flagValue.toString()
             }
+            buildConfigField "String", "DEFAULT_LANGUAGE", "\"${standaloneDefaultLanguage}\""
         }
     }
 
@@ -168,8 +180,9 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation(platform("io.sentry:sentry-bom:7.17.0"))
-    implementation("io.sentry:sentry-android") {
+    implementation 'androidx.webkit:webkit:1.15.0'
+    standardImplementation(platform("io.sentry:sentry-bom:7.17.0"))
+    standardImplementation("io.sentry:sentry-android") {
         exclude group: "io.sentry", module: "sentry-android-ndk"
     }
     // Source: https://mvnrepository.com/artifact/app.rive/rive-android
@@ -232,17 +245,6 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
             "$buildDir/outputs/code-coverage/connected/*coverage.ec"
     ))
 }
-
-
-sentry {
-    org = "curious-learning"
-    projectName = "cr-container"
-
-    // this will upload your source code to Sentry to show it as part of the stack traces
-    // disable if you don't want to expose your sources
-    includeSourceContext = true
-}
-
 tasks.register("verifyStandaloneConfiguration") {
     group = "Verification"
     description = "Checks the standalone flavor and its feature gates."
@@ -260,7 +262,9 @@ tasks.register("verifyStandaloneConfiguration") {
                 ENABLE_INSTALL_REFERRER             : "false",
                 REQUIRE_INTERNET_FOR_UNCACHED_CONTENT: "false",
                 ALLOW_BACK_NAVIGATION               : "false",
-                SHOW_WEBAPP_CLOSE_BUTTON            : "false"
+                SHOW_WEBAPP_CLOSE_BUTTON            : "false",
+                SHOW_LANGUAGE_POPUP                 : "false",
+                SHOW_SETTINGS_BUTTON                : "false"
         ]
 
         expectedFlags.each { flagName, expectedValue ->
@@ -271,6 +275,15 @@ tasks.register("verifyStandaloneConfiguration") {
             if (actualValue != expectedValue) {
                 throw new GradleException("Standalone flavor flag ${flagName} expected ${expectedValue} but was ${actualValue}.")
             }
+        }
+
+        def defaultLanguageField = standaloneFlavor.buildConfigFields["DEFAULT_LANGUAGE"]?.value?.toString()
+        if (defaultLanguageField == null) {
+            throw new GradleException("Standalone flavor is missing BuildConfig field DEFAULT_LANGUAGE.")
+        }
+        if (defaultLanguageField == "\"\"") {
+            println("WARNING: Standalone DEFAULT_LANGUAGE is empty. SHOW_LANGUAGE_POPUP is false, so the app " +
+                    "will load an empty app list unless -PstandaloneDefaultLanguage=<languageInEnglishName> is set.")
         }
 
         if (!file("src/standalone/AndroidManifest.xml").exists()) {

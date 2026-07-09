@@ -16,8 +16,8 @@ All Gradle commands are run from the repo root. On Windows use `gradlew.bat`; th
 # Build
 .\gradlew.bat assembleStandardDebug        # default/standard flavor, debug
 .\gradlew.bat assembleStandardRelease
-.\gradlew.bat assembleStandaloneDebug      # offline standalone flavor
-.\gradlew.bat assembleStandaloneRelease
+.\gradlew.bat assembleStandaloneDebug -PstandaloneDefaultLanguage=<languageInEnglishName>   # offline standalone flavor
+.\gradlew.bat assembleStandaloneRelease -PstandaloneDefaultLanguage=<languageInEnglishName>
 
 # Verify the standalone flavor's feature-gate contract
 .\gradlew.bat :app:verifyStandaloneConfiguration
@@ -48,8 +48,8 @@ CI/CD is CircleCI (`.circleci/config.yml`) running Fastlane (`app/fastlane/Fastf
 
 `app/build.gradle` defines a single `mode` flavor dimension with `standard` and `standalone` product flavors. Both compile the same source tree; behavior differences are driven entirely by a block of `BuildConfig` boolean flags declared per-flavor (`ENABLE_FACEBOOK`, `ENABLE_SENTRY`, `ENABLE_REMOTE_MANIFEST`, `ENABLE_INSTALL_REFERRER`, `REQUIRE_INTERNET_FOR_UNCACHED_CONTENT`, `ALLOW_BACK_NAVIGATION`, `SHOW_WEBAPP_CLOSE_BUTTON` — all `true` for standard, all `false` for standalone). See `docs/standalone-feature-flags.md` for the full flag-to-behavior table and which classes each flag gates.
 
-- **standard**: online, fetches its web-app manifest remotely, uses Facebook SDK, Install Referrer, Sentry crash reporting.
-- **standalone**: fully offline. It ships its own bundled content (`app/src/main/assets/web_apps_manifest.json`, `CRWebPlayerJs/`, `images/`) and seeds Room from those assets instead of hitting the network. It merges `app/src/standalone/AndroidManifest.xml` to strip Facebook/Install Referrer/Sentry manifest entries, and flavor source sets (`app/src/standard/java/...`, `app/src/standalone/java/...`) hold flavor-specific implementations (e.g. `telemetry/SentryReporter.java`) so the standard flavor keeps Sentry while standalone compiles without the dependency at all.
+- **standard**: online, fetches its web-app manifest remotely, uses Facebook SDK, Install Referrer, Sentry crash reporting, shows the language popup and settings button.
+- **standalone**: fully offline. It ships its own bundled content (`app/src/main/assets/web_apps_manifest.json`, `CRWebPlayerJs/`, `images/`) and seeds Room from those assets instead of hitting the network. It merges `app/src/standalone/AndroidManifest.xml` to strip Facebook/Install Referrer/Sentry manifest entries, and flavor source sets (`app/src/standard/java/...`, `app/src/standalone/java/...`) hold flavor-specific implementations (e.g. `telemetry/SentryReporter.java`) so the standard flavor keeps Sentry while standalone compiles without the dependency at all. It also hides the settings button and never shows the language popup (`SHOW_SETTINGS_BUTTON`/`SHOW_LANGUAGE_POPUP=false`) — instead it auto-loads `BuildConfig.DEFAULT_LANGUAGE`, set at build time via `-PstandaloneDefaultLanguage=<languageInEnglishName>` (must match the manifest's actual `languageInEnglishName` value, not necessarily the English form — check the manifest rather than assume).
 - The `verifyStandaloneConfiguration` Gradle task asserts the standalone flavor exists, all its `BuildConfig` flags are `false`, and the standalone manifest overlay is present — run it after touching flavor config.
 - The standalone `applicationId` must also exist as an app entry in `app/google-services.json` or the Google Services plugin will fail for that variant.
 
