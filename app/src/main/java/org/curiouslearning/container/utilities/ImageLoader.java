@@ -39,9 +39,16 @@ public class ImageLoader {
 
     public static void loadWebAppIcon(Context context, String imageUrl, ImageView imageView) {
         Picasso picasso = getInstance(context);
+        String resolvedImageUrl = imageUrl;
+        if (resolvedImageUrl != null && !resolvedImageUrl.startsWith("http://")
+                && !resolvedImageUrl.startsWith("https://")
+                && !resolvedImageUrl.startsWith("file:///android_asset/")) {
+            resolvedImageUrl = "file:///android_asset/images/" + resolvedImageUrl;
+        }
+        final String finalResolvedImageUrl = resolvedImageUrl;
 
         // Load the image and cache it
-        picasso.load(imageUrl)
+        picasso.load(finalResolvedImageUrl)
                 .resize(targetSizePixels, targetSizePixels)
                 .centerCrop()
                 .networkPolicy(NetworkPolicy.OFFLINE)
@@ -53,7 +60,7 @@ public class ImageLoader {
                     @Override
                     public void onError(Exception e) {
                         // Try loading from network if offline cache failed
-                        picasso.load(imageUrl).into(imageView);
+                        picasso.load(finalResolvedImageUrl).into(imageView);
                     }
                 });
     }

@@ -20,11 +20,12 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.webkit.WebViewAssetLoader;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
-import io.sentry.Sentry;
+import org.curiouslearning.container.telemetry.SentryReporter;
 
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 import org.curiouslearning.container.core.subapp.validation.AppEventPayloadValidator;
@@ -115,10 +116,26 @@ public class WebApp extends BaseActivity {
         webView.setHorizontalScrollBarEnabled(false);
 
         // Check if this is FTM app
-        isFtmApp = appUrl.contains("feedthemonster");
+        isFtmApp = appUrl != null && appUrl.contains("feedthemonster");
 
-        // Create custom WebViewClient for FTM to handle monster state API
+        // The domain here only has to match the host of the manifest's own appUrl so
+        // WebViewAssetLoader intercepts requests for it; it is never dereferenced over the
+        // network. Deriving it from appUrl (rather than hardcoding one language's domain)
+        // keeps this correct regardless of which --domain the standalone content was built with.
+        final String urlHost = appUrl != null ? Uri.parse(appUrl).getHost() : null;
+        final WebViewAssetLoader.Builder assetLoaderBuilder = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this));
+        if (urlHost != null) {
+            assetLoaderBuilder.setDomain(urlHost);
+        }
+        final WebViewAssetLoader assetLoader = assetLoaderBuilder.build();
+
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, android.webkit.WebResourceRequest request) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
+            }
+
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
@@ -141,6 +158,7 @@ public class WebApp extends BaseActivity {
         webView.getSettings().getDomStorageEnabled();
         webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
         if (isFtmApp) {
             System.out
@@ -148,17 +166,17 @@ public class WebApp extends BaseActivity {
             if (source != null && !source.isEmpty()) {
                 appUrl = addSourceToUrl(appUrl);
             } else {
-                if (BuildConfig.ENABLE_SENTRY) {
-                    Sentry.captureMessage("Missing source when building URL for app: " + appUrl);
-                }
+            if (BuildConfig.ENABLE_SENTRY) {
+                SentryReporter.captureMessage("Missing source when building URL for app: " + appUrl);
+            }
                 Log.w("WebApp", "Missing source parameter for app: " + appUrl);
             }
             if (campaignId != null && !campaignId.isEmpty()) {
                 appUrl = addCampaignIdToUrl(appUrl);
             } else {
-                if (BuildConfig.ENABLE_SENTRY) {
-                    Sentry.captureMessage("Missing campaign_id when building URL for app: " + appUrl);
-                }
+            if (BuildConfig.ENABLE_SENTRY) {
+                SentryReporter.captureMessage("Missing campaign_id when building URL for app: " + appUrl);
+            }
                 Log.w("WebApp", "Missing campaign_id parameter for app: " + appUrl);
             }
         }
@@ -187,7 +205,7 @@ public class WebApp extends BaseActivity {
                 pseudoId;
         if (pseudoId == null || pseudoId.isEmpty()) {
             if (BuildConfig.ENABLE_SENTRY) {
-                Sentry.captureMessage("Missing cr_user_id for app: " + appUrl);
+                SentryReporter.captureMessage("Missing cr_user_id for app: " + appUrl);
             }
             Log.e("WebApp", "Missing cr_user_id when building URL");
         }

@@ -9,12 +9,14 @@ import androidx.lifecycle.Observer;
 
 import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.data.database.WebAppDatabase;
+import org.curiouslearning.container.data.local.AppManifest;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.remote.RetrofitInstance;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class WebAppRepository {
 
@@ -29,10 +31,23 @@ public class WebAppRepository {
         this.application = application;
         retrofitInstance = RetrofitInstance.getInstance();
         webAppDatabase = new WebAppDatabase(application);
+        fetchWebApp();
     }
 
     public void fetchWebApp() {
         if (!BuildConfig.ENABLE_REMOTE_MANIFEST) {
+            List<WebApp> localWebApps = AppManifest.getAppManifest().getAllWebApps(application.getAssets());
+            localWebApps = localWebApps.stream()
+                    .filter(webApp -> webApp != null
+                            && webApp.getAppUrl() != null
+                            && webApp.getAppUrl().contains("/assets/CRWebPlayerJs/")
+                            && webApp.getLanguageInEnglishName() != null
+                            && !webApp.getLanguageInEnglishName().trim().isEmpty())
+                    .collect(Collectors.toList());
+            if (localWebApps != null && !localWebApps.isEmpty()) {
+                webAppDatabase.deleteWebApps(localWebApps);
+                webAppDatabase.insertAll(localWebApps);
+            }
             return;
         }
         if (isFetching) {

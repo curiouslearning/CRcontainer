@@ -3,7 +3,8 @@ package org.curiouslearning.container.data.local;
 import android.content.res.AssetManager;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 
 public class AppManifest {
@@ -45,13 +47,24 @@ public class AppManifest {
 
     public List<WebApp> getAllWebApps(AssetManager assetManager) {
         String jsonData = getData(assetManager);
+        if (jsonData == null || jsonData.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
         Type listType = new TypeToken<List<WebApp>>(){}.getType();
-        List<WebApp> webApps =  new Gson().fromJson(convertToJsonArray(jsonData).toString(), listType);
-        return webApps;
-    }
+        JsonElement parsedElement = JsonParser.parseString(jsonData);
 
-    public JsonArray convertToJsonArray(String jsonData) {
-        JsonArray jsonArray = new JsonParser().parse(jsonData).getAsJsonArray();
-        return jsonArray;
+        if (parsedElement.isJsonObject()) {
+            JsonObject jsonObject = parsedElement.getAsJsonObject();
+            JsonElement webAppsElement = jsonObject.get("web_apps");
+            if (webAppsElement != null && webAppsElement.isJsonArray()) {
+                return new Gson().fromJson(webAppsElement, listType);
+            }
+        }
+
+        if (parsedElement.isJsonArray()) {
+            return new Gson().fromJson(parsedElement, listType);
+        }
+
+        return Collections.emptyList();
     }
 }

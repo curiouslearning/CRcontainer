@@ -76,7 +76,7 @@ import app.rive.runtime.kotlin.RiveAnimationView;
 import app.rive.runtime.kotlin.core.Alignment;
 import app.rive.runtime.kotlin.core.Fit;
 import app.rive.runtime.kotlin.core.Loop;
-import io.sentry.Sentry;
+import org.curiouslearning.container.telemetry.SentryReporter;
 
 public class MainActivity extends BaseActivity {
 
@@ -286,19 +286,24 @@ public class MainActivity extends BaseActivity {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
         }
         settingsButton = findViewById(R.id.settings);
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // Add spinning animation to settings gear
-                spinSettingsGear(view);
-                AnimationUtil.scaleButton(view, new Runnable() {
-                    @Override
-                    public void run() {
-                        showLanguagePopup();
-                    }
-                });
-            }
-        });
+        if (BuildConfig.SHOW_SETTINGS_BUTTON) {
+            settingsButton.setVisibility(View.VISIBLE);
+            settingsButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    // Add spinning animation to settings gear
+                    spinSettingsGear(view);
+                    AnimationUtil.scaleButton(view, new Runnable() {
+                        @Override
+                        public void run() {
+                            showLanguagePopup();
+                        }
+                    });
+                }
+            });
+        } else {
+            settingsButton.setVisibility(View.GONE);
+        }
 
         // Initialize debug trigger area
         debugTriggerArea = findViewById(R.id.debug_trigger_area);
@@ -864,7 +869,7 @@ public class MainActivity extends BaseActivity {
                 // Slack alert
                 SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
                 if (BuildConfig.ENABLE_SENTRY) {
-                    Sentry.captureMessage("Missing Language when selecting Language ");
+                    SentryReporter.captureMessage("Missing Language when selecting Language ");
                 }
                 showLanguagePopup();
                 return;
@@ -877,7 +882,7 @@ public class MainActivity extends BaseActivity {
                         && !lowerCaseLanguages.contains(language.toLowerCase().trim())) {
                     SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
                     if (BuildConfig.ENABLE_SENTRY) {
-                        Sentry.captureMessage("Incorrect Language when selecting Language ");
+                        SentryReporter.captureMessage("Incorrect Language when selecting Language ");
                     }
                     showLanguagePopup();
                     loadingIndicator.setVisibility(View.GONE);
@@ -896,6 +901,11 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showLanguagePopup() {
+        if (!BuildConfig.SHOW_LANGUAGE_POPUP) {
+            Log.d(TAG, "showLanguagePopup: Skipped (SHOW_LANGUAGE_POPUP disabled); loading default language");
+            loadDefaultLanguage();
+            return;
+        }
         if (isHandlingIdConfirmation || isShowingEnrollmentSuccess) {
             Log.d(TAG, "showLanguagePopup: Skipped because study enrollment confirmation UI is active.");
             return;
@@ -1112,10 +1122,17 @@ public class MainActivity extends BaseActivity {
 
     private Map<String, String> MapLanguagesEnglishName(List<WebApp> webApps) {
         Map<String, String> languagesEnglishNameMap = new TreeMap<>();
+        if (webApps == null) {
+            return languagesEnglishNameMap;
+        }
         for (WebApp webApp : webApps) {
+            if (webApp == null) {
+                continue;
+            }
             String languageInEnglishName = webApp.getLanguageInEnglishName();
             String languageInLocalName = webApp.getLanguage();
-            if (languageInEnglishName != null && languageInLocalName != null) {
+            if (languageInEnglishName != null && !languageInEnglishName.trim().isEmpty()
+                    && languageInLocalName != null && !languageInLocalName.trim().isEmpty()) {
                 languagesEnglishNameMap.put(languageInLocalName, languageInEnglishName);
                 languagesEnglishNameMap.put(languageInEnglishName, languageInLocalName);
             }
@@ -1126,17 +1143,37 @@ public class MainActivity extends BaseActivity {
     private Set<String> sortLanguages(List<WebApp> webApps) {
         Map<String, List<String>> dialectGroups = new TreeMap<>();
         Map<String, String> languages = new TreeMap<>();
+        if (webApps == null) {
+            return new LinkedHashSet<>();
+        }
         for (WebApp webApp : webApps) {
+            if (webApp == null) {
+                continue;
+            }
             String languageInEnglishName = webApp.getLanguageInEnglishName();
             String languageInLocaName = webApp.getLanguage();
+            if (languageInEnglishName == null || languageInEnglishName.trim().isEmpty()
+                    || languageInLocaName == null || languageInLocaName.trim().isEmpty()) {
+                continue;
+            }
             languages.put(languageInEnglishName, languageInLocaName);
         }
         for (WebApp webApp : webApps) {
+            if (webApp == null) {
+                continue;
+            }
             String languageInEnglishName = webApp.getLanguageInEnglishName();
             String languageInLocalName = webApp.getLanguage();
+            if (languageInEnglishName == null || languageInEnglishName.trim().isEmpty()
+                    || languageInLocalName == null || languageInLocalName.trim().isEmpty()) {
+                continue;
+            }
             String[] parts = extractBaseLanguageAndDialect(languageInLocalName, languageInEnglishName);
             String baseLanguage = parts[0]; // The root language (e.g., "English", "Portuguese")
             String dialect = parts[1]; // The dialect (e.g., "US", "Brazilian")
+            if (baseLanguage == null || baseLanguage.trim().isEmpty()) {
+                continue;
+            }
             if (baseLanguage.contains("Kreyòl")) {
                 dialectGroups.putIfAbsent("Creole" + baseLanguage, new ArrayList<>());
                 dialectGroups.get("Creole" + baseLanguage).add(dialect);
@@ -1150,6 +1187,9 @@ public class MainActivity extends BaseActivity {
         for (Map.Entry<String, List<String>> entry : dialectGroups.entrySet()) {
             String baseLanguage = entry.getKey();
             List<String> dialects = entry.getValue();
+            if (dialects == null) {
+                continue;
+            }
             Collections.sort(dialects);
             for (String dialect : dialects) {
                 if (languages.get(baseLanguage) == null || !languages.get(baseLanguage).equals(dialect)) {
@@ -1204,6 +1244,21 @@ public class MainActivity extends BaseActivity {
                 }
             }
         });
+    }
+
+    /**
+     * Loads BuildConfig.DEFAULT_LANGUAGE in place of the language popup when
+     * SHOW_LANGUAGE_POPUP is disabled (standalone builds already know their content language).
+     */
+    private void loadDefaultLanguage() {
+        String defaultLanguage = BuildConfig.DEFAULT_LANGUAGE;
+        if (defaultLanguage == null || defaultLanguage.trim().isEmpty()) {
+            Log.e(TAG, "loadDefaultLanguage: SHOW_LANGUAGE_POPUP is disabled but DEFAULT_LANGUAGE is not set");
+            return;
+        }
+        selectedLanguage = defaultLanguage;
+        storeSelectLanguage(defaultLanguage);
+        loadApps(defaultLanguage);
     }
 
     private void storeSelectLanguage(String language) {
