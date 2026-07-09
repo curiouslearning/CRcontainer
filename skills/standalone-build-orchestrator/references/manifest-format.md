@@ -58,3 +58,31 @@ Icon selection:
 - Fall back to known Curious Reader icon mappings, then to `assessment_icon_prod.png`.
 
 The legacy `?data=<book>` query may exist in older manifests, but this package currently uses `?book=<BookContentFolder>` for CRWebPlayerJs.
+
+Note: each book's own `content/content.json` (distinct from this top-level `web_apps_manifest.json`)
+has a second job beyond describing the book's presentation — `prepare-crwebplayer-content.mjs` reads
+it directly from the CDN as the asset download manifest, avoiding a GitHub API walk per book. See
+`standalone-build-orchestrator/SKILL.md`'s "Content download strategy" section.
+
+## Standalone Seeding Requirement
+
+`WebAppRepository.fetchWebApp()` is what actually seeds Room from this manifest for standalone
+builds (when `ENABLE_REMOTE_MANIFEST` is false). It silently filters out any entry that fails
+this check, with no error and no log — the entry just never appears in the app:
+
+```java
+webApp.getAppUrl() != null && webApp.getAppUrl().contains("/assets/CRWebPlayerJs/")
+&& webApp.getLanguageInEnglishName() != null && !webApp.getLanguageInEnglishName().trim().isEmpty()
+```
+
+So an entry can satisfy every rule above, be valid JSON, and still never show up in standalone if:
+
+- `appUrl` doesn't contain `/assets/CRWebPlayerJs/` (remote-only entries like the default
+  Feed The Monster / Curious Reader English/Hindi rows are filtered out this way — they have
+  no `languageInEnglishName` either), or
+- `languageInEnglishName` is missing, null, or blank.
+
+Always set `languageInEnglishName` and use an `/assets/CRWebPlayerJs/...` `appUrl` for any
+entry meant to be usable offline. If a standalone build shows an empty app list despite the
+manifest looking correct, check this filter before anything else — it's the most common cause,
+more likely than a broken `WebViewAssetLoader` or missing runtime files.

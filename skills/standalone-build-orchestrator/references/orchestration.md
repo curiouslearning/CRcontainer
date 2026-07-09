@@ -27,6 +27,14 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
 node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mjs --language isiZulu --download-runtime --download --write-manifest
 ```
 
+   By default this fetches each book's `content.json` from the CDN (`--content-cdn-base`, default
+   `https://curiousreaderdev.curiouscontent.org`) and downloads every referenced asset from there
+   too, using GitHub only for the initial language-match listing — this is what fixes the GitHub
+   rate-limit exhaustion a large multi-book run used to hit. A book falls back to the GitHub-driven
+   walk automatically if its `content.json` isn't on the CDN; pass `--no-content-cdn` to force the
+   old pure-GitHub path for the whole run. See `standalone-build-orchestrator/SKILL.md`'s "Content
+   download strategy" section for details.
+
 4. Inspect the changed manifest and validate local assets.
    - Confirm runtime validation reports `index.html`, `manifest.json`, `dist/app.js`, and `dist/index.html`.
    - Confirm the helper reported an icon for each matched book.
@@ -56,5 +64,5 @@ Progress output style:
 
 - Keep updates short and ordered.
 - Name each book being downloaded, e.g. `Downloading ChakusCycleIsiZulu`.
-- Distinguish `already present`, `downloaded`, `manifest added`, and `manifest already present`.
+- Distinguish `already present`, `downloaded via CDN`, `downloaded via GitHub fallback`, `manifest added`, and `manifest already present`.
 - Report validation failures before running Gradle.

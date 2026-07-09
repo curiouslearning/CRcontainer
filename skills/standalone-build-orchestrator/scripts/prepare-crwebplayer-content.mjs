@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -17,9 +17,18 @@ Options:
   --local-name NAME        Manifest language value. Defaults to --language.
   --english-name NAME      Manifest languageInEnglishName. Defaults from known aliases or --language.
   --download-runtime       Download root index.html, manifest.json, and dist/ from CRWebPlayer.
-  --download               Download missing/matched BookContent folders through github-content-folder.
+  --download               Download missing/matched BookContent folders.
   --write-manifest         Upsert manifest entries for matched books.
-  --github-skill PATH      Default: skills/github-content-folder/scripts/github-folder.mjs.
+  --github-skill PATH      Default: skills/github-s3-content-pull/scripts/github-s3-content-pull.mjs.
+  --content-cdn-base URL   Default: https://curiousreaderdev.curiouscontent.org. This host mirrors
+                           the repo's path layout 1:1, so each book's own content/content.json
+                           (fetched directly from here) is used as the asset manifest to download
+                           every audio/image straight from the CDN, skipping GitHub's API entirely
+                           for that book. GitHub is still used only to discover which BookContent
+                           folder names match the requested language (one lightweight, non-recursive
+                           call), and as a per-book fallback (via github-s3-content-pull.mjs's own
+                           --cdn-base-url) when a book's content.json isn't available on the CDN.
+  --no-content-cdn         Disable the CDN entirely and use the old pure-GitHub download path.
 `;
 
 const defaults = {
@@ -27,7 +36,8 @@ const defaults = {
   branch: "develop",
   assetsRoot: "app/src/main/assets",
   domain: "maharishi_cr-ftm-standalone.androidplatform.net",
-  githubSkill: "skills/github-content-folder/scripts/github-folder.mjs",
+  githubSkill: "skills/github-s3-content-pull/scripts/github-s3-content-pull.mjs",
+  contentCdnBase: "https://curiousreaderdev.curiouscontent.org",
 };
 
 const iconByBase = new Map([
@@ -94,6 +104,7 @@ const branch = args.branch ?? defaults.branch;
 const assetsRoot = path.resolve(args.assetsRoot ?? defaults.assetsRoot);
 const domain = args.domain ?? defaults.domain;
 const githubSkill = path.resolve(args.githubSkill ?? defaults.githubSkill);
+const contentCdnBase = args.noContentCdn ? null : (args.contentCdnBase ?? defaults.contentCdnBase);
 const languageInfo = languageAliases.get(normalize(args.language)) ?? {
   aliases: [normalize(args.language)],
   local: args.language,
@@ -106,9 +117,9 @@ const playerRoot = path.join(assetsRoot, "CRWebPlayerJs");
 const bookContentRoot = path.join(playerRoot, "BookContent");
 const imagesRoot = path.join(assetsRoot, "images");
 const runtimeTargets = [
-  { repoPath: "index.html", localPath: path.join(playerRoot, "index.html"), flattenRoot: true },
-  { repoPath: "manifest.json", localPath: path.join(playerRoot, "manifest.json"), flattenRoot: true },
-  { repoPath: "dist", localPath: path.join(playerRoot, "dist"), flattenRoot: false },
+  { repoPath: "index.html", localPath: path.join(playerRoot, "index.html"), flattenRoot: true, singleFile: true },
+  { repoPath: "manifest.json", localPath: path.join(playerRoot, "manifest.json"), flattenRoot: true, singleFile: true },
+  { repoPath: "dist", localPath: path.join(playerRoot, "dist"), flattenRoot: false, singleFile: false },
 ];
 
 await mkdir(bookContentRoot, { recursive: true });
@@ -121,13 +132,23 @@ console.log(`Assets root: ${assetsRoot}`);
 console.log(`Available manifest images: ${assetImages.length}`);
 
 if (args.downloadRuntime) {
-  if (!existsSync(githubSkill)) fail(`Missing github-content-folder script: ${githubSkill}`);
+  if (!existsSync(githubSkill)) fail(`Missing github-s3-content-pull script: ${githubSkill}`);
   await mkdir(playerRoot, { recursive: true });
   console.log("Runtime files:");
   for (const target of runtimeTargets) {
     if (existsSync(target.localPath)) {
       console.log(`already present ${target.repoPath}`);
       continue;
+    }
+    if (target.singleFile && contentCdnBase) {
+      const buffer = await tryFetchBytes(`${contentCdnBase.replace(/\/+$/, "")}/${target.repoPath}`);
+      if (buffer) {
+        await mkdir(path.dirname(target.localPath), { recursive: true });
+        await writeFile(target.localPath, buffer);
+        console.log(`download ${target.repoPath} (via cdn)`);
+        continue;
+      }
+      console.log(`cdn miss for ${target.repoPath}; falling back to GitHub`);
     }
     console.log(`download ${target.repoPath}`);
     downloadRepoPath({
@@ -137,6 +158,7 @@ if (args.downloadRuntime) {
       repoPath: target.repoPath,
       out: playerRoot,
       flattenRoot: target.flattenRoot,
+      cdnBaseUrl: contentCdnBase,
     });
   }
 }
@@ -169,7 +191,7 @@ console.log(`Matched ${matchedBooks.length} BookContent folder(s):`);
 for (const book of matchedBooks) console.log(`- ${book} -> icon ${iconForBook(book, assetImages)}`);
 
 if (args.download) {
-  if (!existsSync(githubSkill)) fail(`Missing github-content-folder script: ${githubSkill}`);
+  if (!existsSync(githubSkill)) fail(`Missing github-s3-content-pull script: ${githubSkill}`);
   for (const book of matchedBooks) {
     const localBookPath = path.join(bookContentRoot, book);
     if (existsSync(localBookPath)) {
@@ -177,14 +199,22 @@ if (args.download) {
       continue;
     }
     console.log(`download ${book}`);
-    downloadRepoPath({
-      githubSkill,
-      repo,
-      branch,
-      repoPath: `BookContent/${book}`,
-      out: playerRoot,
-      flattenRoot: false,
-    });
+    let viaCdn = false;
+    if (contentCdnBase) {
+      viaCdn = await downloadBookViaContentJson(book, { contentCdnBase, bookContentRoot });
+    }
+    if (!viaCdn) {
+      if (contentCdnBase) console.log(`  content.json fast path unavailable for ${book}; falling back to GitHub walk`);
+      downloadRepoPath({
+        githubSkill,
+        repo,
+        branch,
+        repoPath: `BookContent/${book}`,
+        out: playerRoot,
+        flattenRoot: false,
+        cdnBaseUrl: contentCdnBase,
+      });
+    }
   }
 }
 
@@ -255,7 +285,7 @@ function parseArgs(values) {
     const key = values[i];
     if (!key.startsWith("--")) fail(`Unexpected argument: ${key}\n\n${usage}`);
     const name = key.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    if (["download", "downloadRuntime", "writeManifest"].includes(name)) {
+    if (["download", "downloadRuntime", "writeManifest", "noContentCdn"].includes(name)) {
       parsed[name] = true;
       continue;
     }
@@ -267,7 +297,7 @@ function parseArgs(values) {
   return parsed;
 }
 
-function downloadRepoPath({ githubSkill, repo, branch, repoPath, out, flattenRoot }) {
+function downloadRepoPath({ githubSkill, repo, branch, repoPath, out, flattenRoot, cdnBaseUrl }) {
   const command = [
     githubSkill,
     "download",
@@ -277,8 +307,103 @@ function downloadRepoPath({ githubSkill, repo, branch, repoPath, out, flattenRoo
     "--out", out,
   ];
   if (flattenRoot) command.push("--flatten-root");
+  if (cdnBaseUrl) command.push("--cdn-base-url", cdnBaseUrl);
   const result = spawnSync(process.execPath, command, { stdio: "inherit" });
   if (result.status !== 0) fail(`Download failed for ${repoPath}`);
+}
+
+// Fast path: a book's own content/content.json (mirrored on the CDN, same as the runtime files)
+// enumerates every audio/image asset it needs via embedded { path, mime } file references. Fetching
+// it directly and downloading only those referenced assets from the CDN skips GitHub's API (and its
+// rate limit) entirely for that book. Any single miss aborts and lets the caller fall back to the
+// GitHub-driven walk for the whole book, so a book is never left partially populated by this path.
+async function downloadBookViaContentJson(book, { contentCdnBase, bookContentRoot }) {
+  const base = contentCdnBase.replace(/\/+$/, "");
+  const contentJsonUrl = `${base}/BookContent/${book}/content/content.json`;
+  const contentJsonBuffer = await tryFetchBytes(contentJsonUrl);
+  if (!contentJsonBuffer) return false;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(contentJsonBuffer.toString("utf8"));
+  } catch {
+    return false;
+  }
+
+  const assetPaths = collectAssetPaths(parsed);
+  const contentDir = path.join(bookContentRoot, book, "content");
+  await mkdir(contentDir, { recursive: true });
+
+  let missed = false;
+  const results = await mapWithConcurrency(assetPaths, 12, async (relPath) => {
+    if (missed) return null;
+    const assetUrl = `${base}/BookContent/${book}/content/${relPath}`;
+    const assetBuffer = await tryFetchBytes(assetUrl);
+    if (!assetBuffer) {
+      console.log(`  cdn miss for asset ${relPath} in ${book}`);
+      missed = true;
+      return null;
+    }
+    return { relPath, buffer: assetBuffer };
+  });
+  if (missed) return false;
+  const downloadedFiles = results;
+
+  await writeFile(path.join(contentDir, "content.json"), contentJsonBuffer);
+  for (const { relPath, buffer } of downloadedFiles) {
+    const targetPath = path.join(contentDir, ...relPath.split("/"));
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, buffer);
+  }
+
+  console.log(`  via CDN content.json: ${downloadedFiles.length + 1} file(s) for ${book}`);
+  return true;
+}
+
+// Recursively collects relative asset paths from a content.json tree. A "path" string counts as an
+// asset reference when its containing object also has a "mime" field (the standard H5P file
+// descriptor shape) or the path itself is already under a known asset folder (audios/, images/) —
+// this stays schema-tolerant without picking up unrelated "path"-named strings elsewhere in the tree.
+function collectAssetPaths(node, found = new Set()) {
+  if (Array.isArray(node)) {
+    for (const item of node) collectAssetPaths(item, found);
+    return [...found];
+  }
+  if (node && typeof node === "object") {
+    const value = node.path;
+    if (typeof value === "string" && !/^https?:\/\//i.test(value)) {
+      const looksLikeAsset = Boolean(node.mime) || /^(audios|images)\//i.test(value);
+      if (looksLikeAsset) found.add(value);
+    }
+    for (const key of Object.keys(node)) collectAssetPaths(node[key], found);
+  }
+  return [...found];
+}
+
+// Runs `worker` over `items` with at most `limit` in flight at once. Plain Promise.all would fire
+// every request simultaneously (rude to the CDN and easy to trip connection limits); a fully
+// sequential loop is correct but slow for the ~100 files a typical book needs.
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  async function runWorker() {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await worker(items[current], current);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runWorker));
+  return results;
+}
+
+async function tryFetchBytes(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return Buffer.from(await response.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 function validateRuntime(root) {

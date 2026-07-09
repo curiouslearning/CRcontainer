@@ -1,3 +1,0 @@
-display_name: GitHub Content Folder
-short_description: Download selected GitHub folders only.
-default_prompt: Download a specific content folder from a public GitHub repository without cloning the whole repo.

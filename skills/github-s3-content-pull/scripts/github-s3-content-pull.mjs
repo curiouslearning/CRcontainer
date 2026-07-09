@@ -3,11 +3,20 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const usage = `Usage:
-  node github-folder.mjs list --url "https://github.com/OWNER/REPO/tree/BRANCH/path"
-  node github-folder.mjs download --url "https://github.com/OWNER/REPO/tree/BRANCH/path" --out .
-  node github-folder.mjs list --repo OWNER/REPO --branch BRANCH --path path/to/folder
-  node github-folder.mjs download --repo OWNER/REPO --branch BRANCH --path path/to/folder --out . [--flatten-root]
-  node github-folder.mjs list --book-content
+  node github-s3-content-pull.mjs list --url "https://github.com/OWNER/REPO/tree/BRANCH/path"
+  node github-s3-content-pull.mjs download --url "https://github.com/OWNER/REPO/tree/BRANCH/path" --out .
+  node github-s3-content-pull.mjs list --repo OWNER/REPO --branch BRANCH --path path/to/folder
+  node github-s3-content-pull.mjs download --repo OWNER/REPO --branch BRANCH --path path/to/folder --out . [--flatten-root]
+  node github-s3-content-pull.mjs list --book-content
+  node github-s3-content-pull.mjs download --book-content --path BookContent/SomeBook --out . --cdn-base-url https://curiousreaderdev.curiouscontent.org
+
+Options:
+  --cdn-base-url URL       Optional. GitHub's Contents API is still used to list/walk the folder
+                           structure (this is the part that burns rate limit), but each file's
+                           bytes are fetched from "<cdn-base-url>/<repo-relative-path>" first, only
+                           falling back to GitHub's download_url if that request fails. The CDN host
+                           must mirror the repo's path layout 1:1 (verified true for
+                           curiousreaderdev.curiouscontent.org against curiouslearning/CRWebPlayer).
 
 Environment:
   GITHUB_TOKEN may be set to raise API rate limits or access authorized repositories.
@@ -130,7 +139,7 @@ function apiUrl(target) {
 async function githubJson(url) {
   const headers = {
     accept: "application/vnd.github+json",
-    "user-agent": "codex-github-content-folder",
+    "user-agent": "codex-github-s3-content-pull",
     "x-github-api-version": "2022-11-28",
   };
   if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
@@ -189,26 +198,46 @@ async function downloadFile(item, rootFolder) {
     return;
   }
 
-  const headers = { "user-agent": "codex-github-content-folder" };
-  if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-
-  const response = await fetch(item.download_url, { headers });
-  if (!response.ok) throw new Error(`Download ${response.status} ${response.statusText}: ${item.download_url}`);
-
   const relativeRepoPath = normalizeRepoPath(item.path);
+  let buffer = null;
+  let source = "github";
+
+  if (options.cdnBaseUrl) {
+    buffer = await tryFetchBytes(`${options.cdnBaseUrl.replace(/\/+$/, "")}/${relativeRepoPath}`);
+    if (buffer) source = "cdn";
+  }
+
+  if (!buffer) {
+    const headers = { "user-agent": "codex-github-s3-content-pull" };
+    if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+
+    const response = await fetch(item.download_url, { headers });
+    if (!response.ok) throw new Error(`Download ${response.status} ${response.statusText}: ${item.download_url}`);
+    buffer = Buffer.from(await response.arrayBuffer());
+  }
+
   let relativeOutPath = options.flattenRoot
     ? path.relative(rootFolder.replaceAll("/", path.sep), relativeRepoPath.replaceAll("/", path.sep))
     : relativeRepoPath.replaceAll("/", path.sep);
   if (!relativeOutPath) relativeOutPath = path.basename(relativeRepoPath);
   const targetFile = path.join(outDir, relativeOutPath);
-  const buffer = Buffer.from(await response.arrayBuffer());
 
   await mkdir(path.dirname(targetFile), { recursive: true });
   await writeFile(targetFile, buffer);
 
   fileCount += 1;
   byteCount += buffer.length;
-  console.log(`file ${item.path} (${buffer.length} bytes)`);
+  console.log(`file ${item.path} (${buffer.length} bytes, via ${source})`);
+}
+
+async function tryFetchBytes(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return Buffer.from(await response.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 function compareEntries(a, b) {

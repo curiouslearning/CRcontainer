@@ -7,7 +7,7 @@ description: Orchestrate a complete Curious Reader Android standalone build from
 
 ## Overview
 
-Coordinate the repo-local `github-content-folder` and `standalone-android-build` skills to produce a content-ready Android standalone build. This skill handles content discovery/download, manifest packaging, standalone package specialization, and final Gradle verification.
+Coordinate the repo-local `github-s3-content-pull` and `standalone-android-build` skills to produce a content-ready Android standalone build. This skill handles content discovery/download, manifest packaging, standalone package specialization, and final Gradle verification.
 
 ## Inputs
 
@@ -24,7 +24,7 @@ If package or language is missing, ask one concise question.
 
 Use these sibling repo-local skills during execution:
 
-- `skills/github-content-folder/SKILL.md` for GitHub BookContent folder listing/download.
+- `skills/github-s3-content-pull/SKILL.md` for GitHub BookContent folder listing/download and its CDN-preferred byte fetching.
 - `skills/standalone-android-build/SKILL.md` for package rename, standalone cleanup, and standalone Gradle build conventions.
 
 Read each sibling `SKILL.md` before invoking its workflow.
@@ -316,10 +316,13 @@ languages.put(languageInEnglishName, languageInLocalName);
 
 Use `scripts/prepare-crwebplayer-content.mjs` for deterministic content work. It:
 
-- Lists `BookContent` from GitHub.
-- Downloads CRWebPlayer runtime files from the same GitHub repo: root `index.html`, root `manifest.json`, and root `dist/`.
+- Lists `BookContent` from GitHub — one lightweight, non-recursive API call regardless of how many books match.
 - Matches folders by case-insensitive normalized language token and known aliases.
-- Downloads missing matched folders through `github-content-folder`.
+- Downloads runtime files (`index.html`, `manifest.json`) and each matched book straight from the
+  CDN (`--content-cdn-base`, default `https://curiousreaderdev.curiouscontent.org`), which mirrors
+  the repo's path layout 1:1 — see "Content download strategy" below for how this avoids GitHub's
+  API rate limit almost entirely. `dist/` still goes through a GitHub-driven folder walk (its file
+  list isn't known ahead of time), but with CDN-preferred bytes per file via `github-s3-content-pull`.
 - Validates the local BookContent shape.
 - Upserts `web_apps_manifest.json` entries using `?book=<BookContentFolder>`.
 - Infers `appIconUrl` from real files in `app/src/main/assets/images/` using a normalized fuzzy match against the BookContent folder name, with production icon filenames preferred over dev/copy variants.
@@ -329,16 +332,49 @@ Use `scripts/prepare-crwebplayer-content.mjs` for deterministic content work. It
 
 The script is intentionally separate from the Android package rename so content problems are visible before project-wide changes.
 
+### Content download strategy: content.json fast path, GitHub fallback
+
+GitHub's Contents API rate limit (60/hour unauthenticated) is spent almost entirely on directory
+**listing**, not file bytes — each subdirectory a recursive walk enters is one API call, and a
+single book's `content/audios/` + `content/images/` alone can be 50-400+ files. Downloading many
+books in one run used to exhaust the budget partway through (confirmed: with 14 matched isiZulu
+books this was previously unable to complete).
+
+Each book's own `content/content.json` is *also* mirrored on the CDN and is itself the book's asset
+manifest — an H5P presentation format that embeds every audio/image it needs as inline `{ path,
+mime }` file references. So for each matched book, the script:
+
+1. Fetches `content.json` directly from the CDN — zero GitHub calls.
+2. Recursively scans it for every asset path (`collectAssetPaths()`: any `.path` string whose
+   containing object has a `mime` field, or that already starts with `audios/`/`images/` —
+   schema-tolerant, not hardcoded to specific H5P element types).
+3. Downloads every asset directly from the CDN, up to 12 concurrent requests at a time
+   (`mapWithConcurrency()` — sequential one-at-a-time fetching of a 100+ file book was correct but
+   slow; unbounded parallelism risks tripping connection limits).
+4. If the `content.json` fetch fails, JSON-parsing fails, or *any single asset* 404s/errors, the
+   whole book aborts this fast path and falls back to the GitHub-driven recursive walk (via
+   `github-s3-content-pull.mjs download`, itself still CDN-preferred per file) for that book only —
+   a book is never left partially populated by a failed fast-path attempt.
+
+Net effect verified in testing: 14/14 matched isiZulu books downloaded in **~1m42s** with **zero**
+GitHub API calls beyond the single initial `BookContent` listing — down from a run that couldn't
+complete at all. Pass `--no-content-cdn` to disable this entirely and force the old pure-GitHub
+path (e.g. if the CDN doesn't have a given language's content yet, or for debugging).
+
+This CDN mirrors whatever's currently *deployed* to the dev environment, not arbitrary git refs —
+fine for the default `develop` branch, but content from an unmerged feature branch on GitHub won't
+be present there and will correctly fall back to the GitHub walk.
+
 ## Progress Style
 
 Provide concise ordered updates:
 
 - `Content discovery`: matched N folders.
 - `Runtime files`: `already present` or `download index.html`, `download manifest.json`, `download dist`.
-- `Content download`: `already present` or `download <BookName>`.
+- `Content download`: `already present` or `download <BookName>` — note `via CDN content.json` vs. `content.json fast path unavailable; falling back to GitHub walk` per book.
 - `Manifest`: added N entries, total N.
 - `Fallback`: `remote listing rate-limited; using local books` when applicable.
 - `Standalone build`: package rename/cleanup status.
 - `Gradle`: build command and result.
 
-Be explicit about blockers such as GitHub API rate limits, missing content folders, manifest mismatches, or Gradle wrapper lock permissions.
+Be explicit about blockers such as GitHub API rate limits, missing content folders, manifest mismatches, or Gradle wrapper lock permissions. Note whether content came via the CDN fast path or the GitHub fallback — a run that's entirely GitHub-fallback for every book is a sign the CDN is unreachable or doesn't have that language's content yet, worth surfacing to the user rather than treating as routine.

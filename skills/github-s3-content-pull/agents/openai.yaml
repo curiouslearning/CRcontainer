@@ -1,0 +1,3 @@
+display_name: GitHub + S3 Content Pull
+short_description: Download selected GitHub folders, preferring a mirrored CDN/S3 host for file bytes.
+default_prompt: Download a specific content folder from a public GitHub repository without cloning the whole repo, using a mirrored CDN for file bytes when available to avoid GitHub API rate limits.
