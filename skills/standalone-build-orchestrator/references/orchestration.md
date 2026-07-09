@@ -59,6 +59,8 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
    - SDK removals/gates applied by standalone build skill.
    - Default language passed to Gradle.
    - Gradle build status and APK path.
+   - The Manual Checklist from `standalone-build-orchestrator/SKILL.md` (service-worker-free `dist/`
+     build, real `google-services.json` registration) — every run, success or not.
 
 Progress output style:
 

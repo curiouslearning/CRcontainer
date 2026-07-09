@@ -71,9 +71,34 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
    - Standalone build skill actions performed.
    - Default language passed to the build (`-PstandaloneDefaultLanguage` value).
    - Gradle result and APK path.
+   - The "Manual Checklist" below, every run, even on success — neither item is automated by
+     this skill and both are required for the standalone build to actually work correctly, not
+     just compile.
+
+## Manual Checklist (Not Automated)
+
+Always end the final response with these two items — this skill has no mechanism to satisfy
+either automatically, so silently omitting them leaves the human operator thinking the build is
+more ready than it is:
+
+- **A `CRWebPlayerJs/dist/` build with the service worker removed.** The runtime files this
+  skill downloads (`--download-runtime`) are pulled as-is from the CRWebPlayer repo/CDN; if that
+  build registers a service worker, it can interfere with `WebViewAssetLoader`-based offline
+  asset serving in the standalone app. Getting a dist build without one is a manual step outside
+  this skill's scope — flag it, don't attempt to strip it automatically.
+- **A fresh `google-services.json` registered for the target package via the Firebase Console.**
+  This skill does not add, duplicate, or otherwise touch `client` entries in
+  `app/google-services.json`. Without a `client` array entry whose `package_name` matches the
+  standalone `applicationId`, the Google Services Gradle plugin fails the build at
+  `processStandaloneDebugGoogleServices` with "No matching client found for package name
+  '<package>'". A previous run worked around this by manually duplicating the existing
+  `org.curiouslearning.container` entry and swapping its `package_name` — reusing that app's
+  Firebase credentials rather than a real separate registration. That is not something to
+  reproduce automatically; ask for a properly registered file instead.
 
 ## Troubleshooting Notes
 
+- If Gradle fails at `processStandaloneDebugGoogleServices` (or the equivalent standard task) with `No matching client found for package name '<package>'`, that is the "Manual Checklist" `google-services.json` item above — the Google Services plugin has no `client` entry for this `applicationId`. Do not attempt to fabricate one; report it as a blocker needing a real Firebase Console registration.
 - If the app crashes before `Application.onCreate` with `SentryInitProvider` or a similar SDK provider, runtime `BuildConfig` checks are not enough. Inspect the merged standalone manifest and remove the SDK at the dependency/manifest level for the standalone flavor.
 - For Sentry specifically, the standalone variant should not carry the Sentry Gradle plugin or Sentry dependency. Keep any Sentry usage behind a flavor-specific wrapper or standard-only source set so the standalone compile still succeeds.
 - If the merged standalone manifest still shows `io.sentry` providers or metadata after cleanup, treat that as a build configuration problem and fix it before shipping the APK.
