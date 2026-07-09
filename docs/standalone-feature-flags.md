@@ -7,13 +7,13 @@ This repository now supports a standalone Android flavor for offline Curious Rea
 The standalone flavor applicationId is:
 
 ```text
-org.curiouslearning.allSA_maharishi
+org.curiouslearning.container
 ```
 
 The base source package is still:
 
 ```text
-org.curiouslearning.allSA_maharishi
+org.curiouslearning.container
 ```
 
 The app now keeps the standard/standalone product flavor structure. The source package rename itself is still handled by the standalone build skill when you want the full package specialization.
@@ -59,7 +59,7 @@ There is also a string field, `DEFAULT_LANGUAGE`, empty for `standard` and set p
 
 ## Package Rename
 
-The standalone build skill is still responsible for renaming Java packages, Gradle namespace/application id, tests, manifest references, and JSON/config references from `org.curiouslearning.allSA_maharishi` to `org.curiouslearning.allSA_maharishi` when you want the full package specialization.
+The standalone build skill is still responsible for renaming Java packages, Gradle namespace/application id, tests, manifest references, and JSON/config references from `org.curiouslearning.container` to `org.curiouslearning.container` when you want the full package specialization.
 
 Source directories now live under:
 
@@ -178,8 +178,8 @@ It accepts an old package and a new package, performs a dry-run package rename, 
 For this package, the rename inputs were:
 
 ```text
-old package: org.curiouslearning.allSA_maharishi
-new package: org.curiouslearning.allSA_maharishi
+old package: org.curiouslearning.container
+new package: org.curiouslearning.container
 ```
 
 ## Verification Checklist

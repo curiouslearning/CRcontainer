@@ -15,7 +15,7 @@ The current unit test suite runs successfully, and Jacoco now produces a usable 
 
 ## Coverage Snapshot
 
-From the generated Jacoco report, aggregated across `org.curiouslearning.allSA_maharishi*` packages:
+From the generated Jacoco report, aggregated across `org.curiouslearning.container*` packages:
 
 - Instruction coverage: `240 / 12,325` `(~1.95%)`
 - Branch coverage: `9 / 978` `(~0.92%)`
