@@ -53,6 +53,9 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
 6. Run the standalone Android build skill with the requested package name.
    - If the project is already using that package, report it and skip only the rename step.
    - Still run standalone cleanup/validation/build steps from that skill.
+   - If Sentry is disabled for the standalone build, make sure the dependency and provider are removed from the standalone variant while keeping any standard-flavor implementation isolated behind flavor-specific source sets or wrappers.
+   - If the standalone variant uses bundled `web_apps_manifest.json`, confirm the asset manifest is parsed in the same shape it is written (`{ version, web_apps }`) and seeded into Room before the UI reads from `getAllWebApps()`.
+   - If the UI groups languages from seeded content, ensure missing `language` or `languageInEnglishName` values are skipped rather than inserted into sorted maps.
 7. Run the final standalone build:
 
 ```powershell
@@ -65,6 +68,226 @@ node skills/standalone-build-orchestrator/scripts/prepare-crwebplayer-content.mj
    - Manifest entries added or already present.
    - Standalone build skill actions performed.
    - Gradle result and APK path.
+
+## Troubleshooting Notes
+
+- If the app crashes before `Application.onCreate` with `SentryInitProvider` or a similar SDK provider, runtime `BuildConfig` checks are not enough. Inspect the merged standalone manifest and remove the SDK at the dependency/manifest level for the standalone flavor.
+- For Sentry specifically, the standalone variant should not carry the Sentry Gradle plugin or Sentry dependency. Keep any Sentry usage behind a flavor-specific wrapper or standard-only source set so the standalone compile still succeeds.
+- If the merged standalone manifest still shows `io.sentry` providers or metadata after cleanup, treat that as a build configuration problem and fix it before shipping the APK.
+- If the standalone build passes but startup still fails, re-open `app/build/intermediates/merged_manifests/standaloneDebug/processStandaloneDebugManifest/AndroidManifest.xml` and confirm that the removed SDK providers are absent.
+- If the app launches but the content list is empty, check the standalone bootstrap path:
+  - `web_apps_manifest.json` must be inserted into Room or returned through the same repository path the UI observes.
+  - `AppManifest` must handle the object-shaped manifest with a top-level `web_apps` array.
+  - `WebAppRepository.fetchWebApp()` should seed bundled assets when remote manifest loading is disabled.
+- If the app crashes in `sortLanguages()` or `MapLanguagesEnglishName()`, inspect the seeded `WebApp` rows for null or blank language fields and skip them before inserting into `TreeMap`.
+- If logcat shows checksum mismatch or `No package ID` warnings after a fresh APK, uninstall the app from the device before re-installing. Treat those as stale-install warnings unless a `FATAL EXCEPTION` follows.
+
+## Standalone Implementation Pattern
+
+Use this when you are porting a blank repo into the standalone shape we ended up with here.
+
+### Package and flavor
+
+- Standalone package used in this run:
+
+```text
+org.curiouslearning.allSA_maharishi
+```
+
+- Add a `mode` flavor dimension with `standard` and `standalone`.
+- Keep the standard flavor intact if you still need it.
+- Keep standalone SDK toggles in `BuildConfig` so the same source tree can compile both flavors.
+
+Example:
+
+```groovy
+flavorDimensions "mode"
+
+productFlavors {
+    standard {
+        dimension "mode"
+        buildConfigField "boolean", "ENABLE_SENTRY", "true"
+    }
+    standalone {
+        dimension "mode"
+        applicationId "org.curiouslearning.allSA_maharishi"
+        buildConfigField "boolean", "ENABLE_SENTRY", "false"
+    }
+}
+```
+
+### Standalone dependencies
+
+For standalone builds, keep only the dependencies you really need to launch the bundled web apps.
+
+Add AndroidX WebKit so `WebViewAssetLoader` compiles:
+
+```groovy
+implementation 'androidx.webkit:webkit:1.15.0'
+```
+
+If Sentry is standard-only, scope it to the standard flavor:
+
+```groovy
+standardImplementation(platform("io.sentry:sentry-bom:7.17.0"))
+standardImplementation("io.sentry:sentry-android") {
+    exclude group: "io.sentry", module: "sentry-android-ndk"
+}
+```
+
+If the repo still uses Facebook, Firebase, or Install Referrer in the standard flavor, keep them there and remove or gate them from standalone only when the standalone experience does not need them.
+
+### Bundled manifest bootstrap
+
+The standalone app should not depend on Retrofit for initial content. It should seed Room from the packaged `web_apps_manifest.json`.
+
+Asset manifest shape:
+
+```json
+{
+  "version": 1,
+  "web_apps": [
+    {
+      "appId": 3,
+      "appIconUrl": "chakus_cycle.png",
+      "title": "Curious Reader ChakusCycle IsiZulu",
+      "appUrl": "https://maharishi_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=ChakusCycleIsiZulu",
+      "language": "isiZulu",
+      "languageInEnglishName": "isiZulu"
+    }
+  ]
+}
+```
+
+Asset parsing template:
+
+```java
+public List<WebApp> getAllWebApps(AssetManager assetManager) {
+    String jsonData = getData(assetManager);
+    if (jsonData == null || jsonData.trim().isEmpty()) {
+        return Collections.emptyList();
+    }
+
+    JsonElement parsedElement = JsonParser.parseString(jsonData);
+    Type listType = new TypeToken<List<WebApp>>(){}.getType();
+
+    if (parsedElement.isJsonObject()) {
+        JsonObject jsonObject = parsedElement.getAsJsonObject();
+        JsonElement webAppsElement = jsonObject.get("web_apps");
+        if (webAppsElement != null && webAppsElement.isJsonArray()) {
+            return new Gson().fromJson(webAppsElement, listType);
+        }
+    }
+
+    if (parsedElement.isJsonArray()) {
+        return new Gson().fromJson(parsedElement, listType);
+    }
+
+    return Collections.emptyList();
+}
+```
+
+Repository seeding template:
+
+```java
+public void fetchWebApp() {
+    if (!BuildConfig.ENABLE_REMOTE_MANIFEST) {
+        List<WebApp> localWebApps = AppManifest.getAppManifest().getAllWebApps(application.getAssets())
+                .stream()
+                .filter(webApp -> webApp != null
+                        && webApp.getAppUrl() != null
+                        && webApp.getAppUrl().contains("/assets/CRWebPlayerJs/")
+                        && webApp.getLanguageInEnglishName() != null
+                        && !webApp.getLanguageInEnglishName().trim().isEmpty())
+                .collect(Collectors.toList());
+
+        if (!localWebApps.isEmpty()) {
+            webAppDatabase.deleteWebApps(localWebApps);
+            webAppDatabase.insertAll(localWebApps);
+        }
+        return;
+    }
+}
+```
+
+### Icon loading
+
+The manifest should carry the icon filename, not a hardcoded drawable mapping.
+
+Example manifest field:
+
+```json
+"appIconUrl": "chakus_cycle.png"
+```
+
+Loader template:
+
+```java
+public static void loadWebAppIcon(Context context, String imageUrl, ImageView imageView) {
+    String resolvedImageUrl = imageUrl;
+    if (resolvedImageUrl != null
+            && !resolvedImageUrl.startsWith("http://")
+            && !resolvedImageUrl.startsWith("https://")
+            && !resolvedImageUrl.startsWith("file:///android_asset/")) {
+        resolvedImageUrl = "file:///android_asset/images/" + resolvedImageUrl;
+    }
+
+    Picasso.get()
+            .load(resolvedImageUrl)
+            .resize(targetSizePixels, targetSizePixels)
+            .centerCrop()
+            .into(imageView);
+}
+```
+
+### Web app URL loading
+
+The `appUrl` should be the manifest URL, but the app should route it through `WebViewAssetLoader` so the content is served from assets.
+
+Example:
+
+```java
+WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+        .setDomain("hindi-cr-ftm-standalone.androidplatform.net")
+        .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+        .build();
+
+webView.setWebViewClient(new WebViewClient() {
+    @Override
+    public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+        return assetLoader.shouldInterceptRequest(request.getUrl());
+    }
+});
+
+webView.loadUrl(addCrUserIdToUrl(appUrl));
+```
+
+### Null-safe language grouping
+
+When you populate the home screen from seeded content, skip incomplete rows before putting data into sorted maps.
+
+Example:
+
+```java
+if (languageInEnglishName == null || languageInEnglishName.trim().isEmpty()
+        || languageInLocalName == null || languageInLocalName.trim().isEmpty()) {
+    continue;
+}
+languages.put(languageInEnglishName, languageInLocalName);
+```
+
+### Minimum file set for a blank repo
+
+- `app/build.gradle`
+- `app/src/main/assets/web_apps_manifest.json`
+- `app/src/main/assets/CRWebPlayerJs/`
+- `app/src/main/assets/images/`
+- `app/src/main/java/.../data/local/AppManifest.java`
+- `app/src/main/java/.../data/respository/WebAppRepository.java`
+- `app/src/main/java/.../utilities/ImageLoader.java`
+- `app/src/main/java/.../WebApp.java`
+- `app/src/main/java/.../MainActivity.java`
+- `app/src/standalone/AndroidManifest.xml`
 
 ## Content Helper
 
