@@ -35,6 +35,8 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
+import org.curiouslearning.container.core.context.AppContext;
+import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadHandler;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
@@ -1187,6 +1189,7 @@ public class MainActivity extends BaseActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
+        AppContext.getInstance().set(AppContextKey.LANGUAGE, language);
         Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
         updateDebugOverlay(); // Update overlay when language changes
 
