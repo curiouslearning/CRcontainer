@@ -2,6 +2,7 @@ package org.curiouslearning.container.core.context;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import java.util.Set;
 
@@ -21,6 +22,7 @@ import java.util.Set;
  */
 public class AppContext {
 
+    private static final String TAG = "AppContext";
     private static final String PREFS_NAME = "app_context_cache";
 
     private static volatile AppContext instance;
@@ -44,6 +46,9 @@ public class AppContext {
     public synchronized void init(Context context) {
         if (prefs == null) {
             prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        }
+        for (AppContextKey key : AppContextKey.values()) {
+            Log.d(TAG, key.name() + " = " + prefs.getAll().get(key.name()));
         }
     }
 

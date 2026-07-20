@@ -161,6 +161,9 @@ public class MainActivity extends BaseActivity {
         loadingIndicator.setVisibility(View.GONE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
+        if (!selectedLanguage.isEmpty()) {
+            AppContext.getInstance().set(AppContextKey.LANGUAGE, selectedLanguage);
+        }
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
