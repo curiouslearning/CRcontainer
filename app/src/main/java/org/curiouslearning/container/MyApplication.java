@@ -4,6 +4,7 @@ import android.app.Application;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
 
+import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.utilities.CountryProvider;
 
 import io.sentry.android.core.SentryAndroid;
@@ -12,6 +13,8 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        AppContext.getInstance().init(this);
 
         // FacebookSdk.sdkInitialize(getApplicationContext());
         FacebookSdk.setAutoInitEnabled(true);
