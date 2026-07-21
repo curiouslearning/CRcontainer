@@ -17,6 +17,7 @@ import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
+import org.curiouslearning.container.utilities.CountryProvider;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -132,6 +133,12 @@ public class DefaultAppEventPayloadHandler
             payload.metadata = new HashMap<>();
         }
         payload.metadata.put("container_app_version", BuildConfig.VERSION_NAME);
+
+        // MR-156: stamp the cached coarse country (full English name); "unknown"
+        // when the device has never resolved one.
+        String country = CountryProvider.getCountry();
+        payload.metadata.put("country",
+                country != null ? country : CountryProvider.MISSING_COUNTRY_VALUE);
 
         switch (normalizedCollection) {
 
