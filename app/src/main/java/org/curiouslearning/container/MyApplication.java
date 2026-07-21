@@ -5,6 +5,7 @@ import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
 
 import org.curiouslearning.container.core.context.AppContext;
+import org.curiouslearning.container.utilities.CountryProvider;
 
 import io.sentry.android.core.SentryAndroid;
 
@@ -31,5 +32,9 @@ public class MyApplication extends Application {
         });
         // RiveInitializer is auto-initialized via AndroidManifest.xml (InitializationProvider)
 
+        // MR-156: load the cached country and refresh it when the 7-day TTL lapses,
+        // so the payload handler can stamp metadata.country with no event-time I/O.
+        CountryProvider.init(this);
+        CountryProvider.refreshCountryIfStale(this);
     }
 }

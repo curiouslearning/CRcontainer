@@ -42,6 +42,9 @@ android {
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
+
+        // ipinfo.io Lite token — same public token shipped in the assessment-survey-js web bundle
+        buildConfigField "String", "IPINFO_TOKEN", "\"b6268727178610\""
     }
 
     buildFeatures {
