@@ -14,6 +14,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
 import org.curiouslearning.container.BuildConfig;
+import org.curiouslearning.container.core.context.AppContext;
+import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 
 import java.time.Instant;
@@ -187,6 +189,14 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
+        // Enrich with the Curious Reader selected language, read at event time from AppContext.
+        // Language can only change from MainActivity (never while a sub-app WebView is foregrounded),
+        // so the store-time value equals the launch language. Scoped to user_sessions_data only.
+        if (payload.metadata == null) {
+            payload.metadata = new HashMap<>();
+        }
+        payload.metadata.put("language", resolveLanguage());
+
         Map<String, Object> record = new HashMap<>();
 
         record.put("cr_user_id", payload.cr_user_id);
@@ -209,6 +219,22 @@ public class DefaultAppEventPayloadHandler
                 })
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed to save user session payload", e));
+    }
+
+    /**
+     * Resolves the Curious Reader selected language from {@link AppContext} for event enrichment.
+     * Falls back to {@code "unknown"} when the language is absent/blank — matching the
+     * {@code schema_version} fallback convention — or when the read fails (e.g. AppContext not yet
+     * initialized), so event storage never fails solely because the language is unavailable.
+     */
+    private String resolveLanguage() {
+        try {
+            String lang = AppContext.getInstance().get(AppContextKey.LANGUAGE);
+            return (lang != null && !lang.trim().isEmpty()) ? lang : "unknown";
+        } catch (Exception e) {
+            Log.w(TAG, "Language unavailable for enrichment — defaulting to \"unknown\"", e);
+            return "unknown";
+        }
     }
 
     /**
