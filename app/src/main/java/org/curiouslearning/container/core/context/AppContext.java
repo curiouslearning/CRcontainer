@@ -17,8 +17,11 @@ import java.util.Set;
  * {@link #init(Context)} once (e.g. from the Application class) before any
  * other method is used.
  *
- * Only simple values are supported (String, Boolean, Integer, Long, Float,
- * Double) — no arrays, collections, or other object types.
+ * Only simple values are supported (String, Boolean, Integer, Long, Float)
+ * — no arrays, collections, Double, or other object types. Double is
+ * rejected rather than narrowed to Float, since SharedPreferences has no
+ * native double storage and silently narrowing would make T get(key) throw
+ * ClassCastException for callers expecting a Double back.
  */
 public class AppContext {
 
@@ -68,11 +71,9 @@ public class AppContext {
             editor.putLong(name, (Long) value);
         } else if (value instanceof Float) {
             editor.putFloat(name, (Float) value);
-        } else if (value instanceof Double) {
-            editor.putFloat(name, ((Double) value).floatValue());
         } else {
             throw new IllegalArgumentException("AppContext only supports simple values "
-                    + "(String, Boolean, Integer, Long, Float, Double); got " + value.getClass());
+                    + "(String, Boolean, Integer, Long, Float); got " + value.getClass());
         }
         editor.apply();
     }
