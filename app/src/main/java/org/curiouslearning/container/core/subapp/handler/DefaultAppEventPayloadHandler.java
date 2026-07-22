@@ -4,39 +4,32 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.MetadataChanges;
-import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 
 import org.curiouslearning.container.BuildConfig;
+import org.curiouslearning.container.core.context.AppContext;
+import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 import org.curiouslearning.container.utilities.CountryProvider;
 
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 public class DefaultAppEventPayloadHandler
+        extends BaseAppEventPayloadHandler
         implements AppEventPayloadHandler {
 
     private static final String TAG = "AppEventHandler";
     private static final String COLLECTION_USER_SESSION = "user_sessions_data";
     private static final String COLLECTION_SUMMARY = "summary_data";
 
-    private final Map<String, ListenerRegistration> syncListeners = new HashMap<>();
-    private final String crUserId;
-
     // Process-level shared instance so the container (MainActivity) and every sub-app (WebApp) resolve to
     // one handler. A single syncListeners map makes the per-doc dedup guard in attachSyncListener effective
-    // process-wide (exactly one sync listener per summary doc), and lets MainActivity warm Firestore /
-    // attach listeners on container open, before any sub-app is launched.
+    // process-wide (exactly one sync listener per session doc), and lets MainActivity warm Firestore /
+    // attach listeners on container open, before any sub-app is launched. Summary docs are tracked
+    // separately by SummaryDataEventPayloadHandler's own singleton, warmed below for the same reason.
     private static DefaultAppEventPayloadHandler instance;
 
     /**
@@ -55,43 +48,11 @@ public class DefaultAppEventPayloadHandler
     }
 
     public DefaultAppEventPayloadHandler(@NonNull String crUserId) {
-        this.crUserId = crUserId;
-        attachExistingSyncListeners();
-    }
-
-    /**
-     * Removes any active sync listeners and clears the registry. Used when the shared instance is replaced
-     * for a new {@code crUserId} so stale registrations are not leaked.
-     */
-    private void detachListeners() {
-        for (ListenerRegistration reg : syncListeners.values()) {
-            if (reg != null) {
-                reg.remove();
-            }
-        }
-        syncListeners.clear();
-    }
-
-    private void attachExistingSyncListeners() {
-        if (crUserId.trim().isEmpty()) {
-            Log.w(TAG, "cr_user_id is blank — skipping existing sync listener attachment");
-            return;
-        }
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        db.collection(COLLECTION_SUMMARY)
-                .whereEqualTo("cr_user_id", crUserId)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<DocumentSnapshot> docs = querySnapshot.getDocuments();
-                    Log.d(TAG, "Attaching sync listeners to " + docs.size() + " existing summary docs");
-                    for (DocumentSnapshot doc : docs) {
-                        attachSyncListener(
-                                db.collection(COLLECTION_SUMMARY).document(doc.getId())
-                        );
-                    }
-                })
-                .addOnFailureListener(e ->
-                        Log.w(TAG, "Failed to fetch existing summary docs for sync listener attachment", e));
+        super(crUserId);
+        // Warms the summary handler's own singleton (and its existing-listener attachment)
+        // as soon as the container resolves this instance, matching the pre-split behavior
+        // where that attachment ran from this class's constructor.
+        SummaryDataEventPayloadHandler.getInstance(crUserId);
     }
 
     @Override
@@ -138,6 +99,16 @@ public class DefaultAppEventPayloadHandler
         payload.metadata.put("country",
                 country != null ? country : CountryProvider.MISSING_COUNTRY_VALUE);
 
+        // Stamp the Curious Reader language cached in AppContext (set on language selection /
+        // FTM launch). Left unstamped when unset/blank so summary partitioning falls back to
+        // its pre-language-partitioning behavior instead of writing an empty/sentinel value.
+        String language = AppContext.getInstance().contains(AppContextKey.LANGUAGE)
+                ? AppContext.getInstance().get(AppContextKey.LANGUAGE)
+                : null;
+        if (language != null && !language.trim().isEmpty()) {
+            payload.metadata.put("language", language);
+        }
+
         switch (normalizedCollection) {
 
             case COLLECTION_USER_SESSION:
@@ -147,7 +118,7 @@ public class DefaultAppEventPayloadHandler
 
             case COLLECTION_SUMMARY:
                 Log.d(TAG, "Handling summary_data payload");
-                storeSummaryPayload(db, payload);
+                SummaryDataEventPayloadHandler.getInstance(crUserId).handle(payload);
                 break;
 
             default:
@@ -218,191 +189,4 @@ public class DefaultAppEventPayloadHandler
                         Log.e(TAG, "Failed to save user session payload", e));
     }
 
-    /**
-     * Used for summary_data
-     */
-    private void storeSummaryPayload(
-            FirebaseFirestore db,
-            AppEventPayload payload
-    ) {
-
-        if (!(payload.data instanceof Map)) {
-            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
-                    + (payload.data == null ? "null" : payload.data.getClass()));
-            return;
-        }
-
-        Log.d(TAG, "Querying summary record (offline-first)");
-
-        Query query = db.collection(payload.collection)
-                .whereEqualTo("cr_user_id", payload.cr_user_id)
-                .whereEqualTo("app_id", payload.app_id)
-                .limit(1);
-
-        // Build the data write map once, using atomic FieldValue.increment sentinels for
-        // "add" fields so concurrent summary writes compose server-side instead of being
-        // read-modified-written (which loses updates when two writes race — e.g. the
-        // PUZZLE_COMPLETED + LEVEL_COMPLETED pair fired on the last puzzle of a level).
-        Map<String, Object> dataWriteMap = buildSummaryDataWriteMap(payload);
-
-        Map<String, Object> record = new HashMap<>();
-        record.put("cr_user_id", payload.cr_user_id);
-        record.put("app_id", payload.app_id);
-        record.put("metadata", payload.metadata);
-        record.put("data", dataWriteMap);
-
-        query.get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (!querySnapshot.isEmpty()) {
-
-                        DocumentSnapshot existingDoc = querySnapshot.getDocuments().get(0);
-
-                        record.put("updated_at", Instant.now().toString());
-
-                        DocumentReference existingRef = db.collection(payload.collection)
-                                .document(existingDoc.getId());
-
-                        existingRef.set(record, SetOptions.merge())
-                                .addOnSuccessListener(aVoid -> {
-                                    Log.d(TAG, "Updated summary payload with id: " + existingDoc.getId());
-                                    attachSyncListener(existingRef);
-                                })
-                                .addOnFailureListener(e ->
-                                        Log.e(TAG, "Failed to update summary payload", e));
-
-                    } else {
-
-                        Log.d(TAG, "No existing summary record — creating new");
-                        createNewSummaryDoc(db, payload, record);
-                    }
-                })
-                .addOnFailureListener(e -> {
-
-                    Log.w(TAG, "Query failed — creating new summary record", e);
-                    createNewSummaryDoc(db, payload, record);
-                });
-    }
-
-    private void createNewSummaryDoc(
-            FirebaseFirestore db,
-            AppEventPayload payload,
-            Map<String, Object> record
-    ) {
-
-        // record already carries the atomic-increment data write map built in
-        // storeSummaryPayload. FieldValue.increment treats a missing field as 0, so the
-        // same map is correct for a brand-new document too.
-        record.put("collection", payload.collection);
-        record.put("created_at", Instant.now().toString());
-        record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
-
-        db.collection(payload.collection)
-                .add(record)
-                .addOnSuccessListener(ref -> {
-                    Log.d(TAG, "Created new summary payload docId=" + ref.getId());
-                    attachSyncListener(ref);
-                })
-                .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed to create summary payload", e));
-    }
-
-    /**
-     * Builds the {@code data} write map for a summary_data payload. "add" fields are emitted
-     * as atomic {@link FieldValue#increment} sentinels so concurrent writes compose
-     * server-side rather than being read-modified-written (which loses updates when two
-     * summary writes race). "replace" fields (and "add" on a non-numeric value, matching the
-     * legacy fallback) are written verbatim.
-     *
-     * This does NOT read the existing document: {@code increment} treats a missing field as
-     * 0, so the same map is correct whether the target doc already exists or is being created.
-     * Written with {@link SetOptions#merge}, sibling fields not present here are left intact.
-     */
-    private Map<String, Object> buildSummaryDataWriteMap(@NonNull AppEventPayload payload) {
-
-        Map<String, Object> writeMap = new HashMap<>();
-
-        if (!(payload.data instanceof Map)) {
-            Log.e(TAG, "Invalid payload.data type during write-map build");
-            return writeMap;
-        }
-
-        Map<String, Object> newData = (Map<String, Object>) payload.data;
-
-        Map<String, Object> options = new HashMap<>();
-
-        if (payload.options instanceof Map) {
-            Map<?, ?> raw = (Map<?, ?>) payload.options;
-            for (Map.Entry<?, ?> entry : raw.entrySet()) {
-                options.put(String.valueOf(entry.getKey()), entry.getValue());
-            }
-        }
-
-        for (Map.Entry<String, Object> entry : newData.entrySet()) {
-
-            String key = entry.getKey();
-            Object newValue = entry.getValue();
-
-            String operation =
-                    options.get(key) instanceof String
-                            ? (String) options.get(key)
-                            : "replace";
-
-            if ("add".equals(operation) && newValue instanceof Number) {
-
-                Number n = (Number) newValue;
-
-                boolean integral =
-                        n instanceof Long ||
-                                n instanceof Integer ||
-                                n instanceof Short ||
-                                n instanceof Byte;
-
-                writeMap.put(key, integral
-                        ? FieldValue.increment(n.longValue())
-                        : FieldValue.increment(n.doubleValue()));
-
-            } else {
-                // "replace" (default), or "add" on a non-numeric value — overwrite.
-                writeMap.put(key, newValue);
-            }
-        }
-
-        return writeMap;
-    }
-
-    /**
-     * Attaches a one-shot metadata listener that stamps synced_at when the pending write
-     * is confirmed by the Firestore server (offline write flushed on reconnect, or
-     * immediate server confirmation when already online).
-     *
-     * Safe to call multiple times for the same docRef — only one listener is kept active
-     * per document ID at a time.
-     */
-    private void attachSyncListener(@NonNull DocumentReference docRef) {
-        String docId = docRef.getId();
-
-        if (syncListeners.containsKey(docId)) {
-            Log.d(TAG, "Sync listener already active for docId=" + docId);
-            return;
-        }
-
-        ListenerRegistration[] holder = {null};
-        holder[0] = docRef.addSnapshotListener(MetadataChanges.INCLUDE, (snapshot, error) -> {
-            if (snapshot == null || error != null) return;
-            if (!snapshot.getMetadata().hasPendingWrites() && !snapshot.getMetadata().isFromCache()) {
-                syncListeners.remove(docId);
-                if (holder[0] != null) holder[0].remove();
-                Log.d(TAG, "Sync detected for docId=" + docId);
-                Map<String, Object> update = new HashMap<>();
-                update.put("synced_at", Instant.now().toString());
-                docRef.set(update, SetOptions.merge())
-                        .addOnSuccessListener(v ->
-                                Log.d(TAG, "synced_at recorded for docId=" + docId))
-                        .addOnFailureListener(e ->
-                                Log.e(TAG, "Failed to record synced_at for docId=" + docId, e));
-            }
-        });
-
-        syncListeners.put(docId, holder[0]);
-    }
 }
