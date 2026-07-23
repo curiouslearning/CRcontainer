@@ -140,6 +140,14 @@ public class DefaultAppEventPayloadHandler
         payload.metadata.put("country",
                 country != null ? country : CountryProvider.MISSING_COUNTRY_VALUE);
 
+        if (payload.attribution == null) {
+            payload.attribution = new HashMap<>();
+        }
+        payload.attribution.put("campaign_id", resolveContextString(AppContextKey.CAMPAIGN_ID, ""));
+        payload.attribution.put("source", resolveContextString(AppContextKey.SOURCE, ""));
+        payload.attribution.put("hostname", resolveContextString(AppContextKey.HOSTNAME, "unknown"));
+        payload.attribution.put("apk_package_name", BuildConfig.APPLICATION_ID);
+
         switch (normalizedCollection) {
 
             case COLLECTION_USER_SESSION:
@@ -212,6 +220,7 @@ public class DefaultAppEventPayloadHandler
         record.put("created_at", Instant.now().toString());
         record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
         record.put("metadata", payload.metadata);
+        record.put("attribution", payload.attribution);
 
         Map<String, Object> data =
                 new HashMap<>((Map<String, Object>) payload.data);
@@ -235,12 +244,16 @@ public class DefaultAppEventPayloadHandler
      * initialized), so event storage never fails solely because the language is unavailable.
      */
     private String resolveLanguage() {
+        return resolveContextString(AppContextKey.LANGUAGE, "unknown");
+    }
+
+    private String resolveContextString(AppContextKey key, String fallback) {
         try {
-            String lang = AppContext.getInstance().get(AppContextKey.LANGUAGE);
-            return (lang != null && !lang.trim().isEmpty()) ? lang : "unknown";
+            String value = AppContext.getInstance().get(key);
+            return (value != null && !value.trim().isEmpty()) ? value : fallback;
         } catch (Exception e) {
-            Log.w(TAG, "Language unavailable for enrichment — defaulting to \"unknown\"", e);
-            return "unknown";
+            Log.w(TAG, "AppContext value unavailable for " + key + " — defaulting to \"" + fallback + "\"", e);
+            return fallback;
         }
     }
 
@@ -275,6 +288,7 @@ public class DefaultAppEventPayloadHandler
         record.put("cr_user_id", payload.cr_user_id);
         record.put("app_id", payload.app_id);
         record.put("metadata", payload.metadata);
+        record.put("attribution", payload.attribution);
         record.put("data", dataWriteMap);
 
         query.get()
