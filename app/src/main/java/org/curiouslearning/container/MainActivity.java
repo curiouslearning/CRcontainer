@@ -164,6 +164,7 @@ public class MainActivity extends BaseActivity {
         if (!selectedLanguage.isEmpty()) {
             AppContext.getInstance().set(AppContextKey.LANGUAGE, selectedLanguage);
         }
+        hydrateAttributionContext();
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
@@ -217,6 +218,8 @@ public class MainActivity extends BaseActivity {
                         installReferrerEditor.putString("source", source);
                         installReferrerEditor.putString("campaign_id", campaign_id);
                         installReferrerEditor.apply();
+
+                        hydrateAttributionContext();
 
                         // Now check offline mode and log event with the stored UTM params
                         if (!isInternetConnected(getApplicationContext())) {
@@ -714,6 +717,7 @@ public class MainActivity extends BaseActivity {
                     storeSelectLanguage(lang);
                     isAttributionComplete = true;
                     AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
+                    hydrateAttributionContext();
 
                     if (isAttributionComplete) {
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
@@ -1186,6 +1190,17 @@ public class MainActivity extends BaseActivity {
                 }
             }
         });
+    }
+
+    private void hydrateAttributionContext() {
+        SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
+        String source = installReferrerPrefs.getString("source", "");
+        String campaignId = installReferrerPrefs.getString("campaign_id", "");
+        AppContext context = AppContext.getInstance();
+        context.set(AppContextKey.SOURCE,
+            source == null || source.trim().isEmpty() ? "" : source.trim());
+        context.set(AppContextKey.CAMPAIGN_ID,
+            campaignId == null || campaignId.trim().isEmpty() ? "" : campaignId.trim());
     }
 
     private void storeSelectLanguage(String language) {

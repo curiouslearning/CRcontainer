@@ -5,5 +5,8 @@ package org.curiouslearning.container.core.context;
  * here rather than introducing separate constants elsewhere.
  */
 public enum AppContextKey {
-    LANGUAGE
+    LANGUAGE,
+    CAMPAIGN_ID,
+    SOURCE,
+    HOSTNAME
 }
