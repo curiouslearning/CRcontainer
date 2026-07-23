@@ -69,6 +69,10 @@ public class DefaultAppEventPayloadHandler
 
     
     private void storePayload(@NonNull AppEventPayload payload) {
+        Log.d(TAG, 
+            "Attempting to store payload | app_id=" + payload.app_id + " collection=" + payload.collection
+            + " cr_user_id=" + payload.cr_user_id
+        );
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String rawCollection = payload.collection;

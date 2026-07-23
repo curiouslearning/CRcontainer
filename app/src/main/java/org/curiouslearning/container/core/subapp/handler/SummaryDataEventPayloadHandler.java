@@ -57,6 +57,9 @@ class SummaryDataEventPayloadHandler extends BaseAppEventPayloadHandler {
             Log.w(TAG, "cr_user_id is blank — skipping existing sync listener attachment");
             return;
         }
+
+        Log.d(TAG, "Attaching sync listeners for cr_user_id=" + crUserId);
+
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection(COLLECTION_SUMMARY)
                 .whereEqualTo("cr_user_id", crUserId)
