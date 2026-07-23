@@ -1196,12 +1196,11 @@ public class MainActivity extends BaseActivity {
         SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
         String source = installReferrerPrefs.getString("source", "");
         String campaignId = installReferrerPrefs.getString("campaign_id", "");
-        if (source != null && !source.trim().isEmpty()) {
-            AppContext.getInstance().set(AppContextKey.SOURCE, source);
-        }
-        if (campaignId != null && !campaignId.trim().isEmpty()) {
-            AppContext.getInstance().set(AppContextKey.CAMPAIGN_ID, campaignId);
-        }
+        AppContext context = AppContext.getInstance();
+        context.set(AppContextKey.SOURCE,
+            source == null || source.trim().isEmpty() ? "" : source.trim());
+        context.set(AppContextKey.CAMPAIGN_ID,
+            campaignId == null || campaignId.trim().isEmpty() ? "" : campaignId.trim());
     }
 
     private void storeSelectLanguage(String language) {
