@@ -161,13 +161,19 @@ public class WebAppActivity extends BaseActivity implements WebAppJsBridge.WebAp
 
     @Override
     public void onCachedStatusReceived(boolean dataCachedStatus) {
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putBoolean(String.valueOf(urlIndex), dataCachedStatus);
-        editor.apply();
-
-        if (!isInternetConnected(getApplicationContext()) && dataCachedStatus) {
-            runOnUiThread(() -> showPrompt("Please Connect to the Network"));
+        if (dataCachedStatus) {
+            // Only advance the cached flag from false → true, never downgrade true → false.
+            // FTM's JS calls cachedStatus(false) at startup before the service worker has
+            // confirmed readiness; if we wrote that false back to prefs we would clear the
+            // "app is cached" flag that was set correctly in a prior session, causing the
+            // offline prompt to appear on the next offline launch even though the app IS cached.
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putBoolean(String.valueOf(urlIndex), true);
+            editor.apply();
+            isDataCached = true;
         }
+        // A false signal from JS is intentionally ignored: it does not mean the app has
+        // lost its cache — it just means the service worker hasn't confirmed yet this session.
     }
 
     @Override

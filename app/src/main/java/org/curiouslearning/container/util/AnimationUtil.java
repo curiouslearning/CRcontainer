@@ -48,8 +48,11 @@ public class AnimationUtil {
         scaleY.setDuration(1500);
         scaleX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
         scaleY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-        scaleX.start();
-        scaleY.start();
+        // Group into a single AnimatorSet so the choreographer only schedules ONE callback
+        // per frame instead of two independent callbacks, halving animation scheduling overhead.
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(scaleX, scaleY);
+        set.start();
         return new ObjectAnimator[]{scaleX, scaleY};
     }
 

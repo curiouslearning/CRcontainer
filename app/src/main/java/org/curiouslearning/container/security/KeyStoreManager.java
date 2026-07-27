@@ -1,4 +1,4 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.security;
 
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
