@@ -35,6 +35,8 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
+import org.curiouslearning.container.core.context.AppContext;
+import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadHandler;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
@@ -159,6 +161,10 @@ public class MainActivity extends BaseActivity {
         loadingIndicator.setVisibility(View.GONE);
         isReferrerHandled = prefs.getBoolean(REFERRER_HANDLED_KEY, false);
         selectedLanguage = prefs.getString("selectedLanguage", "");
+        if (!selectedLanguage.isEmpty()) {
+            AppContext.getInstance().set(AppContextKey.LANGUAGE, selectedLanguage);
+        }
+        hydrateAttributionContext();
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
@@ -212,6 +218,8 @@ public class MainActivity extends BaseActivity {
                         installReferrerEditor.putString("source", source);
                         installReferrerEditor.putString("campaign_id", campaign_id);
                         installReferrerEditor.apply();
+
+                        hydrateAttributionContext();
 
                         // Now check offline mode and log event with the stored UTM params
                         if (!isInternetConnected(getApplicationContext())) {
@@ -709,6 +717,7 @@ public class MainActivity extends BaseActivity {
                     storeSelectLanguage(lang);
                     isAttributionComplete = true;
                     AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
+                    hydrateAttributionContext();
 
                     if (isAttributionComplete) {
                         AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
@@ -1183,10 +1192,22 @@ public class MainActivity extends BaseActivity {
         });
     }
 
+    private void hydrateAttributionContext() {
+        SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
+        String source = installReferrerPrefs.getString("source", "");
+        String campaignId = installReferrerPrefs.getString("campaign_id", "");
+        AppContext context = AppContext.getInstance();
+        context.set(AppContextKey.SOURCE,
+            source == null || source.trim().isEmpty() ? "" : source.trim());
+        context.set(AppContextKey.CAMPAIGN_ID,
+            campaignId == null || campaignId.trim().isEmpty() ? "" : campaignId.trim());
+    }
+
     private void storeSelectLanguage(String language) {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
+        AppContext.getInstance().set(AppContextKey.LANGUAGE, language);
         Log.d(TAG, "storeSelectLanguage: Stored selected language: " + language);
         updateDebugOverlay(); // Update overlay when language changes
 

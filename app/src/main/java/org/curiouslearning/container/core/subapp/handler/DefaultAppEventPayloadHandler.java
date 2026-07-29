@@ -7,14 +7,17 @@ import androidx.annotation.NonNull;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.MetadataChanges;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 
 import org.curiouslearning.container.BuildConfig;
+import org.curiouslearning.container.core.context.AppContext;
+import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
+import org.curiouslearning.container.utilities.CountryProvider;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -28,6 +31,7 @@ public class DefaultAppEventPayloadHandler
     private static final String TAG = "AppEventHandler";
     private static final String COLLECTION_USER_SESSION = "user_sessions_data";
     private static final String COLLECTION_SUMMARY = "summary_data";
+    private static final String LANGUAGE_FIELD = "metadata.language";
 
     private final Map<String, ListenerRegistration> syncListeners = new HashMap<>();
     private final String crUserId;
@@ -105,7 +109,6 @@ public class DefaultAppEventPayloadHandler
         storePayload(payload);
     }
 
-    
     private void storePayload(@NonNull AppEventPayload payload) {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -130,6 +133,30 @@ public class DefaultAppEventPayloadHandler
             payload.metadata = new HashMap<>();
         }
         payload.metadata.put("container_app_version", BuildConfig.VERSION_NAME);
+
+        // MR-156: stamp the cached coarse country (full English name); "unknown"
+        // when the device has never resolved one.
+        String country = CountryProvider.getCountry();
+        payload.metadata.put("country",
+                country != null ? country : CountryProvider.MISSING_COUNTRY_VALUE);
+
+        if (payload.attribution == null) {
+            payload.attribution = new HashMap<>();
+        }
+        payload.attribution.put("campaign_id", resolveContextString(AppContextKey.CAMPAIGN_ID, ""));
+        payload.attribution.put("source", resolveContextString(AppContextKey.SOURCE, ""));
+        payload.attribution.put("hostname", resolveContextString(AppContextKey.HOSTNAME, "unknown"));
+        payload.attribution.put("apk_package_name", BuildConfig.APPLICATION_ID);
+
+        // Stamp the Curious Reader language cached in AppContext. Left unstamped when
+        // unset/blank (rather than a sentinel like "unknown") so summary_data's
+        // field-presence query fallback (see storeSummaryPayload) keeps working — a
+        // written sentinel would make an unset-language doc indistinguishable from one
+        // genuinely tagged with that sentinel as its language.
+        String language = resolveContextString(AppContextKey.LANGUAGE, null);
+        if (language != null) {
+            payload.metadata.put("language", language);
+        }
 
         switch (normalizedCollection) {
 
@@ -195,6 +222,7 @@ public class DefaultAppEventPayloadHandler
         record.put("created_at", Instant.now().toString());
         record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
         record.put("metadata", payload.metadata);
+        record.put("attribution", payload.attribution);
 
         Map<String, Object> data =
                 new HashMap<>((Map<String, Object>) payload.data);
@@ -211,8 +239,24 @@ public class DefaultAppEventPayloadHandler
                         Log.e(TAG, "Failed to save user session payload", e));
     }
 
+    private String resolveContextString(AppContextKey key, String fallback) {
+        try {
+            String value = AppContext.getInstance().get(key);
+            return (value != null && !value.trim().isEmpty()) ? value : fallback;
+        } catch (Exception e) {
+            Log.w(TAG, "AppContext value unavailable for " + key
+                    + (fallback != null ? " — defaulting to \"" + fallback + "\"" : " — leaving unset"), e);
+            return fallback;
+        }
+    }
+
     /**
-     * Used for summary_data
+     * Used for summary_data. Partitioned per language via the {@code metadata.language} field
+     * (stamped, or left absent when unset/blank, by {@link #storePayload}).
+     *
+     * When no language is available, the query matches on {@code cr_user_id} + {@code app_id}
+     * only — the same shape used before language partitioning existed. This is also what
+     * transparently picks up legacy summary docs that predate it, without a separate migration.
      */
     private void storeSummaryPayload(
             FirebaseFirestore db,
@@ -225,12 +269,10 @@ public class DefaultAppEventPayloadHandler
             return;
         }
 
-        Log.d(TAG, "Querying summary record (offline-first)");
+        String language = (String) payload.metadata.get("language");
 
-        Query query = db.collection(payload.collection)
-                .whereEqualTo("cr_user_id", payload.cr_user_id)
-                .whereEqualTo("app_id", payload.app_id)
-                .limit(1);
+        Log.d(TAG, "Querying summary record (offline-first)"
+                + (language != null ? " language=" + language : " (no language)"));
 
         // Build the data write map once, using atomic FieldValue.increment sentinels for
         // "add" fields so concurrent summary writes compose server-side instead of being
@@ -242,38 +284,77 @@ public class DefaultAppEventPayloadHandler
         record.put("cr_user_id", payload.cr_user_id);
         record.put("app_id", payload.app_id);
         record.put("metadata", payload.metadata);
+        record.put("attribution", payload.attribution);
         record.put("data", dataWriteMap);
 
-        query.get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (!querySnapshot.isEmpty()) {
-
-                        DocumentSnapshot existingDoc = querySnapshot.getDocuments().get(0);
-
-                        record.put("updated_at", Instant.now().toString());
-
-                        DocumentReference existingRef = db.collection(payload.collection)
-                                .document(existingDoc.getId());
-
-                        existingRef.set(record, SetOptions.merge())
-                                .addOnSuccessListener(aVoid -> {
-                                    Log.d(TAG, "Updated summary payload with id: " + existingDoc.getId());
-                                    attachSyncListener(existingRef);
-                                })
-                                .addOnFailureListener(e ->
-                                        Log.e(TAG, "Failed to update summary payload", e));
-
-                    } else {
-
-                        Log.d(TAG, "No existing summary record — creating new");
+        if (language != null) {
+            // Language known: Firestore can match it server-side directly.
+            db.collection(payload.collection)
+                    .whereEqualTo("cr_user_id", payload.cr_user_id)
+                    .whereEqualTo("app_id", payload.app_id)
+                    .whereEqualTo(LANGUAGE_FIELD, language)
+                    .limit(1)
+                    .get()
+                    .addOnSuccessListener(querySnapshot ->
+                            onSummaryQueryResult(db, payload, record, firstDocId(querySnapshot)))
+                    .addOnFailureListener(e -> {
+                        Log.w(TAG, "Query failed — creating new summary record", e);
                         createNewSummaryDoc(db, payload, record);
-                    }
-                })
-                .addOnFailureListener(e -> {
+                    });
+        } else {
+            // Language unknown: Firestore has no "field does not exist" filter, so match
+            // cr_user_id + app_id server-side, then pick the doc lacking metadata.language
+            // client-side. This is what keeps the fallback from silently updating a doc
+            // that's already tagged with a different, known language.
+            db.collection(payload.collection)
+                    .whereEqualTo("cr_user_id", payload.cr_user_id)
+                    .whereEqualTo("app_id", payload.app_id)
+                    .get()
+                    .addOnSuccessListener(querySnapshot -> {
+                        String existingDocId = null;
+                        for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                            if (!doc.contains(LANGUAGE_FIELD)) {
+                                existingDocId = doc.getId();
+                                break;
+                            }
+                        }
+                        onSummaryQueryResult(db, payload, record, existingDocId);
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.w(TAG, "Query failed — creating new summary record", e);
+                        createNewSummaryDoc(db, payload, record);
+                    });
+        }
+    }
 
-                    Log.w(TAG, "Query failed — creating new summary record", e);
-                    createNewSummaryDoc(db, payload, record);
-                });
+    private static String firstDocId(QuerySnapshot querySnapshot) {
+        return querySnapshot.isEmpty() ? null : querySnapshot.getDocuments().get(0).getId();
+    }
+
+    private void onSummaryQueryResult(
+            FirebaseFirestore db,
+            AppEventPayload payload,
+            Map<String, Object> record,
+            String existingDocId
+    ) {
+        if (existingDocId != null) {
+
+            record.put("updated_at", Instant.now().toString());
+
+            DocumentReference existingRef = db.collection(payload.collection).document(existingDocId);
+
+            existingRef.set(record, SetOptions.merge())
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Updated summary payload with id: " + existingDocId);
+                        attachSyncListener(existingRef);
+                    })
+                    .addOnFailureListener(e ->
+                            Log.e(TAG, "Failed to update summary payload", e));
+
+        } else {
+            Log.d(TAG, "No existing summary record — creating new");
+            createNewSummaryDoc(db, payload, record);
+        }
     }
 
     private void createNewSummaryDoc(

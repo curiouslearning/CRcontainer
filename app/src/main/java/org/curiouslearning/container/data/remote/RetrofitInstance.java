@@ -9,6 +9,7 @@ import com.google.gson.reflect.TypeToken;
 
 import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.data.database.WebAppDatabase;
+import org.curiouslearning.container.data.model.IpInfoResponse;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.model.WebAppResponse;
 import org.curiouslearning.container.utilities.CacheUtils;
@@ -47,6 +48,35 @@ public class RetrofitInstance {
 
     public interface FetchCallback {
         void onComplete();
+    }
+
+    public interface CountryCallback {
+        void onSuccess(String rawCountry);
+
+        void onFailure();
+    }
+
+    public void fetchCountry(CountryCallback callback) {
+        ApiService api = retrofit.create(ApiService.class);
+        Call<IpInfoResponse> call = api.getIpInfo(BuildConfig.IPINFO_TOKEN);
+
+        call.enqueue(new Callback<IpInfoResponse>() {
+            @Override
+            public void onResponse(Call<IpInfoResponse> call, Response<IpInfoResponse> response) {
+                // Never log the response body here — it contains the device IP (MR-156 AC 2).
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body().country);
+                } else {
+                    callback.onFailure();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<IpInfoResponse> call, Throwable t) {
+                Log.w("CountryProvider", "country lookup failed: " + t.getMessage());
+                callback.onFailure();
+            }
+        });
     }
 
     public void getAppManifest(WebAppDatabase webAppDatabase, FetchCallback callback) {

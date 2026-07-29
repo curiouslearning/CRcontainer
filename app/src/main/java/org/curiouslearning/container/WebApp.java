@@ -26,6 +26,8 @@ import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import io.sentry.Sentry;
 
+import org.curiouslearning.container.core.context.AppContext;
+import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
 import org.curiouslearning.container.core.subapp.validation.AppEventPayloadValidator;
 import org.curiouslearning.container.core.subapp.validation.ValidationResult;
@@ -77,6 +79,10 @@ public class WebApp extends BaseActivity {
             appUrl = intent.getStringExtra("appUrl");
             language = intent.getStringExtra("language");
             languageInEnglishName = intent.getStringExtra("languageInEnglishName");
+
+            String host = (appUrl != null) ? Uri.parse(appUrl).getHost() : null;
+            AppContext.getInstance().set(AppContextKey.HOSTNAME,
+                    (host != null && !host.isEmpty()) ? host : "unknown");
         }
     }
 
