@@ -21,21 +21,27 @@ import okhttp3.OkHttpClient;
  *
  * <h3>Loading strategy</h3>
  * <ol>
- *   <li>Check OkHttp disk cache first ({@link NetworkPolicy#OFFLINE}) — zero network round-trip.</li>
- *   <li>On cache-miss, fetch from the network WITH the full cache pipeline enabled so the
- *       image is cached on disk for future loads.</li>
+ * <li>Check OkHttp disk cache first ({@link NetworkPolicy#OFFLINE}) — zero
+ * network round-trip.</li>
+ * <li>On cache-miss, fetch from the network WITH the full cache pipeline
+ * enabled so the
+ * image is cached on disk for future loads.</li>
  * </ol>
  *
  * <h3>Why this is faster</h3>
  * <ul>
- *   <li>All requests are resized to {@code targetSize × targetSize} dp before decoding,
- *       so the bitmap pool stays small and GC pressure is reduced.</li>
- *   <li>A fade-in animation hides the latency of the first network fetch so the UI
- *       never looks "broken" while icons arrive.</li>
- *   <li>OkHttp connection pooling and keep-alive are explicitly configured so concurrent
- *       icon fetches reuse the same TCP connections.</li>
- *   <li>{@link Picasso#setIndicatorsEnabled(boolean)} can be toggled via
- *       {@link #setDebugIndicators(boolean)} to see cache-hit/miss in development.</li>
+ * <li>All requests are resized to {@code targetSize × targetSize} dp before
+ * decoding,
+ * so the bitmap pool stays small and GC pressure is reduced.</li>
+ * <li>A fade-in animation hides the latency of the first network fetch so the
+ * UI
+ * never looks "broken" while icons arrive.</li>
+ * <li>OkHttp connection pooling and keep-alive are explicitly configured so
+ * concurrent
+ * icon fetches reuse the same TCP connections.</li>
+ * <li>{@link Picasso#setIndicatorsEnabled(boolean)} can be toggled via
+ * {@link #setDebugIndicators(boolean)} to see cache-hit/miss in
+ * development.</li>
  * </ul>
  */
 public class ImageLoader {
@@ -80,22 +86,21 @@ public class ImageLoader {
      * Loads an app icon into {@code imageView} using a two-step cache strategy:
      * disk-first, then network on miss.
      *
-     * <p>Shows a placeholder while loading and a subtle fade-in on first network load
+     * <p>
+     * Shows a placeholder while loading and a subtle fade-in on first network load
      * so the UI never appears "broken" during slow connections.
      */
     public static void loadWebAppIcon(Context context, String imageUrl, ImageView imageView) {
-        if (imageUrl == null || imageUrl.isEmpty()) {
-            imageView.setImageResource(R.drawable.placeholder_app_icon);
-            return;
-        }
 
         Picasso p = getInstance(context);
 
         // Step 1: Try from disk cache. This is instant on a cache-hit.
+        // We omit .placeholder() here so that on a recycled view (e.g., language change),
+        // the previous icon remains visible until the new one is ready, creating a
+        // seamless "ghosting" effect rather than flashing a white box.
         p.load(imageUrl)
                 .resize(targetSizePixels, targetSizePixels)
                 .centerCrop()
-                .placeholder(R.drawable.placeholder_app_icon)
                 .networkPolicy(NetworkPolicy.OFFLINE) // disk only — no network round-trip
                 .into(imageView, new Callback() {
                     @Override
@@ -107,11 +112,10 @@ public class ImageLoader {
                     public void onError(Exception e) {
                         // Step 2: Cache miss — fetch from network.
                         // Picasso will store the result in the OkHttp cache automatically.
+                        // Again, no .placeholder() so we don't flash during the network request.
                         p.load(imageUrl)
                                 .resize(targetSizePixels, targetSizePixels)
                                 .centerCrop()
-                                .placeholder(R.drawable.placeholder_app_icon)
-                                .error(R.drawable.placeholder_app_icon)
                                 .into(imageView);
                     }
                 });
@@ -119,7 +123,8 @@ public class ImageLoader {
 
     /**
      * Pre-warms the disk cache for a list of icon URLs.
-     * Call this after the manifest is fetched, before the user can tap the settings gear.
+     * Call this after the manifest is fetched, before the user can tap the settings
+     * gear.
      * Uses Picasso's fetch() which downloads without attaching to a view.
      */
     public static void prewarmIconCache(Context context, java.util.List<String> iconUrls) {
@@ -134,7 +139,10 @@ public class ImageLoader {
         }
     }
 
-    /** Toggle Picasso debug indicators (colored squares on each image showing cache source). */
+    /**
+     * Toggle Picasso debug indicators (colored squares on each image showing cache
+     * source).
+     */
     public static void setDebugIndicators(boolean enabled) {
         if (picasso != null) {
             picasso.setIndicatorsEnabled(enabled);
