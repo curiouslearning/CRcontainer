@@ -12,14 +12,20 @@ import android.view.View;
 /**
  * Draws an expanding translucent circle to draw attention to the FTM app icon.
  *
- * <p>Performance notes for low-end devices:
+ * <p>
+ * Performance notes for low-end devices:
  * <ul>
- *   <li>A {@code LAYER_TYPE_HARDWARE} layer is set while the animation is running so the
- *       GPU compositor handles each frame rather than the main-thread CPU renderer.</li>
- *   <li>{@code invalidate()} is only called from inside the ValueAnimator update listener,
- *       which is already gated by the animator's running state — no spurious redraws.</li>
- *   <li>The animator is reset to 0 and the hardware layer is removed when stopped, so idle
- *       views have zero GPU overhead.</li>
+ * <li>A {@code LAYER_TYPE_HARDWARE} layer is set while the animation is running
+ * so the
+ * GPU compositor handles each frame rather than the main-thread CPU
+ * renderer.</li>
+ * <li>{@code invalidate()} is only called from inside the ValueAnimator update
+ * listener,
+ * which is already gated by the animator's running state — no spurious
+ * redraws.</li>
+ * <li>The animator is reset to 0 and the hardware layer is removed when
+ * stopped, so idle
+ * views have zero GPU overhead.</li>
  * </ul>
  */
 public class PulsingView extends View {
@@ -44,11 +50,11 @@ public class PulsingView extends View {
         animator = ValueAnimator.ofFloat(0f, maxRadius);
         animator.setDuration(1200);
         animator.setRepeatCount(ValueAnimator.INFINITE);
-        // RESTART mode: circle expands from 0 to max, then jumps back to 0 instantly.
-        // Combined with DecelerateInterpolator this looks like a clean outward "ripple"
-        // and avoids the CPU cost of running the animation backwards each cycle.
-        animator.setRepeatMode(ValueAnimator.RESTART);
-        animator.setInterpolator(new DecelerateInterpolator());
+        // REVERSE mode: circle expands from 0 to max, then shrinks back to 0.
+        // Combined with AccelerateDecelerateInterpolator this looks like a clean
+        // breathing/pulsing effect.
+        animator.setRepeatMode(ValueAnimator.REVERSE);
+        animator.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
         animator.addUpdateListener(animation -> {
             if (isRunning) {
                 radius = (float) animation.getAnimatedValue();
@@ -58,7 +64,8 @@ public class PulsingView extends View {
     }
 
     public void startAnimation() {
-        if (isRunning) return;
+        if (isRunning)
+            return;
         isRunning = true;
         // Hardware layer: the GPU compositor will cache the layer texture and only
         // re-composite it each frame — no CPU canvas drawing per frame.
@@ -67,7 +74,8 @@ public class PulsingView extends View {
     }
 
     public void stopAnimation() {
-        if (!isRunning && animator != null && !animator.isRunning()) return;
+        if (!isRunning && animator != null && !animator.isRunning())
+            return;
         isRunning = false;
         if (animator != null) {
             animator.cancel();
