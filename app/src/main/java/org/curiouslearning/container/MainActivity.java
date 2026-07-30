@@ -139,6 +139,36 @@ public class MainActivity extends BaseActivity
 
         // UI Setup
         initRecyclerView();
+        
+        homeViewModel.getSelectedLanguageWebApps().observe(this,
+                new androidx.lifecycle.Observer<List<WebApp>>() {
+                    @Override
+                    public void onChanged(List<WebApp> webApps) {
+                        loadingIndicator.setVisibility(View.GONE);
+                        if (!webApps.isEmpty()) {
+                            apps.webApps = webApps;
+                            apps.notifyDataSetChanged();
+                            storeSelectLanguage(selectedLanguage);
+
+                            // Pre-warm the icon cache for all apps in the selected language
+                            List<String> iconUrls = new ArrayList<>();
+                            for (WebApp webApp : webApps) {
+                                if (webApp.getAppIconUrl() != null && !webApp.getAppIconUrl().isEmpty()) {
+                                    iconUrls.add(webApp.getAppIconUrl());
+                                }
+                            }
+                            ImageLoader.prewarmIconCache(MainActivity.this, iconUrls);
+                        } else {
+                            if (!prefs.getString("selectedLanguage", "").equals("") && selectedLanguage.equals("")) {
+                                languageDialogManager.showLanguagePopup();
+                            }
+                            if (manifestVersion.equals("")) {
+                                // Trigger network fetch explicitly — Room LiveData will update observers automatically
+                                homeViewModel.triggerRefresh();
+                            }
+                        }
+                    }
+                });
 
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
@@ -320,41 +350,10 @@ public class MainActivity extends BaseActivity
     // --- Helper Methods ---
 
     public void loadApps(String selectedLanguageParam) {
-        Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguage);
+        Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguageParam);
         loadingIndicator.setVisibility(View.VISIBLE);
-        final String language = selectedLanguageParam;
-
-        homeViewModel.getSelectedLanguageWebApps(selectedLanguageParam).observe(this,
-                new androidx.lifecycle.Observer<List<WebApp>>() {
-                    @Override
-                    public void onChanged(List<WebApp> webApps) {
-                        loadingIndicator.setVisibility(View.GONE);
-                        if (!webApps.isEmpty()) {
-                            apps.webApps = webApps;
-                            apps.notifyDataSetChanged();
-                            storeSelectLanguage(language);
-
-                            // Pre-warm the icon cache for all apps in the selected language
-                            List<String> iconUrls = new ArrayList<>();
-                            for (WebApp webApp : webApps) {
-                                if (webApp.getAppIconUrl() != null && !webApp.getAppIconUrl().isEmpty()) {
-                                    iconUrls.add(webApp.getAppIconUrl());
-                                }
-                            }
-                            ImageLoader.prewarmIconCache(MainActivity.this, iconUrls);
-                        } else {
-                            if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
-                                languageDialogManager.showLanguagePopup();
-                            }
-                            if (manifestVersion.equals("")) {
-                                if (!selectedLanguageParam.equals(isValidLanguage))
-                                    loadingIndicator.setVisibility(View.VISIBLE);
-                                // Trigger network fetch explicitly — Room LiveData will update observers automatically
-                                homeViewModel.triggerRefresh();
-                            }
-                        }
-                    }
-                });
+        this.selectedLanguage = selectedLanguageParam;
+        homeViewModel.setLanguage(selectedLanguageParam);
     }
 
     private void storeSelectLanguage(String language) {
