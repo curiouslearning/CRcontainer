@@ -91,6 +91,13 @@ public class WebApp extends BaseActivity {
         utmPrefs = getApplicationContext().getSharedPreferences(UTM_PREFS_NAME, Context.MODE_PRIVATE);
         isDataCached = sharedPref.getBoolean(String.valueOf(urlIndex), false);
         pseudoId = sharedPref.getString("pseudoId", "");
+        // Debug-only override: a custom cr_user_id set via the language popup (testing).
+        if (BuildConfig.DEBUG) {
+            String customUserId = sharedPref.getString("custom_cr_user_id", "");
+            if (customUserId != null && !customUserId.isEmpty()) {
+                pseudoId = customUserId;
+            }
+        }
         source = utmPrefs.getString("source", "");
         campaignId = utmPrefs.getString("campaign_id", "");
         goBack = findViewById(R.id.button2);
