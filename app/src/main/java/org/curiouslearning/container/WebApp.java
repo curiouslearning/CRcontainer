@@ -39,6 +39,10 @@ public class WebApp extends BaseActivity {
 
     private String title;
     private String appUrl;
+    // Debug-only: the deployed URL a local-dev redirect replaced, or null when not redirected.
+    // Identity checks (which sub-app this is, which host to attribute) resolve off this instead of
+    // appUrl so they keep matching the real sub-app while pointed at localhost.
+    private String localDevOriginalUrl;
 
     private WebView webView;
     private SharedPreferences sharedPref;
@@ -79,11 +83,27 @@ public class WebApp extends BaseActivity {
             appUrl = intent.getStringExtra("appUrl");
             language = intent.getStringExtra("language");
             languageInEnglishName = intent.getStringExtra("languageInEnglishName");
+            if (BuildConfig.DEBUG) {
+                localDevOriginalUrl = intent.getStringExtra("localDevOriginalUrl");
+            }
 
-            String host = (appUrl != null) ? Uri.parse(appUrl).getHost() : null;
+            // Attribute to the deployed host even when a debug build is redirected to localhost,
+            // so test writes don't record "localhost" in the hostname field.
+            String identityUrl = identityUrl();
+            String host = (identityUrl != null) ? Uri.parse(identityUrl).getHost() : null;
             AppContext.getInstance().set(AppContextKey.HOSTNAME,
                     (host != null && !host.isEmpty()) ? host : "unknown");
         }
+    }
+
+    /**
+     * The URL to use when identifying the sub-app (which app it is, which host to attribute) rather
+     * than when loading it. Normally just {@link #appUrl}; in a debug build redirected to a local
+     * dev server it is the deployed URL the redirect replaced, since the local one carries neither
+     * the sub-app's name nor its host.
+     */
+    private String identityUrl() {
+        return (localDevOriginalUrl != null && !localDevOriginalUrl.isEmpty()) ? localDevOriginalUrl : appUrl;
     }
 
     private void initViews() {
@@ -121,8 +141,8 @@ public class WebApp extends BaseActivity {
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setHorizontalScrollBarEnabled(false);
 
-        // Check if this is FTM app
-        isFtmApp = appUrl.contains("feedthemonster");
+        // Check if this is FTM app (off identityUrl so a local-dev redirect doesn't hide it)
+        isFtmApp = identityUrl().contains("feedthemonster");
 
         // Create custom WebViewClient for FTM to handle monster state API
         webView.setWebViewClient(new WebViewClient() {

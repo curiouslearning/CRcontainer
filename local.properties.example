@@ -1,0 +1,48 @@
+## Developer-local settings — copy the keys you need into `local.properties`.
+##
+## `local.properties` is gitignored, so anything set here stays on your machine. CI has no
+## `local.properties`, which is exactly why the local sub-app redirect below can never leak into
+## the debug APK that CI builds and commits for testers.
+##
+## Android Studio manages the `sdk.dir` line in `local.properties` itself — don't copy one here.
+
+
+## ---------------------------------------------------------------------------------------------
+## Local sub-app redirect (debug builds only)
+## ---------------------------------------------------------------------------------------------
+## Makes the container load a sub-app (FTM / Assessment) from your local dev server instead of
+## its deployed URL. Consumed by WebAppsAdapter.maybeOverrideAppUrlForLocalDev().
+## Full walkthrough: .claude/skills/test-subapp-locally/SKILL.md
+##
+## Both keys must be set for the redirect to activate; leave them out (or blank) to disable it.
+##
+## 1. localSubappMatchHosts — comma-separated hosts to redirect. Target ONE sub-app at a time:
+##    every matched host is rewritten to the same replacement origin below. Look the current host
+##    up in the testing_branch manifest rather than assuming — sub-apps migrate between hosts:
+##      curl -s "https://devcuriousreader.wpcomstaging.com/container_app_manifest/testing_branch/web_app_manifest.json"
+##
+## 2. localSubappReplacementOrigin — the local origin to load instead. Use `http://localhost`,
+##    NOT `http://10.0.2.2`: sub-apps register a service worker, which requires a secure context
+##    (HTTPS, localhost, or 127.0.0.1). 10.0.2.2 is treated as insecure and the worker silently
+##    fails to register. Cleartext to localhost/127.0.0.1 is already permitted for debug builds
+##    via app/src/debug/res/xml/network_security_config.xml.
+##
+## 3. Forward the device's localhost to your dev server before launching (match the port).
+##    Works for both an emulator and a physical device, and resets whenever the emulator or the
+##    adb server restarts, so re-run it if the redirect stops resolving:
+##      adb reverse tcp:8080 tcp:8080
+##      adb reverse --list          # verify
+##
+## Then re-sync Gradle and run from Android Studio. Confirm via logcat:
+##   WebAppsAdapter: DEBUG sub-app URL override: https://<host>/... -> http://localhost:<port>/?...
+##
+## Note the redirect only rewrites the origin: the original path is dropped (dev servers serve the
+## app at root) while the query and fragment are preserved (e.g. ?cr_lang=english).
+
+## FTM — dev server on :8080 (cd c:/CuriousLearning/FeedTheMonsterJS && npm run dev)
+#localSubappMatchHosts=globallit-aws-s3-static-webapp-test-us-east-2.s3.us-west-2.amazonaws.com
+#localSubappReplacementOrigin=http://localhost:8080
+
+## Assessment — dev server on :8081 (cd c:/CuriousLearning/assessment-survey-js && npm run dev)
+#localSubappMatchHosts=assessmentdev.curiouscontent.org,assessment.curiouscontent.org
+#localSubappReplacementOrigin=http://localhost:8081

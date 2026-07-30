@@ -7,7 +7,9 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +17,7 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.utilities.AnimationUtil;
@@ -117,7 +120,15 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                         Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
-                        intent.putExtra("appUrl", webApps.get(position).getAppUrl());
+                        String appUrl = webApps.get(position).getAppUrl();
+                        String launchUrl = maybeOverrideAppUrlForLocalDev(appUrl);
+                        intent.putExtra("appUrl", launchUrl);
+                        if (BuildConfig.DEBUG && appUrl != null && !appUrl.equals(launchUrl)) {
+                            // Debug-only: the redirect strips the real host from the URL, which would
+                            // otherwise break FTM detection and the hostname attribution field. WebApp
+                            // reads this to keep both resolving off the deployed URL.
+                            intent.putExtra("localDevOriginalUrl", appUrl);
+                        }
                         intent.putExtra("title", webApps.get(position).getTitle());
                         intent.putExtra("language", webApps.get(position).getLanguage());
                         intent.putExtra("languageInEnglishName", webApps.get(position).getLanguageInEnglishName());
@@ -137,6 +148,54 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     public int getItemCount() {
         return webApps.size();
     }
+
+    /**
+     * Debug-only: redirects a deployed sub-app URL to a local dev server so a local FTM /
+     * Assessment build can be tested inside the real container.
+     *
+     * <p>Driven by {@code LOCAL_SUBAPP_MATCH_HOSTS} and {@code LOCAL_SUBAPP_REPLACEMENT_ORIGIN},
+     * which the debug buildType reads from the developer's gitignored {@code local.properties}.
+     * Both are empty in release builds and on CI, so this is a no-op everywhere except a
+     * developer's own machine. See {@code local.properties.example}.
+     *
+     * <p>Only the origin is replaced: the original path is dropped (dev servers serve the app at
+     * root) while the query and fragment are preserved (e.g. {@code ?cr_lang=english}).
+     *
+     * @return the local URL when {@code appUrl}'s host is configured for redirect, otherwise
+     *         {@code appUrl} unchanged.
+     */
+    private String maybeOverrideAppUrlForLocalDev(String appUrl) {
+        if (!BuildConfig.DEBUG
+                || appUrl == null
+                || BuildConfig.LOCAL_SUBAPP_MATCH_HOSTS.isEmpty()
+                || BuildConfig.LOCAL_SUBAPP_REPLACEMENT_ORIGIN.isEmpty()) {
+            return appUrl;
+        }
+        Uri original = Uri.parse(appUrl);
+        String host = original.getHost();
+        if (host == null) {
+            return appUrl;
+        }
+        for (String matchHost : BuildConfig.LOCAL_SUBAPP_MATCH_HOSTS.split(",")) {
+            if (!matchHost.trim().equalsIgnoreCase(host)) {
+                continue;
+            }
+            Uri replacement = Uri.parse(BuildConfig.LOCAL_SUBAPP_REPLACEMENT_ORIGIN);
+            StringBuilder rebuilt = new StringBuilder()
+                    .append(replacement.getScheme()).append("://").append(replacement.getAuthority()).append('/');
+            if (original.getEncodedQuery() != null) {
+                rebuilt.append('?').append(original.getEncodedQuery());
+            }
+            if (original.getEncodedFragment() != null) {
+                rebuilt.append('#').append(original.getEncodedFragment());
+            }
+            String overridden = rebuilt.toString();
+            Log.d("WebAppsAdapter", "DEBUG sub-app URL override: " + appUrl + " -> " + overridden);
+            return overridden;
+        }
+        return appUrl;
+    }
+
     @Override
     public void onViewRecycled(@NonNull ViewHolder holder) {
         super.onViewRecycled(holder);
