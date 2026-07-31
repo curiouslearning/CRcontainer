@@ -7,7 +7,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Handler;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,10 +17,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.data.model.WebApp;
-import org.curiouslearning.container.utilities.AnimationUtil;
-import org.curiouslearning.container.utilities.ImageLoader;
-import org.curiouslearning.container.utilities.AudioPlayer;
-import org.curiouslearning.container.utilities.PulsingView;
+import org.curiouslearning.container.util.AnimationUtil;
+import org.curiouslearning.container.util.ImageLoader;
+import org.curiouslearning.container.util.AudioPlayer;
+import org.curiouslearning.container.util.PulsingView;
 
 import java.util.List;
 
@@ -30,7 +30,6 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
     LayoutInflater inflater;
     public List<WebApp> webApps;
     private AudioPlayer audioPlayer;
-    private Handler handler = new Handler();
     private static final String SHARED_PREFS_NAME = "animatePulse";
     private static final String PULSE_ANIMATION_KEY = "pulse_animaton";
     private SharedPreferences prefs;
@@ -71,24 +70,21 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
         // }
 
         // Only show and animate pulse effect for Feed The Monster when not cached
-        if ( webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
+        if (webApps.get(position).getTitle().contains("Feed The Monster") && !isAppCached(webApps.get(position).getAppId())) {
             // Make pulsator visible for FTM
             holder.pulsatorLayout.setVisibility(View.VISIBLE);
-            if(!isAnimated){
-                holder.pulsatorLayout.startAnimation();
+            // Start the pulse immediately every time this item is bound.
+            // PulsingView.startAnimation() is idempotent — if it is already running it
+            // returns immediately with no side effects, so calling this on every bind is safe.
+            holder.pulsatorLayout.startAnimation();
+            if (!isAnimated) {
+                // Persist so we know the animation has run at least once.
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putBoolean(PULSE_ANIMATION_KEY, true);
                 editor.apply();
-            }else{
-                holder.itemView.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if( webApps.get(position).getTitle().contains("Feed The Monster") && holder.getLayoutPosition() == position)
-                            holder.pulsatorLayout.startAnimation();
-                    }
-                }, 5000);
+                isAnimated = true;
             }
-        }else{
+        } else {
             // Hide and stop pulse animation for all other apps
             holder.pulsatorLayout.stopAnimation();
             holder.pulsatorLayout.setVisibility(View.GONE);
@@ -114,7 +110,7 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                 AnimationUtil.scaleButton(v, new Runnable() {
                     @Override
                     public void run() {
-                        Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
+                        Intent intent = new Intent(ctx, org.curiouslearning.container.presentation.webapp.WebAppActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
                         intent.putExtra("appUrl", webApps.get(position).getAppUrl());

@@ -38,7 +38,7 @@
         <meta-data android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
             android:value="false" />
         <activity
-            android:name=".WebApp"
+            android:name=".presentation.webapp.WebAppActivity"
             android:screenOrientation="portrait"
             android:exported="false">
             <meta-data

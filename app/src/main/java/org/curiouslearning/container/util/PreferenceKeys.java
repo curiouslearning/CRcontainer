@@ -1,4 +1,4 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.util;
 
 /**
  * Central registry of all SharedPreferences key strings.

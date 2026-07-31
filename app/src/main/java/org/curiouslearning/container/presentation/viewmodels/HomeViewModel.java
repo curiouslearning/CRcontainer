@@ -22,21 +22,32 @@ public class HomeViewModel extends AndroidViewModel {
 
     private final WebAppRepository webAppRepository;
 
+    private final androidx.lifecycle.MutableLiveData<String> selectedLanguage = new androidx.lifecycle.MutableLiveData<>();
+    private final LiveData<List<WebApp>> selectedLanguageWebApps;
+
     public HomeViewModel(@NonNull Application application) {
         super(application);
         webAppRepository = new WebAppRepository(application);
+        
+        selectedLanguageWebApps = androidx.lifecycle.Transformations.switchMap(selectedLanguage,
+                lang -> webAppRepository.getSelectedLanguageWebApps(lang));
+
         // Kick off an initial fetch so Room LiveData is populated as soon as
         // the ViewModel is created. Room will notify all active observers
         // automatically once the insert completes.
         webAppRepository.fetchWebApp();
     }
 
+    public void setLanguage(String language) {
+        selectedLanguage.setValue(language);
+    }
+
     /**
-     * Returns a LiveData stream of WebApps filtered by the given language code.
+     * Returns a persistent LiveData stream of WebApps filtered by the selected language.
      * Callers (Activities/Fragments) must observe this with {@code this} as LifecycleOwner.
      */
-    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
-        return webAppRepository.getSelectedlanguageWebApps(selectedLanguage);
+    public LiveData<List<WebApp>> getSelectedLanguageWebApps() {
+        return selectedLanguageWebApps;
     }
 
     /** Returns a LiveData stream of all WebApps in the local database. */

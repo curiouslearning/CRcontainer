@@ -21,7 +21,7 @@ public interface WebAppDao {
     void deleteAllWebApp();
 
     @Query("SELECT * FROM web_app_table where LOWER(languageInEnglishName) = LOWER(:selectedLanguage) ORDER BY appId ASC")
-    LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage);
+    LiveData<List<WebApp>> getSelectedLanguageWebApps(String selectedLanguage);
 
     @Query("SELECT * FROM web_app_table  ORDER BY appId ASC")
     LiveData<List<WebApp>> getAllWebApp();

@@ -1,4 +1,4 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.presentation.home.managers;
 
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
@@ -24,6 +24,8 @@ import app.rive.runtime.kotlin.core.Loop;
 public class VisualEffectsManager {
 
         private ObjectAnimator breathingAnimator;
+        private ObjectAnimator windAnimatorX;
+        private ObjectAnimator windAnimatorRotation;
 
         public void addBreathingEffect(View view) {
                 if (view == null)
@@ -58,7 +60,7 @@ public class VisualEffectsManager {
                         return;
 
                 // Create a subtle horizontal translation animation to simulate wind
-                ObjectAnimator windAnimatorX = ObjectAnimator.ofFloat(
+                windAnimatorX = ObjectAnimator.ofFloat(
                                 foliageView,
                                 "translationX",
                                 -8f, // Slight left movement
@@ -70,7 +72,7 @@ public class VisualEffectsManager {
                 windAnimatorX.setInterpolator(new AccelerateDecelerateInterpolator());
 
                 // Add slight rotation for more natural wind effect
-                ObjectAnimator windAnimatorRotation = ObjectAnimator.ofFloat(
+                windAnimatorRotation = ObjectAnimator.ofFloat(
                                 foliageView,
                                 "rotation",
                                 -1.5f, // Slight counter-clockwise
@@ -84,39 +86,23 @@ public class VisualEffectsManager {
                 // Start both animations
                 windAnimatorX.start();
                 windAnimatorRotation.start();
-
-                // Store animators for cleanup if needed
-                foliageView.setTag(R.id.wind_animator_x_tag, windAnimatorX);
-                foliageView.setTag(R.id.wind_animator_rotation_tag, windAnimatorRotation);
         }
 
         public void pauseWindEffect(ImageView foliageView) {
-                if (foliageView == null)
-                        return;
-
-                Object tagX = foliageView.getTag(R.id.wind_animator_x_tag);
-                Object tagRotation = foliageView.getTag(R.id.wind_animator_rotation_tag);
-
-                if (tagX instanceof ObjectAnimator) {
-                        ((ObjectAnimator) tagX).pause();
+                if (windAnimatorX != null) {
+                        windAnimatorX.pause();
                 }
-                if (tagRotation instanceof ObjectAnimator) {
-                        ((ObjectAnimator) tagRotation).pause();
+                if (windAnimatorRotation != null) {
+                        windAnimatorRotation.pause();
                 }
         }
 
         public void resumeWindEffect(ImageView foliageView) {
-                if (foliageView == null)
-                        return;
-
-                Object tagX = foliageView.getTag(R.id.wind_animator_x_tag);
-                Object tagRotation = foliageView.getTag(R.id.wind_animator_rotation_tag);
-
-                if (tagX instanceof ObjectAnimator) {
-                        ((ObjectAnimator) tagX).resume();
+                if (windAnimatorX != null) {
+                        windAnimatorX.resume();
                 }
-                if (tagRotation instanceof ObjectAnimator) {
-                        ((ObjectAnimator) tagRotation).resume();
+                if (windAnimatorRotation != null) {
+                        windAnimatorRotation.resume();
                 }
         }
 

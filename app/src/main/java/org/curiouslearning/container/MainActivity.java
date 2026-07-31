@@ -1,22 +1,15 @@
 package org.curiouslearning.container;
 
-import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
 
-import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,15 +22,16 @@ import org.curiouslearning.container.installreferrer.InstallReferrerManager;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodels.HomeViewModel;
-import org.curiouslearning.container.utilities.AnimationUtil;
-import org.curiouslearning.container.utilities.AppUtils;
-import org.curiouslearning.container.utilities.AudioPlayer;
-import org.curiouslearning.container.utilities.DebugOverlayManager;
-import org.curiouslearning.container.utilities.ImageLoader;
-import org.curiouslearning.container.utilities.LanguageDialogManager;
-import org.curiouslearning.container.utilities.ReferralManager;
-import org.curiouslearning.container.utilities.StudyEnrollmentManager;
-import org.curiouslearning.container.utilities.VisualEffectsManager;
+import org.curiouslearning.container.util.AnimationUtil;
+import org.curiouslearning.container.util.AppUtils;
+import org.curiouslearning.container.util.AudioPlayer;
+import org.curiouslearning.container.presentation.home.managers.DebugOverlayManager;
+import org.curiouslearning.container.util.ImageLoader;
+import org.curiouslearning.container.presentation.home.managers.LanguageDialogManager;
+import org.curiouslearning.container.presentation.home.managers.ReferralManager;
+import org.curiouslearning.container.deeplink.StudyEnrollmentManager;
+import org.curiouslearning.container.deeplink.StudyEnrollmentState;
+import org.curiouslearning.container.presentation.home.managers.VisualEffectsManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +64,6 @@ public class MainActivity extends BaseActivity
     private ReferralManager referralManager;
     private LanguageDialogManager languageDialogManager;
     private DebugOverlayManager debugOverlayManager;
-    private Dialog dialog;
 
     private StudyEnrollmentManager studyEnrollmentManager;
 
@@ -98,41 +91,7 @@ public class MainActivity extends BaseActivity
         visualEffectsManager = new VisualEffectsManager();
         referralManager = new ReferralManager(this, homeViewModel, this, this);
 
-        studyEnrollmentManager = new StudyEnrollmentManager(this, prefs, appVersion, new StudyEnrollmentManager.StudyEnrollmentListener() {
-            @Override
-            public void onDismissLanguagePopupIfShowing() {
-                dismissLanguagePopupIfShowing();
-            }
-
-            @Override
-            public void onLoadApps(String language) {
-                runOnUiThread(() -> loadApps(language));
-            }
-
-            @Override
-            public void onShowLanguagePopup() {
-                runOnUiThread(() -> languageDialogManager.showLanguagePopup());
-            }
-
-            @Override
-            public void onUpdateDebugOverlay() {
-                runOnUiThread(() -> {
-                    if (debugOverlayManager != null) {
-                        debugOverlayManager.updateDebugOverlay();
-                    }
-                });
-            }
-
-            @Override
-            public void onCachePseudoId() {
-                cachePseudoId();
-            }
-
-            @Override
-            public String getSelectedLanguage() {
-                return selectedLanguage;
-            }
-        });
+        studyEnrollmentManager = new StudyEnrollmentManager(this, prefs, appVersion);
 
         audioPlayer = new AudioPlayer(); // Used by LanguageDialogManager
         languageDialogManager = new LanguageDialogManager(this, homeViewModel, prefs, audioPlayer, this);
@@ -141,6 +100,35 @@ public class MainActivity extends BaseActivity
         View debugTriggerArea = findViewById(R.id.debug_trigger_area);
         debugOverlayManager = new DebugOverlayManager(this, offlineOverlay, debugTriggerArea, prefs, utmPrefs,
                 referralManager, appVersion);
+
+        // Observe study-enrollment events from StudyEnrollmentManager
+        studyEnrollmentManager.getEnrollmentState().observe(this, state -> {
+            if (state == null) return;
+            switch (state.type) {
+                case DISMISS_LANGUAGE_POPUP:
+                    dismissLanguagePopupIfShowing();
+                    break;
+                case LOAD_APPS:
+                    runOnUiThread(() -> loadApps(state.language));
+                    break;
+                case SHOW_LANGUAGE_POPUP:
+                    runOnUiThread(() -> languageDialogManager.showLanguagePopup());
+                    break;
+                case UPDATE_DEBUG_OVERLAY:
+                    runOnUiThread(() -> {
+                        if (debugOverlayManager != null) {
+                            debugOverlayManager.updateDebugOverlay();
+                        }
+                    });
+                    break;
+                case CACHE_PSEUDO_ID:
+                    cachePseudoId();
+                    break;
+                default:
+                    Log.w(TAG, "Unhandled StudyEnrollmentState type: " + state.type);
+                    break;
+            }
+        });
 
         // Visual Effects
         setupVisualEffects();
@@ -151,6 +139,36 @@ public class MainActivity extends BaseActivity
 
         // UI Setup
         initRecyclerView();
+        
+        homeViewModel.getSelectedLanguageWebApps().observe(this,
+                new androidx.lifecycle.Observer<List<WebApp>>() {
+                    @Override
+                    public void onChanged(List<WebApp> webApps) {
+                        loadingIndicator.setVisibility(View.GONE);
+                        if (!webApps.isEmpty()) {
+                            apps.webApps = webApps;
+                            apps.notifyDataSetChanged();
+                            storeSelectLanguage(selectedLanguage);
+
+                            // Pre-warm the icon cache for all apps in the selected language
+                            List<String> iconUrls = new ArrayList<>();
+                            for (WebApp webApp : webApps) {
+                                if (webApp.getAppIconUrl() != null && !webApp.getAppIconUrl().isEmpty()) {
+                                    iconUrls.add(webApp.getAppIconUrl());
+                                }
+                            }
+                            ImageLoader.prewarmIconCache(MainActivity.this, iconUrls);
+                        } else {
+                            if (!prefs.getString("selectedLanguage", "").equals("") && selectedLanguage.equals("")) {
+                                languageDialogManager.showLanguagePopup();
+                            }
+                            if (manifestVersion.equals("")) {
+                                // Trigger network fetch explicitly — Room LiveData will update observers automatically
+                                homeViewModel.triggerRefresh();
+                            }
+                        }
+                    }
+                });
 
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
@@ -197,7 +215,8 @@ public class MainActivity extends BaseActivity
     private void handleIncomingIntent(Intent intent) {
         if (intent != null && intent.getData() != null) {
             Uri data = intent.getData();
-            boolean handledStudyEnrollmentLink = studyEnrollmentManager.handleStudyEnrollmentLink(data);
+            boolean handledStudyEnrollmentLink = studyEnrollmentManager.handleStudyEnrollmentLink(data, selectedLanguage);
+
 
             // Existing language parameter logic
             String language = data.getQueryParameter("language");
@@ -223,8 +242,8 @@ public class MainActivity extends BaseActivity
     }
 
     private void dismissLanguagePopupIfShowing() {
-        if (dialog != null && dialog.isShowing()) {
-            dialog.dismiss();
+        if (languageDialogManager != null) {
+            languageDialogManager.dismissDialog();
         }
     }
 
@@ -331,41 +350,10 @@ public class MainActivity extends BaseActivity
     // --- Helper Methods ---
 
     public void loadApps(String selectedLanguageParam) {
-        Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguage);
+        Log.d(TAG, "loadApps: Loading apps for language: " + selectedLanguageParam);
         loadingIndicator.setVisibility(View.VISIBLE);
-        final String language = selectedLanguageParam;
-
-        homeViewModel.getSelectedlanguageWebApps(selectedLanguageParam).observe(this,
-                new androidx.lifecycle.Observer<List<WebApp>>() {
-                    @Override
-                    public void onChanged(List<WebApp> webApps) {
-                        loadingIndicator.setVisibility(View.GONE);
-                        if (!webApps.isEmpty()) {
-                            apps.webApps = webApps;
-                            apps.notifyDataSetChanged();
-                            storeSelectLanguage(language);
-
-                            // Pre-warm the icon cache for all apps in the selected language
-                            List<String> iconUrls = new ArrayList<>();
-                            for (WebApp webApp : webApps) {
-                                if (webApp.getAppIconUrl() != null && !webApp.getAppIconUrl().isEmpty()) {
-                                    iconUrls.add(webApp.getAppIconUrl());
-                                }
-                            }
-                            ImageLoader.prewarmIconCache(MainActivity.this, iconUrls);
-                        } else {
-                            if (!prefs.getString("selectedLanguage", "").equals("") && language.equals("")) {
-                                languageDialogManager.showLanguagePopup();
-                            }
-                            if (manifestVersion.equals("")) {
-                                if (!selectedLanguageParam.equals(isValidLanguage))
-                                    loadingIndicator.setVisibility(View.VISIBLE);
-                                // Trigger network fetch explicitly — Room LiveData will update observers automatically
-                                homeViewModel.triggerRefresh();
-                            }
-                        }
-                    }
-                });
+        this.selectedLanguage = selectedLanguageParam;
+        homeViewModel.setLanguage(selectedLanguageParam);
     }
 
     private void storeSelectLanguage(String language) {

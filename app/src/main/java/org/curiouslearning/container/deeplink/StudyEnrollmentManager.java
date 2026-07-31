@@ -1,7 +1,9 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.deeplink;
+
+import org.curiouslearning.container.util.AnimationUtil;
+import org.curiouslearning.container.util.AppUtils;
 
 import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.SharedPreferences;
@@ -14,6 +16,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+
 import org.curiouslearning.container.R;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 
@@ -24,28 +29,32 @@ public class StudyEnrollmentManager {
     private final Activity activity;
     private final SharedPreferences prefs;
     private final String appVersion;
-    private final StudyEnrollmentListener listener;
 
     private boolean isHandlingIdConfirmation = false;
     private boolean isShowingEnrollmentSuccess = false;
 
-    public interface StudyEnrollmentListener {
-        void onDismissLanguagePopupIfShowing();
-        void onLoadApps(String language);
-        void onShowLanguagePopup();
-        void onUpdateDebugOverlay();
-        void onCachePseudoId();
-        String getSelectedLanguage();
-    }
+    private final MutableLiveData<StudyEnrollmentState> enrollmentState = new MutableLiveData<>();
 
-    public StudyEnrollmentManager(Activity activity, SharedPreferences prefs, String appVersion, StudyEnrollmentListener listener) {
+    public StudyEnrollmentManager(Activity activity, SharedPreferences prefs, String appVersion) {
         this.activity = activity;
         this.prefs = prefs;
         this.appVersion = appVersion;
-        this.listener = listener;
     }
 
-    public boolean handleStudyEnrollmentLink(Uri data) {
+    /** Observe this to react to enrollment events in the Activity. */
+    public LiveData<StudyEnrollmentState> getEnrollmentState() {
+        return enrollmentState;
+    }
+
+    /**
+     * Handles an incoming study-enrollment deep link.
+     *
+     * @param data             the URI from the incoming Intent
+     * @param selectedLanguage the language currently selected in the host activity;
+     *                         passed directly to avoid an inverted data-flow callback
+     * @return true if the URI was a study-enrollment link and was handled
+     */
+    public boolean handleStudyEnrollmentLink(Uri data, String selectedLanguage) {
         if (data == null) return false;
 
         String newIdRaw = data.getQueryParameter("study_user_id");
@@ -53,7 +62,7 @@ public class StudyEnrollmentManager {
         String studyConsent = data.getQueryParameter("study_consent");
 
         if (!prefs.contains("pseudoId")) {
-            listener.onCachePseudoId();
+            enrollmentState.postValue(StudyEnrollmentState.cachePseudoId());
         }
 
         if (newIdRaw != null && !newIdRaw.isEmpty()) {
@@ -67,14 +76,14 @@ public class StudyEnrollmentManager {
                     Log.d(TAG, "handleStudyEnrollmentLink: Study enrollment UI already active. Ignoring duplicate link.");
                 } else {
                     isHandlingIdConfirmation = true;
-                    listener.onDismissLanguagePopupIfShowing();
+                    enrollmentState.postValue(StudyEnrollmentState.dismissLanguagePopup());
 
                     String confirmationMessage = confirmationMessageRaw;
                     if (confirmationMessage != null && confirmationMessage.length() > 800) {
                         confirmationMessage = confirmationMessage.substring(0, 800);
                     }
 
-                    showConfirmIdDialog(newId, confirmationMessage, studyConsent);
+                    showConfirmIdDialog(newId, confirmationMessage, studyConsent, selectedLanguage);
                 }
                 return true;
             } else {
@@ -84,7 +93,8 @@ public class StudyEnrollmentManager {
         return false;
     }
 
-    private void showConfirmIdDialog(final String newId, final String confirmationMessage, final String studyConsent) {
+    private void showConfirmIdDialog(final String newId, final String confirmationMessage,
+                                     final String studyConsent, final String selectedLanguage) {
         activity.runOnUiThread(() -> {
             try {
                 final Dialog confirmDialog = new Dialog(activity);
@@ -110,19 +120,14 @@ public class StudyEnrollmentManager {
 
                 Button btnConfirm = confirmDialog.findViewById(R.id.btn_confirm);
 
-                ObjectAnimator scaleX = ObjectAnimator.ofFloat(btnConfirm, "scaleX", 1f, 1.05f, 1f);
-                ObjectAnimator scaleY = ObjectAnimator.ofFloat(btnConfirm, "scaleY", 1f, 1.05f, 1f);
-                scaleX.setDuration(1500);
-                scaleY.setDuration(1500);
-                scaleX.setRepeatCount(ValueAnimator.INFINITE);
-                scaleY.setRepeatCount(ValueAnimator.INFINITE);
-                scaleX.start();
-                scaleY.start();
+                ObjectAnimator[] pulseAnimators = AnimationUtil.startPulseAnimation(btnConfirm);
 
                 btnConfirm.setOnClickListener(v -> {
                     btnConfirm.setEnabled(false);
-                    scaleX.cancel();
-                    scaleY.cancel();
+                    if (pulseAnimators != null && pulseAnimators.length == 2) {
+                        pulseAnimators[0].cancel();
+                        pulseAnimators[1].cancel();
+                    }
 
                     String storedStudyUserId = prefs.getString(AnalyticsUtils.STUDY_USER_ID, "");
                     if (storedStudyUserId != null && !storedStudyUserId.isEmpty()) {
@@ -144,7 +149,6 @@ public class StudyEnrollmentManager {
                         joinedStudyAppVersion = AppUtils.getAppVersionName(activity);
                     }
                     String pseudoId = prefs.getString("pseudoId", "");
-                    String selectedLanguage = listener.getSelectedLanguage();
 
                     AnalyticsUtils.logJoinedStudyEvent(
                             activity,
@@ -154,15 +158,15 @@ public class StudyEnrollmentManager {
                             newId,
                             studyConsent);
 
-                    listener.onUpdateDebugOverlay();
+                    enrollmentState.postValue(StudyEnrollmentState.updateDebugOverlay());
 
                     if (selectedLanguage != null && !selectedLanguage.isEmpty()) {
-                        listener.onLoadApps(selectedLanguage);
+                        enrollmentState.postValue(StudyEnrollmentState.loadApps(selectedLanguage));
                     }
 
                     Runnable onDismiss = () -> {
                         if (selectedLanguage == null || selectedLanguage.isEmpty()) {
-                            listener.onShowLanguagePopup();
+                            enrollmentState.postValue(StudyEnrollmentState.showLanguagePopup());
                         }
                     };
 

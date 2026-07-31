@@ -1,4 +1,4 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.util;
 
 import android.app.Activity;
 import android.content.Intent;

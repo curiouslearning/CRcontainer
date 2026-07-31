@@ -11,7 +11,7 @@ import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.model.WebAppResponse;
-import org.curiouslearning.container.utilities.CacheUtils;
+import org.curiouslearning.container.util.CacheUtils;
 
 import java.io.IOException;
 import java.util.List;

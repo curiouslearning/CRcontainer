@@ -1,6 +1,6 @@
 // File: src/main/java/org/curiouslearning/container/utilities/AudioPlayer.java
 
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.util;
 
 import android.content.Context;
 import android.media.MediaPlayer;

@@ -10,8 +10,8 @@ import androidx.room.RoomDatabase;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import org.curiouslearning.container.data.model.WebApp;
-import org.curiouslearning.container.utilities.CacheUtils;
-import org.curiouslearning.container.utilities.ConnectionUtils;
+import org.curiouslearning.container.util.CacheUtils;
+import org.curiouslearning.container.util.ConnectionUtils;
 
 @Database(entities = { WebApp.class }, version = 2)
 public abstract class DatabaseHelper extends RoomDatabase {

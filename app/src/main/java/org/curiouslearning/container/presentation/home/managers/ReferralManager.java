@@ -1,4 +1,8 @@
-package org.curiouslearning.container.utilities;
+package org.curiouslearning.container.presentation.home.managers;
+
+import org.curiouslearning.container.util.ConnectionUtils;
+import org.curiouslearning.container.util.AppUtils;
+import org.curiouslearning.container.util.SlackUtils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -31,7 +35,7 @@ public class ReferralManager {
         private Context context;
         private SharedPreferences prefs;
         private SharedPreferences utmPrefs;
-        private HomeViewModel homeViewModal;
+        private HomeViewModel homeViewModel;
         private LifecycleOwner lifecycleOwner;
         private ReferralManagerListener listener;
 
@@ -50,10 +54,10 @@ public class ReferralManager {
                 void onReferrerStatusUpdate(InstallReferrerManager.ReferrerStatus status);
         }
 
-        public ReferralManager(Context context, HomeViewModel homeViewModal, LifecycleOwner lifecycleOwner,
+        public ReferralManager(Context context, HomeViewModel homeViewModel, LifecycleOwner lifecycleOwner,
                         ReferralManagerListener listener) {
                 this.context = context;
-                this.homeViewModal = homeViewModal;
+                this.homeViewModel = homeViewModel;
                 this.lifecycleOwner = lifecycleOwner;
                 this.listener = listener;
 
@@ -131,15 +135,11 @@ public class ReferralManager {
                                                 if (listener != null)
                                                         listener.onUpdateDebugOverlay();
 
-                                                if (isAttributionComplete) {
-                                                        AnalyticsUtils.logLanguageSelectEvent(context,
-                                                                        "language_selected", pseudoId,
-                                                                        language,
-                                                                        manifestVrsn, "true",
-                                                                        fullURL.replace("deferred_deeplink=", ""));
-                                                } else {
-                                                        Log.d(TAG, "Attribution not complete. Skipping event log.");
-                                                }
+                                                AnalyticsUtils.logLanguageSelectEvent(context,
+                                                                "language_selected", pseudoId,
+                                                                language,
+                                                                manifestVrsn, "true",
+                                                                fullURL.replace("deferred_deeplink=", ""));
                                                 Log.d(TAG, "Referrer language received: " + language + " " + lang);
                                         } else {
                                                 fetchFacebookDeferredData();
@@ -190,13 +190,9 @@ public class ReferralManager {
                                         isAttributionComplete = true;
                                         AnalyticsUtils.storeReferrerParams(context, source, campaign_id);
 
-                                        if (isAttributionComplete) {
-                                                AnalyticsUtils.logLanguageSelectEvent(context, "language_selected",
-                                                                pseudoId, lang,
-                                                                manifestVrsn, "true", String.valueOf(deepLinkUri));
-                                        } else {
-                                                Log.d(TAG, "Attribution not complete. Skipping event log.");
-                                        }
+                                        AnalyticsUtils.logLanguageSelectEvent(context, "language_selected",
+                                                        pseudoId, lang,
+                                                        manifestVrsn, "true", String.valueOf(deepLinkUri));
 
                                 } else {
                                         String selectedLanguage = prefs.getString("selectedLanguage", "");
@@ -248,7 +244,7 @@ public class ReferralManager {
                         return;
                 }
 
-                homeViewModal.getAllLanguagesInEnglish().observe(lifecycleOwner, validLanguages -> {
+                homeViewModel.getAllLanguagesInEnglish().observe(lifecycleOwner, validLanguages -> {
                         List<String> lowerCaseLanguages = validLanguages.stream()
                                         .map(String::toLowerCase)
                                         .collect(Collectors.toList());

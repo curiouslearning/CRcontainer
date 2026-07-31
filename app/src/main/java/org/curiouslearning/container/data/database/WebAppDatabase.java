@@ -41,8 +41,8 @@ public class WebAppDatabase {
         return webAppDao.getAllWebApp();
     }
 
-    public LiveData<List<WebApp>> getSelectedlanguageWebApps(String selectedLanguage) {
-        return webAppDao.getSelectedlanguageWebApps(selectedLanguage);
+    public LiveData<List<WebApp>> getSelectedLanguageWebApps(String selectedLanguage) {
+        return webAppDao.getSelectedLanguageWebApps(selectedLanguage);
     }
 
     public LiveData<List<String>> getAllLanguagesInEnglish() {
