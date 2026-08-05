@@ -124,6 +124,8 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:5.12.0'
     testImplementation 'org.mockito:mockito-inline:5.2.0'
     testImplementation 'androidx.test:core:1.6.1'
+    testImplementation 'androidx.arch.core:core-testing:2.2.0'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 
     androidTestImplementation 'androidx.test:core:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
@@ -153,45 +155,36 @@ tasks.register("jacocoTestReport", JacocoReport) {
         html.required = true
     }
 
+    def excludes = [
+            '**/R.class',
+            '**/R$*.class',
+            '**/BR.class',
+            '**/BR$*.class',
+            '**/BuildConfig.*',
+            '**/Manifest*.*',
+            '**/*Test*.*',
+            '**/databinding/*',
+            '**/android/databinding/*',
+            '**/androidx/**',
+            '**/*$ViewInjector*.*',
+            '**/*$ViewBinder*.*',
+            '**/DataBinderMapperImpl*.*',
+            '**/DataBindingInfo.*'
+    ]
+
     classDirectories.setFrom(fileTree(
-            dir: layout.buildDirectory.dir("intermediates/classes/debug"),
-            excludes: [
-                    '**/R.class',
-                    '**/R$*.class',
-                    '**/BuildConfig.*',
-                    '**/Manifest*.*',
-                    '**/*Test*.*',
-                    '**/databinding/*',
-                    '**/android/databinding/*',
-                    '**/androidx/**',
-                    '**/*$ViewInjector*.*',
-                    '**/*$ViewBinder*.*'
-            ]
+            dir: layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes"),
+            excludes: excludes
     ))
 
     sourceDirectories.setFrom(files(coverageSourceDirs))
     executionData.setFrom(fileTree(dir: layout.buildDirectory, includes: [
             "jacoco/testDebugUnitTest.exec",
+            "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec",
             "outputs/code-coverage/connected/*coverage.ec"
     ]))
-
-    doFirst {
-        classDirectories.setFrom(
-                files(classDirectories.files.collect {
-                    fileTree(dir: it, excludes: [
-                            '**/R.class',
-                            '**/R$*.class',
-                            '**/BuildConfig.*',
-                            '**/Manifest*.*',
-                            '**/*Test*.*',
-                            '**/databinding/*',
-                            '**/android/databinding/*',
-                            '**/androidx/**'
-                    ])
-                })
-        )
-    }
 }
+
 
 
 sentry {

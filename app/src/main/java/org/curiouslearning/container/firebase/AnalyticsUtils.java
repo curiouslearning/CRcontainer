@@ -123,6 +123,7 @@ public class AnalyticsUtils {
         bundle.putString("campaign_id", campaignId);
         bundle.putString(STUDY_USER_ID, sanitizedStudyUserId);
         bundle.putString("study_consent", studyConsent);
+        bundle.putString("app_info.version", appVersion);
 
         firebaseAnalytics.setUserProperty("source", source);
         firebaseAnalytics.setUserProperty("campaign_id", campaignId);
