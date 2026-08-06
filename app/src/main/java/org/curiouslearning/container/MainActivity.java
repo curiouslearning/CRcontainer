@@ -1,6 +1,9 @@
 package org.curiouslearning.container;
 
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -10,6 +13,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,6 +34,7 @@ import org.curiouslearning.container.presentation.home.managers.DebugOverlayMana
 import org.curiouslearning.container.util.ImageLoader;
 import org.curiouslearning.container.presentation.home.managers.LanguageDialogManager;
 import org.curiouslearning.container.presentation.home.managers.ReferralManager;
+import org.curiouslearning.container.util.QRCodeUtil;
 import org.curiouslearning.container.deeplink.StudyEnrollmentManager;
 import org.curiouslearning.container.deeplink.StudyEnrollmentState;
 import org.curiouslearning.container.presentation.home.managers.VisualEffectsManager;
@@ -58,6 +64,12 @@ public class MainActivity extends BaseActivity
     private String appVersion;
     private ProgressBar loadingIndicator;
     private Button settingsButton;
+
+    // QR Code UI elements
+    private View qrOverlay;
+    private ImageView qrCodeImageView;
+    private TextView qrIdTextView;
+    private View showIdButton;
 
     // Managers
     private VisualEffectsManager visualEffectsManager;
@@ -139,6 +151,7 @@ public class MainActivity extends BaseActivity
 
         // UI Setup
         initRecyclerView();
+        setupQRCodeUI();
         
         homeViewModel.getSelectedLanguageWebApps().observe(this,
                 new androidx.lifecycle.Observer<List<WebApp>>() {
@@ -377,6 +390,65 @@ public class MainActivity extends BaseActivity
                 new GridLayoutManager(getApplicationContext(), 2, GridLayoutManager.HORIZONTAL, false));
         apps = new WebAppsAdapter(this, new ArrayList<>());
         recyclerView.setAdapter(apps);
+    }
+
+    private void setupQRCodeUI() {
+        qrOverlay = findViewById(R.id.qr_overlay);
+        qrCodeImageView = findViewById(R.id.qr_code_image);
+        qrIdTextView = findViewById(R.id.qr_id_text);
+        showIdButton = findViewById(R.id.show_id_button);
+
+        String pseudoId = prefs.getString("pseudoId", "");
+        if (qrCodeImageView != null) {
+            QRCodeUtil.generateQRCode(pseudoId, qrCodeImageView);
+        }
+        if (qrIdTextView != null) {
+            qrIdTextView.setText("cr_user_id_" + pseudoId);
+        }
+
+        if (showIdButton != null) {
+            showIdButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (qrOverlay != null) {
+                        qrOverlay.setVisibility(View.VISIBLE);
+                        showIdButton.setVisibility(View.GONE);
+                    }
+                }
+            });
+        }
+
+        if (qrOverlay != null) {
+            qrOverlay.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    qrOverlay.setVisibility(View.GONE);
+                    if (showIdButton != null) {
+                        showIdButton.setVisibility(View.VISIBLE);
+                    }
+                }
+            });
+        }
+
+        View.OnClickListener copyToClipboardListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    ClipData clip = ClipData.newPlainText("Unique ID", "cr_user_id_" + pseudoId);
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(MainActivity.this, "Unique ID copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            }
+        };
+
+        if (qrCodeImageView != null) {
+            qrCodeImageView.setOnClickListener(copyToClipboardListener);
+        }
+
+        if (qrIdTextView != null) {
+            qrIdTextView.setOnClickListener(copyToClipboardListener);
+        }
     }
 
     private void cachePseudoId() {
