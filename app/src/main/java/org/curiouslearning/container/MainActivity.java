@@ -23,7 +23,12 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.FrameLayout;
 import android.widget.ProgressBar;
+import android.widget.Toast;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import android.graphics.Bitmap;
 
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -71,6 +76,9 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import android.util.Log;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.qrcode.QRCodeWriter;
 import android.content.Intent;
 import android.widget.TextView;
 
@@ -101,8 +109,10 @@ public class MainActivity extends BaseActivity {
     private String manifestVersion;
     private static final String TAG = "MainActivity";
     private AudioPlayer audioPlayer;
-    // Warms Firestore and attaches summary_data sync listeners on container open (shared instance also used
-    // by WebApp). The static getInstance holds the canonical reference; this field is kept for readability.
+    // Warms Firestore and attaches summary_data sync listeners on container open
+    // (shared instance also used
+    // by WebApp). The static getInstance holds the canonical reference; this field
+    // is kept for readability.
     private DefaultAppEventPayloadHandler summaryHandler;
     private String appVersion;
     private boolean isReferrerHandled;
@@ -113,6 +123,10 @@ public class MainActivity extends BaseActivity {
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
     private InstallReferrerManager.ReferrerStatus currentReferrerStatus;
+    private FrameLayout qrOverlay;
+    private ImageView qrCodeImageView;
+    private TextView qrIdTextView;
+    private ImageButton showIdButton;
     private View debugTriggerArea;
     private int debugTapCount = 0;
     private long lastTapTime = 0;
@@ -324,6 +338,66 @@ public class MainActivity extends BaseActivity {
                 }
             }
         });
+        qrOverlay = findViewById(R.id.qr_overlay);
+        qrCodeImageView = findViewById(R.id.qr_code_image);
+        qrIdTextView = findViewById(R.id.qr_id_text);
+        showIdButton = findViewById(R.id.show_id_button);
+
+        String pseudoId = prefs.getString("pseudoId", "");
+        if (qrCodeImageView != null) {
+            generateQRCode(pseudoId, qrCodeImageView);
+        }
+        if (qrIdTextView != null) {
+            qrIdTextView.setText("cr_user_id_" + pseudoId);
+        }
+
+        if (showIdButton != null) {
+            showIdButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (qrOverlay != null) {
+                        qrOverlay.setVisibility(View.VISIBLE);
+                        showIdButton.setVisibility(View.GONE);
+                    }
+                }
+            });
+        }
+
+        if (qrOverlay != null) {
+            qrOverlay.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    qrOverlay.setVisibility(View.GONE);
+                    if (showIdButton != null) {
+                        showIdButton.setVisibility(View.VISIBLE);
+                    }
+                }
+            });
+        }
+
+        if (qrCodeImageView != null) {
+            qrCodeImageView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("Unique ID", "cr_user_id_" + pseudoId);
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(MainActivity.this, "Unique ID copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        if (qrIdTextView != null) {
+            qrIdTextView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("Unique ID", "cr_user_id_" + pseudoId);
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(MainActivity.this, "Unique ID copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     @Override
@@ -337,7 +411,7 @@ public class MainActivity extends BaseActivity {
         if (intent != null && intent.getData() != null) {
             Uri data = intent.getData();
             boolean handledStudyEnrollmentLink = false;
-            
+
             // Check for set_new_ID
             String newIdRaw = data.getQueryParameter("study_user_id");
             String confirmationMessageRaw = data.getQueryParameter("confirmation_message");
@@ -355,18 +429,20 @@ public class MainActivity extends BaseActivity {
                     handledStudyEnrollmentLink = true;
                     String storedStudyUserId = prefs.getString(AnalyticsUtils.STUDY_USER_ID, "");
                     if (storedStudyUserId != null && !storedStudyUserId.isEmpty()) {
-                        Log.d(TAG, "handleIncomingIntent: Study enrollment link ignored because a study user ID is already stored.");
+                        Log.d(TAG,
+                                "handleIncomingIntent: Study enrollment link ignored because a study user ID is already stored.");
                     } else if (isHandlingIdConfirmation || isShowingEnrollmentSuccess) {
-                        Log.d(TAG, "handleIncomingIntent: Study enrollment UI already active. Ignoring duplicate link.");
+                        Log.d(TAG,
+                                "handleIncomingIntent: Study enrollment UI already active. Ignoring duplicate link.");
                     } else {
                         isHandlingIdConfirmation = true;
                         dismissLanguagePopupIfShowing();
-                        
+
                         String confirmationMessage = confirmationMessageRaw;
                         if (confirmationMessage != null && confirmationMessage.length() > 800) {
                             confirmationMessage = confirmationMessage.substring(0, 800);
                         }
-                        
+
                         showConfirmIdDialog(newId, confirmationMessage, studyConsent);
                     }
                 } else {
@@ -527,7 +603,7 @@ public class MainActivity extends BaseActivity {
                 successDialog.setCanceledOnTouchOutside(false);
                 successDialog.setCancelable(false);
                 Handler successHandler = new Handler(Looper.getMainLooper());
-                final boolean[] dismissActionDelivered = {false};
+                final boolean[] dismissActionDelivered = { false };
                 successDialog.setOnDismissListener(dialog -> {
                     isShowingEnrollmentSuccess = false;
                     if (!dismissActionDelivered[0] && onDismissAction != null) {
@@ -743,6 +819,30 @@ public class MainActivity extends BaseActivity {
         });
     }
 
+    private void generateQRCode(String text, ImageView imageView) {
+        if (imageView == null)
+            return;
+        if (text == null || text.isEmpty()) {
+            Log.w(TAG, "generateQRCode: pseudoId is null or empty, skipping QR code generation");
+            return;
+        }
+        QRCodeWriter writer = new QRCodeWriter();
+        try {
+            int size = 512;
+            com.google.zxing.common.BitMatrix bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, size, size);
+            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565);
+            for (int x = 0; x < size; x++) {
+                for (int y = 0; y < size; y++) {
+                    bitmap.setPixel(x, y,
+                            bitMatrix.get(x, y) ? android.graphics.Color.BLACK : android.graphics.Color.WHITE);
+                }
+            }
+            imageView.setImageBitmap(bitmap);
+        } catch (WriterException e) {
+            e.printStackTrace();
+        }
+    }
+
     protected void initRecyclerView() {
         recyclerView = findViewById(R.id.recycleView);
         recyclerView.setLayoutManager(
@@ -770,6 +870,7 @@ public class MainActivity extends BaseActivity {
         String pseudoId = prefs.getString("pseudoId", "");
         summaryHandler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
     }
+
     public static String convertEpochToDate(long epochMillis) {
         Date date = new Date(epochMillis);
         SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.getDefault());
@@ -1198,9 +1299,9 @@ public class MainActivity extends BaseActivity {
         String campaignId = installReferrerPrefs.getString("campaign_id", "");
         AppContext context = AppContext.getInstance();
         context.set(AppContextKey.SOURCE,
-            source == null || source.trim().isEmpty() ? "" : source.trim());
+                source == null || source.trim().isEmpty() ? "" : source.trim());
         context.set(AppContextKey.CAMPAIGN_ID,
-            campaignId == null || campaignId.trim().isEmpty() ? "" : campaignId.trim());
+                campaignId == null || campaignId.trim().isEmpty() ? "" : campaignId.trim());
     }
 
     private void storeSelectLanguage(String language) {
