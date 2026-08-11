@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only (this file lives in the debug source set, so release APKs are unaffected).
+
+  targetSdk 28+ denies cleartext HTTP by default, which blocks the local sub-app redirect from
+  loading http://localhost:<port> in the WebView (net::ERR_CLEARTEXT_NOT_PERMITTED). This permits
+  cleartext to loopback ONLY — every other host still requires HTTPS, even in debug.
+
+  Deliberately limited to localhost / 127.0.0.1: those are the origins the redirect uses, and they
+  are the only ones a browser treats as a secure context, which sub-app service workers require.
+  Reach the host machine's dev server through them with `adb reverse tcp:<port> tcp:<port>`
+  rather than adding the emulator alias 10.0.2.2 here — service workers do not register on it.
+
+  See local.properties.example and .claude/skills/test-subapp-locally/SKILL.md
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

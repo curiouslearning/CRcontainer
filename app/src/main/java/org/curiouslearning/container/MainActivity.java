@@ -21,6 +21,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.FrameLayout;
@@ -868,6 +869,13 @@ public class MainActivity extends BaseActivity {
 
     private void warmFirestoreDataSync() {
         String pseudoId = prefs.getString("pseudoId", "");
+        // Debug-only override mirrors WebApp.initViews so a tester's custom cr_user_id syncs on container open too.
+        if (BuildConfig.DEBUG) {
+            String customUserId = prefs.getString("custom_cr_user_id", "");
+            if (customUserId != null && !customUserId.isEmpty()) {
+                pseudoId = customUserId;
+            }
+        }
         summaryHandler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
     }
 
@@ -1017,6 +1025,13 @@ public class MainActivity extends BaseActivity {
             TextInputLayout textBox = dialog.findViewById(R.id.dropdown_menu);
             AutoCompleteTextView autoCompleteTextView = dialog.findViewById(R.id.autoComplete);
 
+            // Debug-only: custom cr_user_id override field for testing.
+            final EditText customUserIdField = dialog.findViewById(R.id.custom_user_id);
+            if (BuildConfig.DEBUG && customUserIdField != null) {
+                customUserIdField.setVisibility(View.VISIBLE);
+                customUserIdField.setText(prefs.getString("custom_cr_user_id", ""));
+            }
+
             // Ensure TextInputLayout has transparent background (Material Design can
             // override XML)
             textBox.setBackground(null);
@@ -1084,6 +1099,7 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                 audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
+                                persistCustomUserId(customUserIdField);
                                 String selectedDisplayName = (String) parent.getItemAtPosition(position);
                                 selectedLanguage = languagesEnglishNameMap.get(selectedDisplayName);
 
@@ -1146,6 +1162,7 @@ public class MainActivity extends BaseActivity {
             closeButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     audioPlayer.play(MainActivity.this, R.raw.sound_button_pressed);
+                    persistCustomUserId(customUserIdField);
                     textView.setVisibility(View.GONE);
 
                     // Animate close button, then trigger dropdown exit animation
@@ -1195,6 +1212,22 @@ public class MainActivity extends BaseActivity {
                 Log.e(TAG, "showLanguagePopup: Failed to show dialog", e);
             }
         }
+    }
+
+    // Debug-only: persist (or clear) the custom cr_user_id override entered in the
+    // language popup. No-op in release builds since the field is never shown there.
+    private void persistCustomUserId(EditText customUserIdField) {
+        if (!BuildConfig.DEBUG || customUserIdField == null) {
+            return;
+        }
+        String customId = customUserIdField.getText().toString().trim();
+        SharedPreferences.Editor editor = prefs.edit();
+        if (customId.isEmpty()) {
+            editor.remove("custom_cr_user_id");
+        } else {
+            editor.putString("custom_cr_user_id", customId);
+        }
+        editor.apply();
     }
 
     private Map<String, String> MapLanguagesEnglishName(List<WebApp> webApps) {

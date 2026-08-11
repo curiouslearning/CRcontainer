@@ -90,6 +90,30 @@
             android:textSize="18sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Debug-only custom cr_user_id override (gated by BuildConfig.DEBUG in code) -->
+    <EditText
+        android:id="@+id/custom_user_id"
+        android:layout_width="@dimen/dropdown_menu_width"
+        android:layout_height="wrap_content"
+        android:background="@drawable/dropdown_trigger_purple"
+        android:elevation="4dp"
+        android:hint="@string/custom_user_id_hint"
+        android:imeOptions="actionDone"
+        android:inputType="text"
+        android:maxLines="1"
+        android:paddingStart="20dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="12dp"
+        android:textColor="@android:color/white"
+        android:textColorHint="#CCFFFFFF"
+        android:textSize="16sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/dropdown_menu"
+        app:layout_constraintStart_toStartOf="@id/dropdown_menu"
+        app:layout_constraintTop_toBottomOf="@id/dropdown_menu"
+        tools:ignore="Autofill" />
+
     <ImageView
         android:id="@+id/setting_close"
         android:layout_width="67dp"

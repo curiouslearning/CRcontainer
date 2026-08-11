@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only manifest overlay. Merged into the main manifest for debug builds only, so release
+  APKs never carry the network security config below.
+
+  Its sole purpose is to permit cleartext HTTP to loopback so the local sub-app redirect can load
+  http://localhost:<port>. See app/src/debug/res/xml/network_security_config.xml for the (loopback
+  only) allowlist and why it is scoped that way.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application android:networkSecurityConfig="@xml/network_security_config" />
+
+</manifest>
