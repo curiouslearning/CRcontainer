@@ -363,11 +363,14 @@ public class DefaultAppEventPayloadHandler
             Map<String, Object> record
     ) {
 
+        String now = Instant.now().toString();
+
         // record already carries the atomic-increment data write map built in
         // storeSummaryPayload. FieldValue.increment treats a missing field as 0, so the
         // same map is correct for a brand-new document too.
         record.put("collection", payload.collection);
-        record.put("created_at", Instant.now().toString());
+        record.put("created_at", now);
+        record.put("updated_at", now);
         record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
 
         db.collection(payload.collection)
