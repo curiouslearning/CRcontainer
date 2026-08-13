@@ -271,7 +271,7 @@ public class WebApp extends BaseActivity {
         WebAppInterface(Context context) {
             mContext = context;
             // Shared process-level instance (also warmed on container open in MainActivity) — reused here so
-            // there is exactly one sync listener per summary doc across the container and all sub-apps.
+            // the container and every sub-app write through one handler against one warmed Firestore cache.
             handler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
         }
 

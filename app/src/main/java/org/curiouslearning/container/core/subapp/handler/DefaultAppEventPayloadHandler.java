@@ -8,8 +8,6 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.MetadataChanges;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
 
@@ -21,7 +19,6 @@ import org.curiouslearning.container.utilities.CountryProvider;
 
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -33,25 +30,20 @@ public class DefaultAppEventPayloadHandler
     private static final String COLLECTION_SUMMARY = "summary_data";
     private static final String LANGUAGE_FIELD = "metadata.language";
 
-    private final Map<String, ListenerRegistration> syncListeners = new HashMap<>();
     private final String crUserId;
 
     // Process-level shared instance so the container (MainActivity) and every sub-app (WebApp) resolve to
-    // one handler. A single syncListeners map makes the per-doc dedup guard in attachSyncListener effective
-    // process-wide (exactly one sync listener per summary doc), and lets MainActivity warm Firestore /
-    // attach listeners on container open, before any sub-app is launched.
+    // one handler, and so MainActivity can warm Firestore on container open — priming the local cache with
+    // this user's summary docs before any sub-app is launched (see prefetchSummaryDocs).
     private static DefaultAppEventPayloadHandler instance;
 
     /**
-     * Returns the shared handler for {@code crUserId}, constructing it on first use. Rebuilds (detaching the
-     * previous instance's listeners) only when the id changes — which in practice happens only under the
-     * DEBUG {@code custom_cr_user_id} override; the production {@code pseudoId} is stable for the process.
+     * Returns the shared handler for {@code crUserId}, constructing it on first use. Rebuilds only when the
+     * id changes — which in practice happens only under the DEBUG {@code custom_cr_user_id} override; the
+     * production {@code pseudoId} is stable for the process.
      */
     public static synchronized DefaultAppEventPayloadHandler getInstance(@NonNull String crUserId) {
         if (instance == null || !instance.crUserId.equals(crUserId)) {
-            if (instance != null) {
-                instance.detachListeners();
-            }
             instance = new DefaultAppEventPayloadHandler(crUserId);
         }
         return instance;
@@ -59,42 +51,27 @@ public class DefaultAppEventPayloadHandler
 
     public DefaultAppEventPayloadHandler(@NonNull String crUserId) {
         this.crUserId = crUserId;
-        attachExistingSyncListeners();
+        prefetchSummaryDocs();
     }
 
     /**
-     * Removes any active sync listeners and clears the registry. Used when the shared instance is replaced
-     * for a new {@code crUserId} so stale registrations are not leaked.
+     * Warms the local Firestore cache with this user's existing summary docs on container open, so the
+     * upsert query in {@link #storeSummaryPayload} can still resolve an existing doc when the device is
+     * offline at write time — instead of missing it and creating a duplicate summary record.
      */
-    private void detachListeners() {
-        for (ListenerRegistration reg : syncListeners.values()) {
-            if (reg != null) {
-                reg.remove();
-            }
-        }
-        syncListeners.clear();
-    }
-
-    private void attachExistingSyncListeners() {
+    private void prefetchSummaryDocs() {
         if (crUserId.trim().isEmpty()) {
-            Log.w(TAG, "cr_user_id is blank — skipping existing sync listener attachment");
+            Log.w(TAG, "cr_user_id is blank — skipping summary doc prefetch");
             return;
         }
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        db.collection(COLLECTION_SUMMARY)
+        FirebaseFirestore.getInstance()
+                .collection(COLLECTION_SUMMARY)
                 .whereEqualTo("cr_user_id", crUserId)
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<DocumentSnapshot> docs = querySnapshot.getDocuments();
-                    Log.d(TAG, "Attaching sync listeners to " + docs.size() + " existing summary docs");
-                    for (DocumentSnapshot doc : docs) {
-                        attachSyncListener(
-                                db.collection(COLLECTION_SUMMARY).document(doc.getId())
-                        );
-                    }
-                })
+                .addOnSuccessListener(querySnapshot ->
+                        Log.d(TAG, "Prefetched " + querySnapshot.size() + " existing summary docs"))
                 .addOnFailureListener(e ->
-                        Log.w(TAG, "Failed to fetch existing summary docs for sync listener attachment", e));
+                        Log.w(TAG, "Failed to prefetch existing summary docs", e));
     }
 
     @Override
@@ -220,6 +197,7 @@ public class DefaultAppEventPayloadHandler
         record.put("app_id", payload.app_id);
         record.put("collection", payload.collection);
         record.put("created_at", Instant.now().toString());
+        record.put("synced_at", FieldValue.serverTimestamp());
         record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
         record.put("metadata", payload.metadata);
         record.put("attribution", payload.attribution);
@@ -231,10 +209,8 @@ public class DefaultAppEventPayloadHandler
 
         db.collection(payload.collection)
                 .add(record)
-                .addOnSuccessListener(ref -> {
-                    Log.d(TAG, "User session saved docId=" + ref.getId());
-                    attachSyncListener(ref);
-                })
+                .addOnSuccessListener(ref ->
+                        Log.d(TAG, "User session saved docId=" + ref.getId()))
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed to save user session payload", e));
     }
@@ -286,6 +262,7 @@ public class DefaultAppEventPayloadHandler
         record.put("metadata", payload.metadata);
         record.put("attribution", payload.attribution);
         record.put("data", dataWriteMap);
+        record.put("synced_at", FieldValue.serverTimestamp());
 
         if (language != null) {
             // Language known: Firestore can match it server-side directly.
@@ -344,10 +321,8 @@ public class DefaultAppEventPayloadHandler
             DocumentReference existingRef = db.collection(payload.collection).document(existingDocId);
 
             existingRef.set(record, SetOptions.merge())
-                    .addOnSuccessListener(aVoid -> {
-                        Log.d(TAG, "Updated summary payload with id: " + existingDocId);
-                        attachSyncListener(existingRef);
-                    })
+                    .addOnSuccessListener(aVoid ->
+                            Log.d(TAG, "Updated summary payload with id: " + existingDocId))
                     .addOnFailureListener(e ->
                             Log.e(TAG, "Failed to update summary payload", e));
 
@@ -375,10 +350,8 @@ public class DefaultAppEventPayloadHandler
 
         db.collection(payload.collection)
                 .add(record)
-                .addOnSuccessListener(ref -> {
-                    Log.d(TAG, "Created new summary payload docId=" + ref.getId());
-                    attachSyncListener(ref);
-                })
+                .addOnSuccessListener(ref ->
+                        Log.d(TAG, "Created new summary payload docId=" + ref.getId()))
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed to create summary payload", e));
     }
@@ -445,41 +418,5 @@ public class DefaultAppEventPayloadHandler
         }
 
         return writeMap;
-    }
-
-    /**
-     * Attaches a one-shot metadata listener that stamps synced_at when the pending write
-     * is confirmed by the Firestore server (offline write flushed on reconnect, or
-     * immediate server confirmation when already online).
-     *
-     * Safe to call multiple times for the same docRef — only one listener is kept active
-     * per document ID at a time.
-     */
-    private void attachSyncListener(@NonNull DocumentReference docRef) {
-        String docId = docRef.getId();
-
-        if (syncListeners.containsKey(docId)) {
-            Log.d(TAG, "Sync listener already active for docId=" + docId);
-            return;
-        }
-
-        ListenerRegistration[] holder = {null};
-        holder[0] = docRef.addSnapshotListener(MetadataChanges.INCLUDE, (snapshot, error) -> {
-            if (snapshot == null || error != null) return;
-            if (!snapshot.getMetadata().hasPendingWrites() && !snapshot.getMetadata().isFromCache()) {
-                syncListeners.remove(docId);
-                if (holder[0] != null) holder[0].remove();
-                Log.d(TAG, "Sync detected for docId=" + docId);
-                Map<String, Object> update = new HashMap<>();
-                update.put("synced_at", Instant.now().toString());
-                docRef.set(update, SetOptions.merge())
-                        .addOnSuccessListener(v ->
-                                Log.d(TAG, "synced_at recorded for docId=" + docId))
-                        .addOnFailureListener(e ->
-                                Log.e(TAG, "Failed to record synced_at for docId=" + docId, e));
-            }
-        });
-
-        syncListeners.put(docId, holder[0]);
     }
 }
