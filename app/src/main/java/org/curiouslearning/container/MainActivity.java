@@ -110,10 +110,9 @@ public class MainActivity extends BaseActivity {
     private String manifestVersion;
     private static final String TAG = "MainActivity";
     private AudioPlayer audioPlayer;
-    // Warms Firestore and attaches summary_data sync listeners on container open
-    // (shared instance also used
-    // by WebApp). The static getInstance holds the canonical reference; this field
-    // is kept for readability.
+    // Warms Firestore and prefetches this user's summary_data docs into the local
+    // cache on container open (shared instance also used by WebApp). The static
+    // getInstance holds the canonical reference; this field is kept for readability.
     private DefaultAppEventPayloadHandler summaryHandler;
     private String appVersion;
     private boolean isReferrerHandled;
