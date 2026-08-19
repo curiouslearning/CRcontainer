@@ -16,8 +16,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 
 import androidx.appcompat.app.AlertDialog;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -28,11 +26,7 @@ import io.sentry.Sentry;
 
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
-import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
-import org.curiouslearning.container.core.subapp.validation.AppEventPayloadValidator;
-import org.curiouslearning.container.core.subapp.validation.ValidationResult;
-import org.curiouslearning.container.core.subapp.handler.AppEventPayloadHandler;
-import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadHandler;
+import org.curiouslearning.container.core.subapp.emitter.AppEventEmitter;
 
 
 public class WebApp extends BaseActivity {
@@ -263,16 +257,14 @@ public class WebApp extends BaseActivity {
 
     public class WebAppInterface {
         private Context mContext;
-        private final Gson gson = new Gson();
-        private final AppEventPayloadValidator validator =
-                new AppEventPayloadValidator();
-        private final AppEventPayloadHandler handler;
+        private final AppEventEmitter emitter;
 
         WebAppInterface(Context context) {
             mContext = context;
-            // Shared process-level instance (also warmed on container open in MainActivity) — reused here so
-            // the container and every sub-app write through one handler against one warmed Firestore cache.
-            handler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
+            // Resolves to the shared process-level handler (also warmed on container open in MainActivity)
+            // — so the container and every sub-app write through one handler against one warmed Firestore
+            // cache. Validation and JSON parsing live in the emitter, shared with Java-side callers.
+            emitter = AppEventEmitter.forUser(pseudoId);
         }
 
         @JavascriptInterface
@@ -307,31 +299,9 @@ public class WebApp extends BaseActivity {
 
         @JavascriptInterface
         public void logMessage(String payloadJson) {
-
-            try {
-                if (payloadJson == null || payloadJson.trim().isEmpty()) {
-                    Log.e("WebApp", "Rejected payload: empty JSON");
-                    return;
-                }
-
-                AppEventPayload payload =
-                        gson.fromJson(payloadJson, AppEventPayload.class);
-
-                ValidationResult result = validator.validate(payload);
-
-                if (!result.isValid) {
-                    Log.e("WebApp",
-                            "Payload rejected: " + result.errorMessage);
-                    return;
-                }
-
-                handler.handle(payload);
-
-            } catch (JsonSyntaxException e) {
-                Log.e("WebApp", "Invalid JSON payload", e);
-            } catch (Exception e) {
-                Log.e("WebApp", "Unexpected error handling payload", e);
-            }
+            // Guards, parsing, validation and dispatch all live in the emitter, so a JS-originated
+            // event and a container-originated one travel the identical path.
+            emitter.emitJson(payloadJson);
         }
 
         @JavascriptInterface
