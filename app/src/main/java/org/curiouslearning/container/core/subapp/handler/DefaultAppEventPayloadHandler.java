@@ -4,6 +4,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -75,7 +76,7 @@ public class DefaultAppEventPayloadHandler
     }
 
     @Override
-    public void handle(AppEventPayload payload) {
+    public void handle(AppEventPayload payload, AppEventWriteCallback callback) {
 
         Log.d(
                 TAG,
@@ -83,10 +84,10 @@ public class DefaultAppEventPayloadHandler
                         " collection=" + payload.collection
         );
 
-        storePayload(payload);
+        storePayload(payload, OneShotWriteCallback.wrap(callback));
     }
 
-    private void storePayload(@NonNull AppEventPayload payload) {
+    private void storePayload(@NonNull AppEventPayload payload, @NonNull OneShotWriteCallback callback) {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String rawCollection = payload.collection;
@@ -98,6 +99,8 @@ public class DefaultAppEventPayloadHandler
         ) {
 
             Log.e(TAG, "Invalid payload — missing or blank required fields");
+            callback.onFailed(new IllegalArgumentException(
+                    "Invalid payload — missing or blank required fields"));
             return;
         }
 
@@ -139,21 +142,20 @@ public class DefaultAppEventPayloadHandler
 
             case COLLECTION_USER_SESSION:
                 Log.d(TAG, "Handling user_sessions_data payload");
-                storeUserSessionPayload(db, payload);
+                storeUserSessionPayload(db, payload, callback);
                 break;
 
             case COLLECTION_SUMMARY:
                 Log.d(TAG, "Handling summary_data payload");
-                storeSummaryPayload(db, payload);
+                storeSummaryPayload(db, payload, callback);
                 break;
 
             default:
-                Log.e(
-                        TAG,
-                        "Unsupported collection: raw='" + rawCollection +
-                                "' normalized='" + normalizedCollection +
-                                "' length=" + normalizedCollection.length()
-                );
+                String unsupported = "Unsupported collection: raw='" + rawCollection +
+                        "' normalized='" + normalizedCollection +
+                        "' length=" + normalizedCollection.length();
+                Log.e(TAG, unsupported);
+                callback.onFailed(new IllegalArgumentException(unsupported));
                 return;
         }
     }
@@ -182,12 +184,15 @@ public class DefaultAppEventPayloadHandler
      */
     private void storeUserSessionPayload(
             FirebaseFirestore db,
-            AppEventPayload payload
+            AppEventPayload payload,
+            @NonNull OneShotWriteCallback callback
     ) {
 
         if (!(payload.data instanceof Map)) {
-            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
-                    + (payload.data == null ? "null" : payload.data.getClass()));
+            String message = "Invalid payload.data type. Expected Map but got: "
+                    + (payload.data == null ? "null" : payload.data.getClass());
+            Log.e(TAG, message);
+            callback.onFailed(new IllegalArgumentException(message));
             return;
         }
 
@@ -207,12 +212,23 @@ public class DefaultAppEventPayloadHandler
 
         record.put("data", data);
 
-        db.collection(payload.collection)
-                .add(record)
-                .addOnSuccessListener(ref ->
-                        Log.d(TAG, "User session saved docId=" + ref.getId()))
-                .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed to save user session payload", e));
+        Task<DocumentReference> write = db.collection(payload.collection).add(record);
+
+        // Signalled before the listeners are attached, so "queued precedes the terminal callback"
+        // holds even when the write acks immediately. The write is already in Firestore's local
+        // persistence queue at this point and survives process death, so the caller may release its
+        // own copy; the listeners below only fire on server ack, which offline may be much later or
+        // never.
+        callback.onQueued();
+
+        write.addOnSuccessListener(ref -> {
+                    Log.d(TAG, "User session saved docId=" + ref.getId());
+                    callback.onWritten(ref.getId());
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to save user session payload", e);
+                    callback.onFailed(e);
+                });
     }
 
     private String resolveContextString(AppContextKey key, String fallback) {
@@ -236,12 +252,15 @@ public class DefaultAppEventPayloadHandler
      */
     private void storeSummaryPayload(
             FirebaseFirestore db,
-            AppEventPayload payload
+            AppEventPayload payload,
+            @NonNull OneShotWriteCallback callback
     ) {
 
         if (!(payload.data instanceof Map)) {
-            Log.e(TAG, "Invalid payload.data type. Expected Map but got: "
-                    + (payload.data == null ? "null" : payload.data.getClass()));
+            String message = "Invalid payload.data type. Expected Map but got: "
+                    + (payload.data == null ? "null" : payload.data.getClass());
+            Log.e(TAG, message);
+            callback.onFailed(new IllegalArgumentException(message));
             return;
         }
 
@@ -273,10 +292,10 @@ public class DefaultAppEventPayloadHandler
                     .limit(1)
                     .get()
                     .addOnSuccessListener(querySnapshot ->
-                            onSummaryQueryResult(db, payload, record, firstDocId(querySnapshot)))
+                            onSummaryQueryResult(db, payload, record, firstDocId(querySnapshot), callback))
                     .addOnFailureListener(e -> {
                         Log.w(TAG, "Query failed — creating new summary record", e);
-                        createNewSummaryDoc(db, payload, record);
+                        createNewSummaryDoc(db, payload, record, callback);
                     });
         } else {
             // Language unknown: Firestore has no "field does not exist" filter, so match
@@ -295,11 +314,11 @@ public class DefaultAppEventPayloadHandler
                                 break;
                             }
                         }
-                        onSummaryQueryResult(db, payload, record, existingDocId);
+                        onSummaryQueryResult(db, payload, record, existingDocId, callback);
                     })
                     .addOnFailureListener(e -> {
                         Log.w(TAG, "Query failed — creating new summary record", e);
-                        createNewSummaryDoc(db, payload, record);
+                        createNewSummaryDoc(db, payload, record, callback);
                     });
         }
     }
@@ -312,7 +331,8 @@ public class DefaultAppEventPayloadHandler
             FirebaseFirestore db,
             AppEventPayload payload,
             Map<String, Object> record,
-            String existingDocId
+            String existingDocId,
+            @NonNull OneShotWriteCallback callback
     ) {
         if (existingDocId != null) {
 
@@ -320,22 +340,30 @@ public class DefaultAppEventPayloadHandler
 
             DocumentReference existingRef = db.collection(payload.collection).document(existingDocId);
 
-            existingRef.set(record, SetOptions.merge())
-                    .addOnSuccessListener(aVoid ->
-                            Log.d(TAG, "Updated summary payload with id: " + existingDocId))
-                    .addOnFailureListener(e ->
-                            Log.e(TAG, "Failed to update summary payload", e));
+            Task<Void> write = existingRef.set(record, SetOptions.merge());
+
+            callback.onQueued();
+
+            write.addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Updated summary payload with id: " + existingDocId);
+                        callback.onWritten(existingDocId);
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Failed to update summary payload", e);
+                        callback.onFailed(e);
+                    });
 
         } else {
             Log.d(TAG, "No existing summary record — creating new");
-            createNewSummaryDoc(db, payload, record);
+            createNewSummaryDoc(db, payload, record, callback);
         }
     }
 
     private void createNewSummaryDoc(
             FirebaseFirestore db,
             AppEventPayload payload,
-            Map<String, Object> record
+            Map<String, Object> record,
+            @NonNull OneShotWriteCallback callback
     ) {
 
         String now = Instant.now().toString();
@@ -348,12 +376,18 @@ public class DefaultAppEventPayloadHandler
         record.put("updated_at", now);
         record.put("schema_version", payload.schema_version != null ? payload.schema_version : "unknown");
 
-        db.collection(payload.collection)
-                .add(record)
-                .addOnSuccessListener(ref ->
-                        Log.d(TAG, "Created new summary payload docId=" + ref.getId()))
-                .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed to create summary payload", e));
+        Task<DocumentReference> write = db.collection(payload.collection).add(record);
+
+        callback.onQueued();
+
+        write.addOnSuccessListener(ref -> {
+                    Log.d(TAG, "Created new summary payload docId=" + ref.getId());
+                    callback.onWritten(ref.getId());
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to create summary payload", e);
+                    callback.onFailed(e);
+                });
     }
 
     /**
