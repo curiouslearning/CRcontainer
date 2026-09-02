@@ -27,6 +27,8 @@ import io.sentry.Sentry;
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.emitter.AppEventEmitter;
+import org.curiouslearning.container.core.usage.SubAppIdResolver;
+import org.curiouslearning.container.core.usage.SubAppUsageTracker;
 
 
 public class WebApp extends BaseActivity {
@@ -57,6 +59,8 @@ public class WebApp extends BaseActivity {
     private Runnable monsterStateCheckRunnable;
     private boolean isMonsterCheckRunning;
     private boolean isFtmApp;
+    /** Container-measured usage timing; null when this sub-app has no resolvable app_id. */
+    private SubAppUsageTracker usageTracker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,8 +69,47 @@ public class WebApp extends BaseActivity {
         setContentView(R.layout.activity_web_app);
         getIntentData();
         initViews();
+        initUsageTracking();
         logAppLaunchEvent();
         loadWebView();
+    }
+
+    /**
+     * Sets up container-measured usage timing (MR-181). Runs after {@link #initViews()}, which resolves
+     * {@code pseudoId}. Skipped without an {@code app_id}, since there is no document to attribute time to.
+     */
+    private void initUsageTracking() {
+        String appKey = SubAppIdResolver.resolve(
+                getIntent().getStringExtra(SubAppIdResolver.EXTRA_APP_ID), identityUrl());
+
+        if (appKey == null) {
+            Log.d("SubAppUsage", "No app_id for \"" + title + "\"; container-measured usage not tracked");
+            return;
+        }
+
+        if (pseudoId == null || pseudoId.isEmpty()) {
+            // The validator would reject every write anyway; measuring would only produce error logs.
+            Log.w("SubAppUsage", "No cr_user_id yet; container-measured usage not tracked for " + appKey);
+            return;
+        }
+
+        usageTracker = SubAppUsageTracker.create(this, appKey, usageLanguage(), pseudoId);
+    }
+
+    /**
+     * The language the usage write is keyed on. Must match what the handler stamps as
+     * {@code metadata.language}, or the container and the sub-app land in different documents.
+     */
+    private String usageLanguage() {
+        Object contextLanguage = AppContext.getInstance().get(AppContextKey.LANGUAGE);
+
+        if (contextLanguage instanceof String && !((String) contextLanguage).isEmpty()) {
+            return (String) contextLanguage;
+        }
+
+        return (languageInEnglishName != null && !languageInEnglishName.isEmpty())
+                ? languageInEnglishName
+                : "unknown";
     }
 
     private void getIntentData() {
@@ -513,8 +556,20 @@ public class WebApp extends BaseActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        if (usageTracker != null) {
+            usageTracker.onStart(this);
+        }
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
+        // Closes the usage segment; the write happens in onStop.
+        if (usageTracker != null) {
+            usageTracker.onPause();
+        }
         // Stop periodic state checks when leaving FTM
         if (monsterStateCheckHandler != null && monsterStateCheckRunnable != null) {
             monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
@@ -525,9 +580,22 @@ public class WebApp extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (usageTracker != null) {
+            usageTracker.onResume();
+        }
         // Resume periodic state checks if FTM is open
         if (webView != null && isFtmApp && !isMonsterCheckRunning) {
             startPeriodicMonsterStateCheck(webView);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Flushed here rather than in onPause so a momentary pause doesn't write, and skipped while the
+        // Activity is being recreated: the timer is process-wide, so the time joins the next flush.
+        if (usageTracker != null) {
+            usageTracker.onStop(isChangingConfigurations());
         }
     }
 
