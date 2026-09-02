@@ -93,6 +93,21 @@ public class WebApp extends BaseActivity {
             String host = (identityUrl != null) ? Uri.parse(identityUrl).getHost() : null;
             AppContext.getInstance().set(AppContextKey.HOSTNAME,
                     (host != null && !host.isEmpty()) ? host : "unknown");
+
+            // MR-217: capture this sub-app's manifest-derived app_id as the current session's
+            // trusted app identifier before the WebView (and therefore the JS bridge) can load.
+            // Left unset — never guessed — when the launched catalog entry has no app_id yet;
+            // DefaultAppEventPayloadHandler's fallback order covers that case.
+            String appIdExtra = intent.getStringExtra("app_id");
+            if (appIdExtra != null && !appIdExtra.trim().isEmpty()) {
+                AppContext.getInstance().set(AppContextKey.CURRENT_APP_ID, appIdExtra);
+                Log.d("WebApp", "current_app_id set to " + appIdExtra);
+            } else {
+                // Explicitly clear rather than leave untouched — otherwise a previous sub-app's
+                // app_id would linger and be wrongly attributed to this one (FR-005).
+                AppContext.getInstance().remove(AppContextKey.CURRENT_APP_ID);
+                Log.d("WebApp", "No app_id on launch intent — current_app_id left unset");
+            }
         }
     }
 
