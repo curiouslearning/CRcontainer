@@ -77,6 +77,12 @@ public class DefaultAppEventPayloadHandler
     @Override
     public void handle(AppEventPayload payload) {
 
+        // MR-217: resolve once, here, and overwrite payload.app_id with the trusted value — every
+        // downstream read of payload.app_id (this log line, storeUserSessionPayload,
+        // storeSummaryPayload's written field and both whereEqualTo queries) then uses it with no
+        // further changes needed at those call sites.
+        payload.app_id = resolveAppId(payload);
+
         Log.d(
                 TAG,
                 "Accepted payload | app_id=" + payload.app_id +
@@ -92,8 +98,10 @@ public class DefaultAppEventPayloadHandler
         String rawCollection = payload.collection;
         String normalizedCollection = normalizeCollection(rawCollection);
 
+        // app_id is intentionally not checked here — handle() has already resolved it via
+        // resolveAppId, which always returns a non-blank value (current_app_id, the payload's
+        // own app_id, or "unknown"); it is never a rejection reason.
         if (payload.cr_user_id == null || payload.cr_user_id.trim().isEmpty() ||
-                payload.app_id == null || payload.app_id.trim().isEmpty() ||
                 normalizedCollection == null || normalizedCollection.isEmpty()
         ) {
 
@@ -213,6 +221,34 @@ public class DefaultAppEventPayloadHandler
                         Log.d(TAG, "User session saved docId=" + ref.getId()))
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Failed to save user session payload", e));
+    }
+
+    /**
+     * MR-217: resolves the trusted app_id for a Firestore field/query, in this fixed order and
+     * no other ("do not guess"):
+     * <ol>
+     *   <li>current_app_id (this session's manifest-derived, container-known value) — used
+     *       silently when available.</li>
+     *   <li>{@code payload.app_id}, the sub-app's own reported value — used, with a warning
+     *       logged, only when (1) is unavailable.</li>
+     *   <li>The literal {@code "unknown"} — used, with a warning logged, only when both (1) and
+     *       (2) are unavailable.</li>
+     * </ol>
+     */
+    String resolveAppId(@NonNull AppEventPayload payload) {
+        String currentAppId = resolveContextString(AppContextKey.CURRENT_APP_ID, null);
+        if (currentAppId != null && !currentAppId.trim().isEmpty()) {
+            return currentAppId;
+        }
+
+        if (payload.app_id != null && !payload.app_id.trim().isEmpty()) {
+            Log.w(TAG, "current_app_id unavailable — falling back to payload app_id="
+                    + payload.app_id);
+            return payload.app_id;
+        }
+
+        Log.w(TAG, "current_app_id and payload app_id both unavailable — defaulting app_id to \"unknown\"");
+        return "unknown";
     }
 
     private String resolveContextString(AppContextKey key, String fallback) {

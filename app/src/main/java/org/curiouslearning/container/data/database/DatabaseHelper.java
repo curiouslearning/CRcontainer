@@ -13,7 +13,7 @@ import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.utilities.CacheUtils;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 
-@Database(entities = { WebApp.class }, version = 2)
+@Database(entities = { WebApp.class }, version = 3)
 public abstract class DatabaseHelper extends RoomDatabase {
 
     private static DatabaseHelper instance;

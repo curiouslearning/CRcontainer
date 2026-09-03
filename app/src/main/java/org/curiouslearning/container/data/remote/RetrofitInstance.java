@@ -97,6 +97,7 @@ public class RetrofitInstance {
                         if (webAppResponse != null) {
                             CacheUtils.setManifestVersionNumber(webAppResponse.getVersion());
                             List<WebApp> webApps = webAppResponse.getWebApps();
+                            logAppIdCoverage(webApps);
                             webAppDatabase.deleteWebApps(webApps);
                         }
                     }
@@ -136,6 +137,7 @@ public class RetrofitInstance {
                         WebAppResponse webAppResponse = findWebApps(jsonElement);
                         webAppResponse.setVersion(versionElement.getAsString());
                         String latestManifestVersion = webAppResponse.getVersion();
+                        logAppIdCoverage(webAppResponse.getWebApps());
                         if (!Objects.equals(manifestVersion, latestManifestVersion)) {
                             CacheUtils.setManifestVersionNumber(latestManifestVersion);
                             webAppDatabase.deleteWebApps(webAppResponse.getWebApps());
@@ -150,6 +152,21 @@ public class RetrofitInstance {
             }
         });
 
+    }
+
+    /**
+     * MR-217: logs how many of the just-parsed manifest entries carry an app_id, so a manifest
+     * that hasn't rolled the field out yet (or partially has) is visible in device logs without
+     * inspecting the on-device catalog directly.
+     */
+    private void logAppIdCoverage(List<WebApp> webApps) {
+        if (webApps == null) {
+            return;
+        }
+        long withAppId = webApps.stream()
+                .filter(webApp -> webApp.getApp_id() != null && !webApp.getApp_id().trim().isEmpty())
+                .count();
+        Log.d("AppConfig", "Manifest app_id coverage: " + withAppId + "/" + webApps.size() + " entries");
     }
 
     private WebAppResponse findWebApps(JsonElement element) {
