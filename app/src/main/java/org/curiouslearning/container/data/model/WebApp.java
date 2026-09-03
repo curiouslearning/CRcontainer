@@ -19,7 +19,12 @@ public class WebApp {
 
     private String languageInEnglishName;
 
-
+    // Sourced from the manifest's "app_id" key. Kept snake_case (unlike this entity's other
+    // on-device-only fields) so Gson maps it 1:1 with no @SerializedName, matching the precedent
+    // already set by AppEventPayload.app_id for cross-boundary/Firestore-facing identifiers.
+    // Distinct from appId above (the local Room primary key/selection index) — nullable since a
+    // manifest entry may predate this field's server-side rollout.
+    private String app_id;
 
     public int getAppId() {
         return appId;
@@ -67,6 +72,14 @@ public class WebApp {
 
     public void setLanguageInEnglishName(String languageInEnglishName) {
         this.languageInEnglishName = languageInEnglishName;
+    }
+
+    public String getApp_id() {
+        return app_id;
+    }
+
+    public void setApp_id(String app_id) {
+        this.app_id = app_id;
     }
 
 }

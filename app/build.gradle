@@ -1,9 +1,8 @@
 plugins {
     id 'com.android.application'
-        id 'com.google.gms.google-services'
+    id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
     id 'jacoco'
-
     id 'io.sentry.android.gradle' version '5.10.0'
 }
 def buildBranch = project.hasProperty("buildBranch") ? project.getProperty("buildBranch") : "main"
@@ -27,7 +26,7 @@ task printApiUrl {
 
 android {
     namespace 'org.curiouslearning.container'
-    compileSdk 35
+    compileSdk = 36
     packagingOptions {
         pickFirst "lib/x86/libc++_shared.so"
         pickFirst "lib/x86_64/libc++_shared.so"
@@ -36,10 +35,10 @@ android {
     }
     defaultConfig {
         applicationId "org.curiouslearning.container"
-        minSdk 24
-        targetSdk 35
-        versionCode 91
-        versionName "2.34.6"
+        minSdk = 24
+        targetSdk = 36
+        versionCode 92
+        versionName "2.34.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

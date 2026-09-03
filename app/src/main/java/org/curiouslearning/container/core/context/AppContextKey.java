@@ -8,5 +8,6 @@ public enum AppContextKey {
     LANGUAGE,
     CAMPAIGN_ID,
     SOURCE,
-    HOSTNAME
+    HOSTNAME,
+    CURRENT_APP_ID
 }
