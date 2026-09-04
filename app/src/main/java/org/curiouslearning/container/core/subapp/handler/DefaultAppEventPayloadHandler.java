@@ -136,13 +136,20 @@ public class DefaultAppEventPayloadHandler
         payload.attribution.put("hostname", resolveContextString(AppContextKey.HOSTNAME, "unknown"));
         payload.attribution.put("apk_package_name", BuildConfig.APPLICATION_ID);
 
-        // Stamp the Curious Reader language cached in AppContext. Left unstamped when
+        // Stamp the Curious Reader language. A payload may name its own via container_language —
+        // container-measured usage does, because a recovered stretch is written on a later launch and
+        // AppContext may by then hold a different selection, which would file the time under the wrong
+        // document. That field is Java-only; AppEventEmitter.emitJson rejects it from a sub-app, so a
+        // bridge payload can never reach this branch.
+        //
+        // Otherwise fall back to the language cached in AppContext. Left unstamped when
         // unset/blank (rather than a sentinel like "unknown") so summary_data's
         // field-presence query fallback (see storeSummaryPayload) keeps working — a
         // written sentinel would make an unset-language doc indistinguishable from one
         // genuinely tagged with that sentinel as its language.
-        String language = resolveContextString(AppContextKey.LANGUAGE, null);
-        if (language != null) {
+        String language = resolveLanguage(payload);
+
+        if (isPresent(language)) {
             payload.metadata.put("language", language);
         }
 
@@ -265,6 +272,24 @@ public class DefaultAppEventPayloadHandler
 
         Log.w(TAG, "current_app_id and payload app_id both unavailable — defaulting app_id to \"unknown\"");
         return "unknown";
+    }
+
+    /** Non-null and not just whitespace — the bar a language must clear to be stamped at all. */
+    private static boolean isPresent(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    /**
+     * {@code payload.container_language} if named (Java-only; the bridge rejects it), else {@code AppContext},
+     * else {@code null} — never a sentinel, which would break the field-presence query fallback.
+     */
+    String resolveLanguage(@NonNull AppEventPayload payload) {
+
+        if (isPresent(payload.container_language)) {
+            return payload.container_language.trim();
+        }
+
+        return resolveContextString(AppContextKey.LANGUAGE, null);
     }
 
     private String resolveContextString(AppContextKey key, String fallback) {

@@ -44,6 +44,10 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadHandler;
+import org.curiouslearning.container.core.usage.AndroidBootTokenProvider;
+import org.curiouslearning.container.core.usage.FirestoreUsageFlusher;
+import org.curiouslearning.container.core.usage.OpenStretchRecovery;
+import org.curiouslearning.container.core.usage.SharedPreferencesOpenStretchStore;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -75,6 +79,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeMap;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import android.util.Log;
 import com.google.zxing.BarcodeFormat;
@@ -876,6 +881,35 @@ public class MainActivity extends BaseActivity {
             }
         }
         summaryHandler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
+
+        recoverOpenUsageStretches();
+    }
+
+    /**
+     * Writes any container-measured usage a previous run was killed before it could flush (MR-182).
+     *
+     * <p>Runs here rather than in {@code MyApplication}, so it happens once per container open against an
+     * already-warmed handler, instead of on the main thread of every process spawn.
+     *
+     * <p>Off the main thread and fully swallowed: a child must never wait on this, or see it fail. Each
+     * record carries its own {@code cr_user_id}, so {@code pseudoId} is deliberately not consulted.
+     */
+    private void recoverOpenUsageStretches() {
+
+        Context appContext = getApplicationContext();
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                new OpenStretchRecovery(
+                        new SharedPreferencesOpenStretchStore(appContext),
+                        new AndroidBootTokenProvider(),
+                        FirestoreUsageFlusher::new)
+                        .recoverAll();
+
+            } catch (Exception e) {
+                Log.w(TAG, "Open usage stretch recovery failed; nothing lost that was not already lost", e);
+            }
+        });
     }
 
     public static String convertEpochToDate(long epochMillis) {

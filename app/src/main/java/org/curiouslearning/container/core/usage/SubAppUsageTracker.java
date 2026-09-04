@@ -12,9 +12,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
+import org.curiouslearning.container.core.subapp.handler.AppEventWriteCallback;
+
 /**
- * Drives a {@link SubAppUsageTimer} from one sub-app Activity's lifecycle. Time counts only while the
- * Activity is resumed and the screen is interactive, and is flushed on stop.
+ * Drives a {@link SubAppUsageTimer} from one sub-app Activity's lifecycle — time counts only while resumed
+ * with the screen on — plus an {@link OpenStretchRecorder} keeping the same state on disk against a kill.
  */
 public final class SubAppUsageTracker {
 
@@ -31,6 +33,7 @@ public final class SubAppUsageTracker {
 
     private final SubAppUsageTimer timer;
     private final SubAppUsageFlusher flusher;
+    private final OpenStretchRecorder recorder;
     private final ScreenState screenState;
     private final String appKey;
     private final String language;
@@ -63,9 +66,22 @@ public final class SubAppUsageTracker {
 
         SubAppUsageFlusher override = flusherOverride;
 
+        SubAppUsageTimer timer = SubAppUsageTimers.getInstance(appKey, language);
+
+        OpenStretchRecorder recorder = new OpenStretchRecorder(
+                new SharedPreferencesOpenStretchStore(context),
+                timer,
+                new AndroidMonotonicClock(),
+                new AndroidBootTokenProvider(),
+                new ExecutorHeartbeatTicker(),
+                appKey,
+                language,
+                crUserId);
+
         return new SubAppUsageTracker(
-                SubAppUsageTimers.getInstance(appKey, language),
+                timer,
                 (override != null) ? override : new FirestoreUsageFlusher(crUserId),
+                recorder,
                 screenState,
                 appKey,
                 language);
@@ -74,11 +90,13 @@ public final class SubAppUsageTracker {
     @VisibleForTesting
     SubAppUsageTracker(@NonNull SubAppUsageTimer timer,
                        @NonNull SubAppUsageFlusher flusher,
+                       @NonNull OpenStretchRecorder recorder,
                        @NonNull ScreenState screenState,
                        @NonNull String appKey,
                        @NonNull String language) {
         this.timer = timer;
         this.flusher = flusher;
+        this.recorder = recorder;
         this.screenState = screenState;
         this.appKey = appKey;
         this.language = language;
@@ -117,7 +135,7 @@ public final class SubAppUsageTracker {
         resumed = true;
 
         if (screenState.isInteractive()) {
-            timer.start(appKey, language);
+            openSegment();
         }
     }
 
@@ -125,7 +143,15 @@ public final class SubAppUsageTracker {
     public void onPause() {
 
         resumed = false;
-        timer.pause();
+        closeSegment();
+    }
+
+    /**
+     * An event arrived from the sub-app, proving it was alive now. Purely additive — the container's own
+     * heartbeat bounds the error, so a silent sub-app is recovered just as accurately.
+     */
+    public void onSubAppEvent() {
+        recorder.onSubAppEvent();
     }
 
     /**
@@ -145,11 +171,24 @@ public final class SubAppUsageTracker {
 
         if (changingConfigurations) {
             // The timer is process-wide, so the time survives recreation and joins the next flush.
-            // Writing here would split one session across two increments.
+            // Writing here would split one session across two increments. The open-stretch record stays
+            // too, for the same reason — the session is not over.
             return;
         }
 
         flush();
+    }
+
+    private void openSegment() {
+        timer.start(appKey, language);
+        // After start(), so the record it writes already shows the segment open.
+        recorder.onSegmentOpened();
+    }
+
+    private void closeSegment() {
+        timer.pause();
+        // After pause(), so the closing segment's time is already in the accumulators being persisted.
+        recorder.onSegmentClosed();
     }
 
     private void flush() {
@@ -158,23 +197,41 @@ public final class SubAppUsageTracker {
         UsageSegment segment = timer.stopAndDrain();
 
         if (segment.isEmpty()) {
+            // Nothing to write, and nothing left worth recovering.
+            recorder.clear();
             return;
         }
 
-        flusher.flush(segment);
+        flusher.flush(segment, new AppEventWriteCallback() {
+            @Override
+            public void onQueued() {
+                // Only now: the record and the timer's undrained state must stop existing at the same
+                // moment. Clearing at pause would lose a paused-then-killed session; clearing before the
+                // write is accepted would lose a rejected one; not clearing at all would recover time
+                // that has already been written.
+                recorder.clear();
+            }
+
+            @Override
+            public void onFailed(Exception e) {
+                Log.w(TAG, "Usage write failed; open stretch kept for the next launch", e);
+            }
+        });
     }
 
-    private void onScreenEvent(@Nullable String action) {
+    /** Package-private so a test can deliver a screen transition without broadcasting one. */
+    @VisibleForTesting
+    void onScreenEvent(@Nullable String action) {
 
         if (Intent.ACTION_SCREEN_OFF.equals(action)) {
             // Makes "screen-off is not counted" hold independently of lifecycle ordering.
-            timer.pause();
+            closeSegment();
             return;
         }
 
         // SCREEN_ON covers devices with no lock; USER_PRESENT covers those with a keyguard.
         if (resumed && !timer.isRunning() && screenState.isInteractive()) {
-            timer.start(appKey, language);
+            openSegment();
         }
     }
 }
