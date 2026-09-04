@@ -109,6 +109,18 @@ public final class AppEventEmitter {
 
             AppEventPayload payload = gson.fromJson(payloadJson, AppEventPayload.class);
 
+            // The trust boundary. container_language lets a Java caller name the language a payload's
+            // data belongs to, overriding live AppContext state; honouring it from a sub-app would hand
+            // sub-apps the ability to relabel which language partition their own data lands in, which
+            // they cannot do today. Rejected rather than quietly stripped, because a sub-app sending it
+            // is either confused or probing, and both deserve a signal.
+            if (payload != null && payload.container_language != null) {
+                Log.e(TAG, "Rejected payload: container_language is not accepted from a sub-app");
+                once.onFailed(new IllegalArgumentException(
+                        "Rejected payload: container_language is not accepted from a sub-app"));
+                return false;
+            }
+
             return emit(payload, once);
 
         } catch (JsonSyntaxException e) {

@@ -1,10 +1,8 @@
 package org.curiouslearning.container.core.usage;
 
 /**
- * The result of one {@link SubAppUsageTimer#stopAndDrain()}: how much container-measured foreground time is
- * ready to be written, and which document it belongs to.
- *
- * <p>Immutable, and safe to hand to a Firestore callback that may run later.
+ * The result of one {@link SubAppUsageTimer#stopAndDrain()}, or of one recovered stretch: how much time is
+ * ready to be written, and which document it belongs to. Immutable, safe to hand to a later callback.
  */
 public final class UsageSegment {
 
@@ -20,16 +18,47 @@ public final class UsageSegment {
     /** Sum of the same segments before the cap, in whole seconds. Always {@code >= cappedSeconds}. */
     public final long rawSeconds;
 
+    /** How much of {@link #cappedSeconds} is an estimate rather than a measurement; 0 for a drain. */
+    public final long recoveredSeconds;
+
+    /** How many recovery events this segment represents; 0 for a drain, 1 for a recovered stretch. */
+    public final long recoveredCount;
+
+    /** An ordinary drain: nothing here is a recovery estimate. */
     public UsageSegment(String appKey, String language, long cappedSeconds, long rawSeconds) {
+        this(appKey, language, cappedSeconds, rawSeconds, 0L, 0L);
+    }
+
+    public UsageSegment(String appKey,
+                        String language,
+                        long cappedSeconds,
+                        long rawSeconds,
+                        long recoveredSeconds,
+                        long recoveredCount) {
         this.appKey = appKey;
         this.language = language;
         this.cappedSeconds = cappedSeconds;
         this.rawSeconds = rawSeconds;
+        this.recoveredSeconds = recoveredSeconds;
+        this.recoveredCount = recoveredCount;
     }
 
-    /** True when there is nothing to write; callers should skip the write rather than send a zero increment. */
+    /**
+     * A recovered stretch. {@code rawSeconds} is deliberately the same capped value: {@code raw - capped}
+     * measures what the cap trimmed from *measured* play, so an estimate must contribute zero to it.
+     */
+    public static UsageSegment recovered(String appKey, String language, long seconds) {
+        return new UsageSegment(appKey, language, seconds, seconds, seconds, 1L);
+    }
+
+    /** True when there is nothing to write; callers skip rather than send a zero increment. */
     public boolean isEmpty() {
-        return cappedSeconds == 0L && rawSeconds == 0L;
+        return cappedSeconds == 0L && rawSeconds == 0L && recoveredSeconds == 0L && recoveredCount == 0L;
+    }
+
+    /** True when this segment carries recovery counters that must be written alongside the duration. */
+    public boolean isRecovered() {
+        return recoveredCount > 0L;
     }
 
     @Override
@@ -37,6 +66,10 @@ public final class UsageSegment {
         return "UsageSegment{appKey=" + appKey +
                 ", language=" + language +
                 ", cappedSeconds=" + cappedSeconds +
-                ", rawSeconds=" + rawSeconds + "}";
+                ", rawSeconds=" + rawSeconds +
+                (isRecovered()
+                        ? ", recoveredSeconds=" + recoveredSeconds + ", recoveredCount=" + recoveredCount
+                        : "") +
+                "}";
     }
 }
