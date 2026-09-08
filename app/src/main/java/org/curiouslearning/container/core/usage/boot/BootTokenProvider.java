@@ -1,4 +1,4 @@
-package org.curiouslearning.container.core.usage;
+package org.curiouslearning.container.core.usage.boot;
 
 /**
  * Identifies one uninterrupted run of the device, so a record written before a reboot can be recognised

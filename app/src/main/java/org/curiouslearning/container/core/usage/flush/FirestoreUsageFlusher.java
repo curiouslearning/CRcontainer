@@ -1,4 +1,4 @@
-package org.curiouslearning.container.core.usage;
+package org.curiouslearning.container.core.usage.flush;
 
 import android.util.Log;
 
@@ -9,6 +9,7 @@ import org.curiouslearning.container.core.subapp.emitter.AppEventEmitter;
 import org.curiouslearning.container.core.subapp.emitter.AppEventPayloadBuilder;
 import org.curiouslearning.container.core.subapp.handler.AppEventWriteCallback;
 import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
+import org.curiouslearning.container.core.usage.UsageSegment;
 
 /**
  * Writes a drained {@link UsageSegment} into {@code summary_data} (MR-183). Every field is {@code add} — a

@@ -13,6 +13,11 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
 import org.curiouslearning.container.core.subapp.handler.AppEventWriteCallback;
+import org.curiouslearning.container.core.usage.boot.AndroidBootTokenProvider;
+import org.curiouslearning.container.core.usage.clock.AndroidMonotonicClock;
+import org.curiouslearning.container.core.usage.flush.FirestoreUsageFlusher;
+import org.curiouslearning.container.core.usage.flush.SubAppUsageFlusher;
+import org.curiouslearning.container.core.usage.heartbeat.ExecutorHeartbeatTicker;
 
 /**
  * Drives a {@link SubAppUsageTimer} from one sub-app Activity's lifecycle — time counts only while resumed

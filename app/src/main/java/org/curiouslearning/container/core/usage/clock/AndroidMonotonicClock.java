@@ -1,4 +1,4 @@
-package org.curiouslearning.container.core.usage;
+package org.curiouslearning.container.core.usage.clock;
 
 import android.os.SystemClock;
 

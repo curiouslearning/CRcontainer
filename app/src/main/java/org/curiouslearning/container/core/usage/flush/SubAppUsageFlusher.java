@@ -1,8 +1,9 @@
-package org.curiouslearning.container.core.usage;
+package org.curiouslearning.container.core.usage.flush;
 
 import androidx.annotation.Nullable;
 
 import org.curiouslearning.container.core.subapp.handler.AppEventWriteCallback;
+import org.curiouslearning.container.core.usage.UsageSegment;
 
 /** Where a drained {@link UsageSegment} goes. A seam for tests, and for MR-184's coalescing. */
 public interface SubAppUsageFlusher {

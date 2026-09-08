@@ -4,6 +4,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import org.curiouslearning.container.core.usage.boot.BootTokenProvider;
+import org.curiouslearning.container.core.usage.clock.MonotonicClock;
+import org.curiouslearning.container.core.usage.heartbeat.HeartbeatTicker;
+
 /**
  * Keeps an {@link OpenStretchRecord} on disk while one sub-app has undrained usage time, so a process kill
  * loses at most one heartbeat interval instead of the whole session.
