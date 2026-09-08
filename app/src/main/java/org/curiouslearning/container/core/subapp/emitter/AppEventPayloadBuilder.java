@@ -41,6 +41,7 @@ public final class AppEventPayloadBuilder {
     private String collection;
     private String schemaVersion;
     private String timestamp;
+    private String language;
 
     public AppEventPayloadBuilder crUserId(String crUserId) {
         this.crUserId = crUserId;
@@ -65,6 +66,17 @@ public final class AppEventPayloadBuilder {
     /** Defaults to {@code Instant.now()} at {@link #build()} time; set this only to override it. */
     public AppEventPayloadBuilder timestamp(String timestamp) {
         this.timestamp = timestamp;
+        return this;
+    }
+
+    /**
+     * The language this payload's data belongs to, overriding {@code AppContext}. Set it only when the
+     * data was measured at some moment other than now.
+     *
+     * @see AppEventPayload#container_language
+     */
+    public AppEventPayloadBuilder language(String language) {
+        this.language = language;
         return this;
     }
 
@@ -96,6 +108,7 @@ public final class AppEventPayloadBuilder {
         payload.timestamp = (timestamp != null && !timestamp.trim().isEmpty())
                 ? timestamp
                 : Instant.now().toString();
+        payload.container_language = (language != null && !language.trim().isEmpty()) ? language : null;
         payload.data = new HashMap<>(data);
         payload.options = new HashMap<>(options);
 

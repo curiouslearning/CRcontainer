@@ -1,5 +1,7 @@
 package org.curiouslearning.container.core.usage;
 
+import org.curiouslearning.container.core.usage.clock.MonotonicClock;
+
 /**
  * Accumulates container-measured foreground time for one sub-app, in segments, and hands it out in whole
  * seconds on {@link #stopAndDrain()}.
@@ -101,6 +103,54 @@ public final class SubAppUsageTimer {
     /** True while a segment is open, i.e. between {@link #start} and the next pause or drain. */
     public synchronized boolean isRunning() {
         return segmentStartMs != NOT_RUNNING;
+    }
+
+    /**
+     * Everything this timer holds that a process kill would lose, read atomically — so a heartbeat cannot
+     * pair a segment start from before a {@code pause()} with accumulators from after it.
+     */
+    static final class Undrained {
+
+        final String appKey;
+        final String language;
+
+        /** Start of the open segment, or {@link SubAppUsageTimer#NOT_RUNNING}. */
+        final long segmentStartMs;
+
+        final long cappedMs;
+        final long trimmedMs;
+
+        private Undrained(String appKey, String language, long segmentStartMs, long cappedMs, long trimmedMs) {
+            this.appKey = appKey;
+            this.language = language;
+            this.segmentStartMs = segmentStartMs;
+            this.cappedMs = cappedMs;
+            this.trimmedMs = trimmedMs;
+        }
+
+        /** True when there is nothing worth persisting: no open segment and nothing accumulated. */
+        boolean isEmpty() {
+            return segmentStartMs == NOT_RUNNING && cappedMs == 0L && trimmedMs == 0L;
+        }
+    }
+
+    /** @see Undrained */
+    synchronized Undrained undrained() {
+        return new Undrained(appKey, language, segmentStartMs, accCappedMs, accTrimmedMs);
+    }
+
+    /**
+     * Adds previously-persisted time back into the accumulators, without opening a segment. Additive, so
+     * it cannot discard time this timer has already measured in the current process.
+     */
+    synchronized void restoreUndrained(long cappedMs, long trimmedMs) {
+
+        if (cappedMs < 0L || trimmedMs < 0L) {
+            return;
+        }
+
+        accCappedMs += cappedMs;
+        accTrimmedMs += trimmedMs;
     }
 
     /**

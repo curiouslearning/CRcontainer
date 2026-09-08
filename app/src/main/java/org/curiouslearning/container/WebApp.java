@@ -97,6 +97,27 @@ public class WebApp extends BaseActivity {
     }
 
     /**
+     * Tells the usage tracker the sub-app was alive just now, if it is being tracked at all.
+     *
+     * <p>A no-op for a sub-app with no resolvable {@code app_id} or no {@code cr_user_id}, which is
+     * consistent with such a sub-app not being measured in the first place.
+     */
+    private void noteSubAppAlive() {
+
+        SubAppUsageTracker tracker = usageTracker;
+
+        if (tracker == null) {
+            return;
+        }
+
+        try {
+            tracker.onSubAppEvent();
+        } catch (Exception e) {
+            Log.w("SubAppUsage", "Could not record sub-app liveness", e);
+        }
+    }
+
+    /**
      * The language the usage write is keyed on. Must match what the handler stamps as
      * {@code metadata.language}, or the container and the sub-app land in different documents.
      */
@@ -360,6 +381,11 @@ public class WebApp extends BaseActivity {
             // Guards, parsing, validation and dispatch all live in the emitter, so a JS-originated
             // event and a container-originated one travel the identical path.
             emitter.emitJson(payloadJson);
+
+            // Independently of whether that payload was accepted, its arrival proves the sub-app was
+            // alive just now, which sharpens a recovery estimate at no cost. Deliberately after the
+            // emit, and swallowing everything: usage bookkeeping must never affect a bridge call.
+            noteSubAppAlive();
         }
 
         @JavascriptInterface

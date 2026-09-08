@@ -1,4 +1,4 @@
-package org.curiouslearning.container.core.usage;
+package org.curiouslearning.container.core.usage.clock;
 
 /**
  * A monotonic elapsed-time source, injected so usage measurement can be driven by tests.
