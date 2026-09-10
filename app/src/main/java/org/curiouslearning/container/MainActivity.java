@@ -47,6 +47,8 @@ import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadH
 import org.curiouslearning.container.core.usage.OpenStretchRecovery;
 import org.curiouslearning.container.core.usage.boot.AndroidBootTokenProvider;
 import org.curiouslearning.container.core.usage.flush.FirestoreUsageFlusher;
+import org.curiouslearning.container.core.usage.flush.PendingUsageWriteRecovery;
+import org.curiouslearning.container.core.usage.flush.SharedPreferencesPendingUsageWriteStore;
 import org.curiouslearning.container.core.usage.SharedPreferencesOpenStretchStore;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
@@ -886,13 +888,16 @@ public class MainActivity extends BaseActivity {
     }
 
     /**
-     * Writes any container-measured usage a previous run was killed before it could flush (MR-182).
+     * Writes any container-measured usage a previous run was killed before it could flush: MR-182's own
+     * undrained-segment estimate, and MR-184's own already-drained-but-unflushed coalescing buffer.
      *
      * <p>Runs here rather than in {@code MyApplication}, so it happens once per container open against an
      * already-warmed handler, instead of on the main thread of every process spawn.
      *
      * <p>Off the main thread and fully swallowed: a child must never wait on this, or see it fail. Each
-     * record carries its own {@code cr_user_id}, so {@code pseudoId} is deliberately not consulted.
+     * record carries its own {@code cr_user_id}, so {@code pseudoId} is deliberately not consulted. The two
+     * recovery passes are independent (MR-184 research.md D4) and each is swallowed on its own, so one
+     * failing never stops the other.
      */
     private void recoverOpenUsageStretches() {
 
@@ -908,6 +913,16 @@ public class MainActivity extends BaseActivity {
 
             } catch (Exception e) {
                 Log.w(TAG, "Open usage stretch recovery failed; nothing lost that was not already lost", e);
+            }
+
+            try {
+                new PendingUsageWriteRecovery(
+                        new SharedPreferencesPendingUsageWriteStore(appContext),
+                        FirestoreUsageFlusher::new)
+                        .recoverAll();
+
+            } catch (Exception e) {
+                Log.w(TAG, "Pending usage write recovery failed; nothing lost that was not already lost", e);
             }
         });
     }

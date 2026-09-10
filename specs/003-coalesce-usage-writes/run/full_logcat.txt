@@ -1,0 +1,10 @@
+--------- beginning of main
+09-10 07:07:40.153 D/UsageFlusher( 3387): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=104, rawSeconds=104}
+09-10 07:09:09.113 D/UsageFlusher( 3387): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=33, rawSeconds=33}
+09-10 07:14:45.152 D/UsageFlusher( 3387): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=24, rawSeconds=24}
+09-10 07:15:52.396 D/UsageFlusher( 3387): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=15, rawSeconds=15}
+09-10 07:16:39.641 D/UsageFlusher( 3387): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=23, rawSeconds=23}
+09-10 07:19:17.874 D/UsageFlusher( 3387): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=30, rawSeconds=30}
+09-10 07:19:48.814 D/PendingUsageWriteRecovery( 6187): Found 1 pending usage write(s) from a previous run
+09-10 07:19:48.818 D/UsageFlusher( 6187): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=6, rawSeconds=6}
+09-10 07:19:49.772 D/PendingUsageWriteRecovery( 6187): Recovered UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=6, rawSeconds=6}

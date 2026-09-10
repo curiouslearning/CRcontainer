@@ -15,7 +15,7 @@ import androidx.annotation.VisibleForTesting;
 import org.curiouslearning.container.core.subapp.handler.AppEventWriteCallback;
 import org.curiouslearning.container.core.usage.boot.AndroidBootTokenProvider;
 import org.curiouslearning.container.core.usage.clock.AndroidMonotonicClock;
-import org.curiouslearning.container.core.usage.flush.FirestoreUsageFlusher;
+import org.curiouslearning.container.core.usage.flush.CoalescingUsageFlushers;
 import org.curiouslearning.container.core.usage.flush.SubAppUsageFlusher;
 import org.curiouslearning.container.core.usage.heartbeat.ExecutorHeartbeatTicker;
 
@@ -85,7 +85,7 @@ public final class SubAppUsageTracker {
 
         return new SubAppUsageTracker(
                 timer,
-                (override != null) ? override : new FirestoreUsageFlusher(crUserId),
+                (override != null) ? override : CoalescingUsageFlushers.getInstance(context, appKey, language, crUserId),
                 recorder,
                 screenState,
                 appKey,
@@ -161,9 +161,13 @@ public final class SubAppUsageTracker {
 
     /**
      * Stops listening and flushes, unless the Activity is being recreated. Call from
-     * {@code Activity.onStop} as {@code onStop(isChangingConfigurations())}.
+     * {@code Activity.onStop} as {@code onStop(isChangingConfigurations(), isFinishing())}.
+     *
+     * @param finishing true only when the child is genuinely done with this sub-app (Back, the in-app close
+     *                  button, or any other {@code finish()} call site) — never true for a transient
+     *                  Home/recents toggle, which leaves the Activity stopped but resumable.
      */
-    public void onStop(boolean changingConfigurations) {
+    public void onStop(boolean changingConfigurations, boolean finishing) {
 
         if (receiverContext != null) {
             try {
@@ -181,7 +185,7 @@ public final class SubAppUsageTracker {
             return;
         }
 
-        flush();
+        flush(finishing);
     }
 
     private void openSegment() {
@@ -196,7 +200,7 @@ public final class SubAppUsageTracker {
         recorder.onSegmentClosed();
     }
 
-    private void flush() {
+    private void flush(boolean finishing) {
 
         // stopAndDrain closes any still-open segment first, so no pause is needed beforehand.
         UsageSegment segment = timer.stopAndDrain();
@@ -204,24 +208,30 @@ public final class SubAppUsageTracker {
         if (segment.isEmpty()) {
             // Nothing to write, and nothing left worth recovering.
             recorder.clear();
-            return;
+        } else {
+            flusher.flush(segment, new AppEventWriteCallback() {
+                @Override
+                public void onQueued() {
+                    // Only now: the record and the timer's undrained state must stop existing at the same
+                    // moment. Clearing at pause would lose a paused-then-killed session; clearing before
+                    // the write is accepted would lose a rejected one; not clearing at all would recover
+                    // time that has already been written.
+                    recorder.clear();
+                }
+
+                @Override
+                public void onFailed(Exception e) {
+                    Log.w(TAG, "Usage write failed; open stretch kept for the next launch", e);
+                }
+            });
         }
 
-        flusher.flush(segment, new AppEventWriteCallback() {
-            @Override
-            public void onQueued() {
-                // Only now: the record and the timer's undrained state must stop existing at the same
-                // moment. Clearing at pause would lose a paused-then-killed session; clearing before the
-                // write is accepted would lose a rejected one; not clearing at all would recover time
-                // that has already been written.
-                recorder.clear();
-            }
-
-            @Override
-            public void onFailed(Exception e) {
-                Log.w(TAG, "Usage write failed; open stretch kept for the next launch", e);
-            }
-        });
+        if (finishing) {
+            // Fire-and-forget, after handing the just-drained segment off above: a no-op for a plain
+            // flusher, and for a coalescing one, forces whatever is buffered — this segment included —
+            // out to Firestore now, instead of waiting for the next periodic interval.
+            flusher.flushPending();
+        }
     }
 
     /** Package-private so a test can deliver a screen transition without broadcasting one. */
