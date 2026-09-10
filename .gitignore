@@ -22,3 +22,5 @@ sentry.properties
 # Ignore Python bytecode and cache
 __pycache__/
 *.py[cod]
+
+.ignore/
