@@ -6,7 +6,7 @@ import androidx.annotation.NonNull;
 
 import org.curiouslearning.container.core.subapp.handler.AppEventWriteCallback;
 import org.curiouslearning.container.core.usage.boot.BootTokenProvider;
-import org.curiouslearning.container.core.usage.flush.SubAppUsageFlusher;
+import org.curiouslearning.container.core.usage.flush.FlusherFactory;
 
 import java.util.List;
 
@@ -24,14 +24,6 @@ public final class OpenStretchRecovery {
     private final BootTokenProvider bootTokens;
     private final FlusherFactory flusherFactory;
     private final long capMs;
-
-    /**
-     * Builds the flusher for one record's own {@code cr_user_id} — never from current state, which the
-     * debug override can have changed since.
-     */
-    public interface FlusherFactory {
-        SubAppUsageFlusher forUser(@NonNull String crUserId);
-    }
 
     public OpenStretchRecovery(@NonNull OpenStretchStore store,
                                @NonNull BootTokenProvider bootTokens,

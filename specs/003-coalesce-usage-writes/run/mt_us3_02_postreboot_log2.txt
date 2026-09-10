@@ -1,0 +1,4 @@
+--------- beginning of main
+09-10 07:20:58.774 D/PendingUsageWriteRecovery( 2516): Found 1 pending usage write(s) from a previous run
+09-10 07:20:58.830 D/UsageFlusher( 2516): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=4, rawSeconds=4}
+09-10 07:21:02.761 D/PendingUsageWriteRecovery( 2516): Recovered UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=4, rawSeconds=4}
