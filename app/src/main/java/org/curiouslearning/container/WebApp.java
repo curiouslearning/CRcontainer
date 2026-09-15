@@ -635,11 +635,10 @@ public class WebApp extends BaseActivity {
         super.onStop();
         // Flushed here rather than in onPause so a momentary pause doesn't write, and skipped while the
         // Activity is being recreated: the timer is process-wide, so the time joins the next flush.
-        // isFinishing() tells a genuine session end (Back, the close button) apart from a transient
-        // Home/recents toggle — only the former forces a coalesced buffer out to Firestore immediately
-        // (MR-184); onStop() itself is delivered identically for both, so this is the only place to ask.
+        // Every other stop writes, backgrounding included (MR-228) — a child who presses Home is as done
+        // measuring as one who presses Back, and may not reopen the container for days.
         if (usageTracker != null) {
-            usageTracker.onStop(isChangingConfigurations(), isFinishing());
+            usageTracker.onStop(isChangingConfigurations());
         }
     }
 

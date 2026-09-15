@@ -152,22 +152,52 @@ public final class SubAppUsageTracker {
     }
 
     /**
-     * An event arrived from the sub-app, proving it was alive now. Purely additive — the container's own
-     * heartbeat bounds the error, so a silent sub-app is recovered just as accurately.
+     * An event arrived from the sub-app, proving it was alive now. Banks what the open segment has measured
+     * so far into the flusher, converting it from time a kill could only recover as an <em>estimate</em> into
+     * measured duration that is durable on disk (MR-228).
+     *
+     * <p>The event is the container's only evidence that a child is actually playing, which is why the
+     * banking hangs off it rather than off a timer: banked time is evidenced play, while whatever the event
+     * did not cover stays an estimate in {@code cr_recovered_seconds} and can be discounted as such. A
+     * sub-app that reports nothing is therefore never banked, only estimated — which is the honest answer for
+     * one that gives no liveness signal at all.
+     *
+     * <p>Never calls {@code flushPending()}, so with the coalescing flusher production uses, the fold reaches
+     * SharedPreferences and nothing else — the periodic ticker or the next stop does the Firestore write.
+     * Write volume stays bounded by the interval, not by how chatty a sub-app is.
      */
     public void onSubAppEvent() {
-        recorder.onSubAppEvent();
+
+        // Runs on the WebView's JavaBridge thread, so it can interleave with a lifecycle flush on main. The
+        // timer is fully synchronized, and the worst interleaving leaves a record the recovery discards.
+        UsageSegment segment = timer.checkpointAndDrain();
+
+        if (segment.isEmpty()) {
+            // Nothing whole to bank — FTM sends two payloads per game event in the same millisecond, so the
+            // second lands here. The record still describes the same total; just move the liveness point.
+            recorder.onSubAppEvent();
+            return;
+        }
+
+        Log.d(TAG, "Sub-app event banked " + segment.cappedSeconds + "s of open segment time");
+
+        flusher.flush(segment, null);
+
+        // After the fold, never before: SharedPreferences applies land in submission order, so a kill in
+        // between duplicates at most this one event's worth of time rather than losing it.
+        recorder.onCheckpoint();
     }
 
     /**
      * Stops listening and flushes, unless the Activity is being recreated. Call from
-     * {@code Activity.onStop} as {@code onStop(isChangingConfigurations(), isFinishing())}.
+     * {@code Activity.onStop} as {@code onStop(isChangingConfigurations())}.
      *
-     * @param finishing true only when the child is genuinely done with this sub-app (Back, the in-app close
-     *                  button, or any other {@code finish()} call site) — never true for a transient
-     *                  Home/recents toggle, which leaves the Activity stopped but resumable.
+     * <p>Every stop that is not a recreation writes, whether the child is done with the sub-app or has merely
+     * pushed it to the background. There is no stop worth measuring that should not write: {@code WebApp}
+     * starts no activities of its own, so the only stops are Home/recents, screen-off — where writing is
+     * exactly what is wanted — and a return to the grid, which always finishes.
      */
-    public void onStop(boolean changingConfigurations, boolean finishing) {
+    public void onStop(boolean changingConfigurations) {
 
         if (receiverContext != null) {
             try {
@@ -185,7 +215,7 @@ public final class SubAppUsageTracker {
             return;
         }
 
-        flush(finishing);
+        flush();
     }
 
     private void openSegment() {
@@ -200,7 +230,7 @@ public final class SubAppUsageTracker {
         recorder.onSegmentClosed();
     }
 
-    private void flush(boolean finishing) {
+    private void flush() {
 
         // stopAndDrain closes any still-open segment first, so no pause is needed beforehand.
         UsageSegment segment = timer.stopAndDrain();
@@ -226,12 +256,12 @@ public final class SubAppUsageTracker {
             });
         }
 
-        if (finishing) {
-            // Fire-and-forget, after handing the just-drained segment off above: a no-op for a plain
-            // flusher, and for a coalescing one, forces whatever is buffered — this segment included —
-            // out to Firestore now, instead of waiting for the next periodic interval.
-            flusher.flushPending();
-        }
+        // Fire-and-forget, after handing the just-drained segment off above: a no-op for a plain flusher,
+        // and for a coalescing one, forces whatever is buffered — this segment included — out to Firestore
+        // now, instead of waiting for the next periodic interval. Unconditional, because a session the child
+        // backgrounded is just as measured as one they finished, and on a device that is not reopened for
+        // days the periodic interval is not a fallback that ever runs.
+        flusher.flushPending();
     }
 
     /** Package-private so a test can deliver a screen transition without broadcasting one. */

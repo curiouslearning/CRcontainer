@@ -24,7 +24,8 @@ import java.util.Map;
  * {@code CoalescingUsageFlusher} already-capped numbers, which proves the *coalescer* never re-caps a sum, but
  * never proves the cap those numbers came from was real. This test wires an actual {@link SubAppUsageTimer} —
  * with its package-private test constructor's lowered cap, same pattern {@code SubAppUsageTimerTest} already
- * uses — into a real {@link CoalescingUsageFlusher}, so the per-segment cap (MR-178/MR-180) and the coalescing
+ * uses — into a real {@link CoalescingUsageFlusher}, so the idle cap (MR-178/MR-180, and since MR-228 scoped
+ * to the stretch since the last sub-app event rather than to the whole segment) and the coalescing
  * summation (MR-184/FR-005) are exercised together, end to end, on the JVM. It is the device-free equivalent
  * of [quickstart.md](../../../../../../../specs/003-coalesce-usage-writes/quickstart.md) Level 3 / test-plan.md
  * MT-US2-01, which a real 30-minute-capped device run is impractical to reproduce by hand.
@@ -146,5 +147,59 @@ public class CoalescingUsageFlusherCapIntegrationTest {
                 2L * onePerSegmentCapInSeconds, delegate.lastSegment.cappedSeconds);
         assertEquals("raw duration must sum independently of capping",
                 2L * overCapInSeconds, delegate.lastSegment.rawSeconds);
+    }
+
+    /**
+     * The mirror image, for MR-228: one uninterrupted over-cap stretch, with a sub-app event every minute
+     * throughout, is a child who never stopped playing. The cap bounds time nothing vouched for, so every
+     * one of those minutes is credited and none is trimmed — {@code raw == capped}.
+     *
+     * <p>This is the case the cap used to get wrong: a real session was truncated at the cap purely because
+     * it ran long, despite the sub-app reporting all the way through it.
+     */
+    @Test
+    public void oneOverCapSegmentBankedThroughoutIsCreditedInFull() {
+
+        long overCapMs = CAP_MS + 10L * 60L * 1000L;
+        long bankIntervalMs = 60L * 1000L;
+
+        timer.start(APP, LANG);
+
+        for (long elapsedMs = 0L; elapsedMs < overCapMs; elapsedMs += bankIntervalMs) {
+            clock.advance(bankIntervalMs);
+            flusher.flush(timer.checkpointAndDrain(), null);
+        }
+
+        timer.pause();
+        flusher.flush(timer.stopAndDrain(), null);
+        flusher.flushPending();
+
+        assertEquals("an actively-reporting session must not be trimmed for running long",
+                overCapMs / 1_000L, delegate.lastSegment.cappedSeconds);
+        assertEquals("nothing was trimmed, so raw and capped agree",
+                overCapMs / 1_000L, delegate.lastSegment.rawSeconds);
+    }
+
+    /**
+     * And the guard that keeps the cap meaningful: the same over-cap stretch with no events at all — a
+     * device left face-up on a sub-app screen, or {@code assessment}, which reports nothing ever — is still
+     * trimmed to a single cap, exactly as before MR-228.
+     */
+    @Test
+    public void oneOverCapSegmentWithNoEventsIsStillTrimmedToASingleCap() {
+
+        long overCapMs = CAP_MS + 10L * 60L * 1000L;
+
+        timer.start(APP, LANG);
+        clock.advance(overCapMs);
+        timer.pause();
+
+        flusher.flush(timer.stopAndDrain(), null);
+        flusher.flushPending();
+
+        assertEquals("un-evidenced time must still be capped",
+                CAP_MS / 1_000L, delegate.lastSegment.cappedSeconds);
+        assertEquals("raw carries the whole stretch, so raw - capped measures what was trimmed",
+                overCapMs / 1_000L, delegate.lastSegment.rawSeconds);
     }
 }
