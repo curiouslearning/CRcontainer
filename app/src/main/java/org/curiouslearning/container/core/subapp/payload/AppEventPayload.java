@@ -13,4 +13,10 @@ public class AppEventPayload {
     public Map<String, Object> attribution;
     public String timestamp;
     public String schema_version;
+
+    /**
+     * The language this payload's data belongs to, overriding live {@code AppContext} state. <b>Java
+     * only</b> — {@code AppEventEmitter.emitJson} rejects it from a sub-app, which must not relabel its own.
+     */
+    public String container_language;
 }

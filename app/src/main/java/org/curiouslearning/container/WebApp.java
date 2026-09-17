@@ -16,8 +16,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 
 import androidx.appcompat.app.AlertDialog;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
@@ -28,11 +26,9 @@ import io.sentry.Sentry;
 
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
-import org.curiouslearning.container.core.subapp.payload.AppEventPayload;
-import org.curiouslearning.container.core.subapp.validation.AppEventPayloadValidator;
-import org.curiouslearning.container.core.subapp.validation.ValidationResult;
-import org.curiouslearning.container.core.subapp.handler.AppEventPayloadHandler;
-import org.curiouslearning.container.core.subapp.handler.DefaultAppEventPayloadHandler;
+import org.curiouslearning.container.core.subapp.emitter.AppEventEmitter;
+import org.curiouslearning.container.core.usage.SubAppIdResolver;
+import org.curiouslearning.container.core.usage.SubAppUsageTracker;
 
 
 public class WebApp extends BaseActivity {
@@ -63,6 +59,8 @@ public class WebApp extends BaseActivity {
     private Runnable monsterStateCheckRunnable;
     private boolean isMonsterCheckRunning;
     private boolean isFtmApp;
+    /** Container-measured usage timing; null when this sub-app has no resolvable app_id. */
+    private SubAppUsageTracker usageTracker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,8 +69,68 @@ public class WebApp extends BaseActivity {
         setContentView(R.layout.activity_web_app);
         getIntentData();
         initViews();
+        initUsageTracking();
         logAppLaunchEvent();
         loadWebView();
+    }
+
+    /**
+     * Sets up container-measured usage timing (MR-181). Runs after {@link #initViews()}, which resolves
+     * {@code pseudoId}. Skipped without an {@code app_id}, since there is no document to attribute time to.
+     */
+    private void initUsageTracking() {
+        String appKey = SubAppIdResolver.resolve(
+                getIntent().getStringExtra(SubAppIdResolver.EXTRA_APP_ID), identityUrl());
+
+        if (appKey == null) {
+            Log.d("SubAppUsage", "No app_id for \"" + title + "\"; container-measured usage not tracked");
+            return;
+        }
+
+        if (pseudoId == null || pseudoId.isEmpty()) {
+            // The validator would reject every write anyway; measuring would only produce error logs.
+            Log.w("SubAppUsage", "No cr_user_id yet; container-measured usage not tracked for " + appKey);
+            return;
+        }
+
+        usageTracker = SubAppUsageTracker.create(this, appKey, usageLanguage(), pseudoId);
+    }
+
+    /**
+     * Tells the usage tracker the sub-app was alive just now, if it is being tracked at all.
+     *
+     * <p>A no-op for a sub-app with no resolvable {@code app_id} or no {@code cr_user_id}, which is
+     * consistent with such a sub-app not being measured in the first place.
+     */
+    private void noteSubAppAlive() {
+
+        SubAppUsageTracker tracker = usageTracker;
+
+        if (tracker == null) {
+            return;
+        }
+
+        try {
+            tracker.onSubAppEvent();
+        } catch (Exception e) {
+            Log.w("SubAppUsage", "Could not record sub-app liveness", e);
+        }
+    }
+
+    /**
+     * The language the usage write is keyed on. Must match what the handler stamps as
+     * {@code metadata.language}, or the container and the sub-app land in different documents.
+     */
+    private String usageLanguage() {
+        Object contextLanguage = AppContext.getInstance().get(AppContextKey.LANGUAGE);
+
+        if (contextLanguage instanceof String && !((String) contextLanguage).isEmpty()) {
+            return (String) contextLanguage;
+        }
+
+        return (languageInEnglishName != null && !languageInEnglishName.isEmpty())
+                ? languageInEnglishName
+                : "unknown";
     }
 
     private void getIntentData() {
@@ -278,16 +336,14 @@ public class WebApp extends BaseActivity {
 
     public class WebAppInterface {
         private Context mContext;
-        private final Gson gson = new Gson();
-        private final AppEventPayloadValidator validator =
-                new AppEventPayloadValidator();
-        private final AppEventPayloadHandler handler;
+        private final AppEventEmitter emitter;
 
         WebAppInterface(Context context) {
             mContext = context;
-            // Shared process-level instance (also warmed on container open in MainActivity) — reused here so
-            // the container and every sub-app write through one handler against one warmed Firestore cache.
-            handler = DefaultAppEventPayloadHandler.getInstance(pseudoId);
+            // Resolves to the shared process-level handler (also warmed on container open in MainActivity)
+            // — so the container and every sub-app write through one handler against one warmed Firestore
+            // cache. Validation and JSON parsing live in the emitter, shared with Java-side callers.
+            emitter = AppEventEmitter.forUser(pseudoId);
         }
 
         @JavascriptInterface
@@ -322,31 +378,14 @@ public class WebApp extends BaseActivity {
 
         @JavascriptInterface
         public void logMessage(String payloadJson) {
+            // Guards, parsing, validation and dispatch all live in the emitter, so a JS-originated
+            // event and a container-originated one travel the identical path.
+            emitter.emitJson(payloadJson);
 
-            try {
-                if (payloadJson == null || payloadJson.trim().isEmpty()) {
-                    Log.e("WebApp", "Rejected payload: empty JSON");
-                    return;
-                }
-
-                AppEventPayload payload =
-                        gson.fromJson(payloadJson, AppEventPayload.class);
-
-                ValidationResult result = validator.validate(payload);
-
-                if (!result.isValid) {
-                    Log.e("WebApp",
-                            "Payload rejected: " + result.errorMessage);
-                    return;
-                }
-
-                handler.handle(payload);
-
-            } catch (JsonSyntaxException e) {
-                Log.e("WebApp", "Invalid JSON payload", e);
-            } catch (Exception e) {
-                Log.e("WebApp", "Unexpected error handling payload", e);
-            }
+            // Independently of whether that payload was accepted, its arrival proves the sub-app was
+            // alive just now, which sharpens a recovery estimate at no cost. Deliberately after the
+            // emit, and swallowing everything: usage bookkeeping must never affect a bridge call.
+            noteSubAppAlive();
         }
 
         @JavascriptInterface
@@ -558,8 +597,20 @@ public class WebApp extends BaseActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        if (usageTracker != null) {
+            usageTracker.onStart(this);
+        }
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
+        // Closes the usage segment; the write happens in onStop.
+        if (usageTracker != null) {
+            usageTracker.onPause();
+        }
         // Stop periodic state checks when leaving FTM
         if (monsterStateCheckHandler != null && monsterStateCheckRunnable != null) {
             monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);
@@ -570,9 +621,24 @@ public class WebApp extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (usageTracker != null) {
+            usageTracker.onResume();
+        }
         // Resume periodic state checks if FTM is open
         if (webView != null && isFtmApp && !isMonsterCheckRunning) {
             startPeriodicMonsterStateCheck(webView);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Flushed here rather than in onPause so a momentary pause doesn't write, and skipped while the
+        // Activity is being recreated: the timer is process-wide, so the time joins the next flush.
+        // Every other stop writes, backgrounding included (MR-228) — a child who presses Home is as done
+        // measuring as one who presses Back, and may not reopen the container for days.
+        if (usageTracker != null) {
+            usageTracker.onStop(isChangingConfigurations());
         }
     }
 
