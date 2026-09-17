@@ -113,6 +113,21 @@ public final class OpenStretchRecorder {
     }
 
     /**
+     * A checkpoint has handed part of the open segment to a flusher; rewrite the record to describe only what
+     * is left. Unlike {@link #onSubAppEvent()} this persists unconditionally — the record must shrink even
+     * when the clock has not advanced, or the banked time would be described by both the pending write and
+     * the open-stretch estimate, and next launch would write it twice.
+     *
+     * <p>The segment is still open, so this is emphatically not {@link #clear()}.
+     */
+    public synchronized void onCheckpoint() {
+
+        lastAliveMs = Math.max(lastAliveMs, clock.elapsedRealtimeMillis());
+
+        persist();
+    }
+
+    /**
      * The timer has been drained and the write durably queued; there is nothing left to recover. Not at
      * pause, and not before the write is accepted, or a rejected or offline write would lose the time.
      */
