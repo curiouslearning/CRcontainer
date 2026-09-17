@@ -120,6 +120,9 @@ public class WebAppsAdapter extends RecyclerView.Adapter<WebAppsAdapter.ViewHold
                         Intent intent = new Intent(ctx, org.curiouslearning.container.WebApp.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.putExtra("appId", String.valueOf(webApps.get(position).getAppId()));
+                        String manifestAppId = webApps.get(position).getApp_id();
+                        intent.putExtra("app_id", manifestAppId);
+                        Log.d("WebAppsAdapter", "Launching with app_id=" + manifestAppId);
                         String appUrl = webApps.get(position).getAppUrl();
                         String launchUrl = maybeOverrideAppUrlForLocalDev(appUrl);
                         intent.putExtra("appUrl", launchUrl);

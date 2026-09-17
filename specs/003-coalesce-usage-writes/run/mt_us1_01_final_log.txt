@@ -1,0 +1,2 @@
+--------- beginning of main
+09-10 07:09:09.113 D/UsageFlusher( 3387): Flushed UsageSegment{appKey=feed-the-monster, language=English African, cappedSeconds=33, rawSeconds=33}

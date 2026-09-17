@@ -16,9 +16,9 @@ public class AppEventPayloadValidator {
             return ValidationResult.failure("Missing cr_user_id");
         }
 
-        if (isEmpty(payload.app_id)) {
-            return ValidationResult.failure("Missing app_id");
-        }
+        // MR-217: app_id is no longer required here — the container resolves its own trusted
+        // app_id (DefaultAppEventPayloadHandler.resolveAppId) and only falls back to this
+        // payload's app_id, if present, when that's unavailable. See AppEventPayloadValidatorTest.
 
         if (isEmpty(payload.collection)) {
             return ValidationResult.failure("Missing collection");
