@@ -1,5 +1,6 @@
 source "https://rubygems.org"
-gem "fastlane"
 
-gem "google-apis-core"
-gem "googleauth"
+gem "fastlane", "2.238.0"
+gem "google-apis-core", "0.16.0"
+gem "googleauth", "1.17.1"
+

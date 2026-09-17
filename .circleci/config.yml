@@ -16,9 +16,27 @@ jobs:
           name: Install Bundler & Fastlane plugins
           command: |
             sudo apt-get update && sudo apt-get install -y libyaml-dev
-            sudo gem install bundler
+
+            # Print the toolchain versions up front. This image ships Ruby 3.0;
+            # if that ever changes, this line is the first place it shows.
+            ruby -v
+
+            # Pin Bundler instead of taking whatever is newest today.
+            sudo gem install bundler -v '~> 2.5'
+            bundle -v
+
             cd app
-            bundle install --path vendor/bundle
+
+            # `bundle install --path` is deprecated (it relies on state being
+            # remembered between invocations). The config form is the supported
+            # replacement and is scoped to this checkout.
+            bundle config set --local path 'vendor/bundle'
+            bundle install
+
+            # Guard rail: prove that real fastlane got installed. The previous
+            # failure resolved to the placeholder gem "fastlane 0.0.1"; this
+            # line would have caught that in seconds instead of minutes.
+            bundle exec fastlane --version
 
       - run:
           name: Make gradlew executable
@@ -72,7 +90,7 @@ jobs:
             cd app
             bundle exec fastlane deploy
 
-      
+
 
 workflows:
   deploy_on_branch:
