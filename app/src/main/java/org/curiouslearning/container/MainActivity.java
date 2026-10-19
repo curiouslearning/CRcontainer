@@ -228,16 +228,19 @@ public class MainActivity extends BaseActivity {
                         Uri uri = Uri.parse("http://dummyurl.com/?" + fullURL);
                         String source = uri.getQueryParameter("source");
                         String campaign_id = uri.getQueryParameter("campaign_id");
-                        utmEditor.putString("source", source);
-                        utmEditor.putString("campaign_id", campaign_id);
-                        utmEditor.apply();
-
-                        // Also store in InstallReferrerPrefs for analytics
+                        // Never overwrite stored attribution with null/empty values.
                         SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs",
                                 MODE_PRIVATE);
                         SharedPreferences.Editor installReferrerEditor = installReferrerPrefs.edit();
-                        installReferrerEditor.putString("source", source);
-                        installReferrerEditor.putString("campaign_id", campaign_id);
+                        if (source != null && !source.trim().isEmpty()) {
+                            utmEditor.putString("source", source);
+                            installReferrerEditor.putString("source", source);
+                        }
+                        if (campaign_id != null && !campaign_id.trim().isEmpty()) {
+                            utmEditor.putString("campaign_id", campaign_id);
+                            installReferrerEditor.putString("campaign_id", campaign_id);
+                        }
+                        utmEditor.apply();
                         installReferrerEditor.apply();
 
                         hydrateAttributionContext();
@@ -786,9 +789,14 @@ public class MainActivity extends BaseActivity {
                     String language = ((Uri) deepLinkUri).getQueryParameter("language");
                     String source = ((Uri) deepLinkUri).getQueryParameter("source");
                     String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
+                    // Never overwrite stored attribution with null/empty values.
                     SharedPreferences.Editor editor = utmPrefs.edit();
-                    editor.putString("source", source);
-                    editor.putString("campaign_id", campaign_id);
+                    if (source != null && !source.trim().isEmpty()) {
+                        editor.putString("source", source);
+                    }
+                    if (campaign_id != null && !campaign_id.trim().isEmpty()) {
+                        editor.putString("campaign_id", campaign_id);
+                    }
                     editor.apply();
                     validLanguage(language, "facebook", String.valueOf(deepLinkUri));
                     String lang = "";
