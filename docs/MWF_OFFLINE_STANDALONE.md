@@ -206,8 +206,8 @@ Gradle merges the flavor's assets over the shared ones, so the player sees a sin
 Use `--out app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` when packaging French titles. This
 matches the production catalog for those languages. There are no Brazilian Portuguese books in the production catalog.
 
-Nine Swahili book folders were also copied into the shared `BookContent/` at one point; they are
-not referenced by either manifest and add ~48 MB to both APKs until removed.
+Only books referenced by a manifest are kept under `BookContent/`; `tools/package-books.js --verify`
+lists what is packaged.
 
 ## Verification status (2026-10-21)
 
