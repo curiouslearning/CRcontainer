@@ -1,6 +1,7 @@
 package org.curiouslearning.container.utilities;
 
 import android.content.Context;
+import android.content.res.AssetManager;
 import android.net.Uri;
 import android.util.Log;
 import android.webkit.WebResourceRequest;
@@ -11,41 +12,61 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.webkit.ServiceWorkerClientCompat;
 import androidx.webkit.ServiceWorkerControllerCompat;
-import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewFeature;
 
 import org.curiouslearning.container.BuildConfig;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 /**
- * Serves the sub-apps packaged inside the APK to the WebView, each on its own production origin,
- * for the offline standalone flavors.
+ * Serves the sub-apps packaged inside the APK to the WebView, for the offline standalone flavors.
  *
- * <p>The packaged catalog uses the <em>same</em> URLs as the Play Store catalog
- * ({@code https://feedthemonster.curiouscontent.org/?cr_lang=french},
- * {@code https://curiousreader.curiouscontent.org/?book=LetsFlyEnLv2}). In a standalone flavor
- * every request to a packaged host is answered by {@link WebViewAssetLoader} from the matching
- * directory under {@code assets/} ({@code PACKAGED_ORIGINS}) and never reaches the network.
- * Keeping the real origins matters for three reasons:
+ * <p>Catalog entries address packaged content on a <em>virtual host</em> under
+ * {@code androidplatform.net} (reserved by AndroidX for exactly this purpose; it never resolves on
+ * the internet), e.g.
+ * {@code https://mwfpde_french_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=french}.
+ * The host names the build, so it shows up unchanged in {@code attribution.hostname} (Firestore),
+ * {@code web_app_url} (Firebase Analytics) and the sub-app's own page URL, which is what lets the
+ * research data from a standalone build be told apart from the Play Store app. The host is
+ * <em>not</em> hard-coded here: any {@code *.androidplatform.net} host is served, and the manifest
+ * decides the name.
+ *
+ * <p>Request paths are resolved against {@code assets/}:
  * <ul>
- *   <li>FTM's language JSON references its puzzle/feedback audio by <em>absolute</em>
- *       {@code https://feedthemonster.curiouscontent.org/lang/...} URLs, so they resolve to the
- *       packaged files without rewriting any content.</li>
- *   <li>It is a secure context, so {@code localStorage} (level progress), the Cache API and
- *       IndexedDB behave exactly as on the real site.</li>
- *   <li>{@code attribution.hostname} and FTM's own environment detection see production, so the
- *       data written for Literacy Coach is indistinguishable from the online build.</li>
+ *   <li>{@code /assets/<dir>/<file>} → {@code assets/<dir>/<file>} (the normal case: relative URLs
+ *       inside a sub-app).</li>
+ *   <li>Any other root-absolute path (the Curious Reader player requests
+ *       {@code /BookContent/...}, {@code /interactive-book-static/...}, {@code /dist/...} as if it
+ *       were deployed at an origin root) is looked up inside each packaged sub-app directory, first
+ *       match wins.</li>
  * </ul>
  *
- * <p>Interception is gated on {@code BuildConfig.OFFLINE_STANDALONE}: the online flavor loads this
- * host from the network as before and never constructs a loader.
+ * <p>Two production hosts are also answered from the APK, because content refers to them by
+ * absolute URL: FTM's language JSON points its puzzle audio at
+ * {@code https://feedthemonster.curiouscontent.org/lang/...}. Those requests are cross-origin from
+ * the virtual host, so every response carries permissive CORS headers. A handful of third-party
+ * CDN files the vendored GDL player needs are vendored too ({@link #VENDORED_CDN_FILES}).
+ *
+ * <p>Everything is gated on {@code BuildConfig.OFFLINE_STANDALONE}; the online flavor never
+ * intercepts anything.
  */
 public final class LocalWebContent {
 
     private static final String TAG = "LocalWebContent";
+
+    /** Suffix of the virtual hosts used by the packaged catalogs. */
+    public static final String VIRTUAL_HOST_SUFFIX = ".androidplatform.net";
+
+    /** URL path prefix on a virtual host that maps straight onto {@code assets/}. */
+    public static final String ASSETS_PATH_PREFIX = "/assets/";
 
     /** Feed The Monster: production build packaged by tools/package-ftm.js. */
     public static final String FTM_DOMAIN = "feedthemonster.curiouscontent.org";
@@ -55,233 +76,37 @@ public final class LocalWebContent {
     public static final String BOOKS_DOMAIN = "curiousreader.curiouscontent.org";
     public static final String BOOKS_ASSET_DIR = "CRWebPlayerJs";
 
+    private static final String INDEX_FILE = "index.html";
+
     /**
-     * Host -> directory under {@code assets/} whose contents are served at that origin's root.
-     * Must match the {@code appUrl} hosts used in the flavor manifests.
+     * Production host → packaged directory served at that origin's root. Needed for the absolute
+     * URLs embedded in content (FTM audio); the catalog itself uses the virtual host.
      */
     private static final Map<String, String> PACKAGED_ORIGINS = new HashMap<>();
+
+    /**
+     * Packaged sub-app directories, in the order a root-absolute path on a virtual host is looked
+     * up in them. The book player is first because it is the one that uses root-absolute paths.
+     */
+    private static final List<String> PACKAGED_DIRS =
+            Collections.unmodifiableList(Arrays.asList(BOOKS_ASSET_DIR, FTM_ASSET_DIR));
 
     static {
         PACKAGED_ORIGINS.put(FTM_DOMAIN, FTM_ASSET_DIR);
         PACKAGED_ORIGINS.put(BOOKS_DOMAIN, BOOKS_ASSET_DIR);
     }
 
-    private static final String INDEX_FILE = "index.html";
-
-    /**
-     * MIME types by extension for the files FTM serves. {@code AssetsPathHandler} asks Android's
-     * {@code MimeTypeMap}, which on older WebViews does not know {@code .wasm}/{@code .riv} and may
-     * return {@code text/plain} for {@code .js}; a module script or WebAssembly stream with the
-     * wrong type is refused by the browser, so the type is set here explicitly.
-     */
-    private static final Map<String, String> MIME_BY_EXTENSION = new HashMap<>();
-
-    static {
-        MIME_BY_EXTENSION.put("html", "text/html");
-        MIME_BY_EXTENSION.put("js", "text/javascript");
-        MIME_BY_EXTENSION.put("mjs", "text/javascript");
-        MIME_BY_EXTENSION.put("css", "text/css");
-        MIME_BY_EXTENSION.put("json", "application/json");
-        MIME_BY_EXTENSION.put("wasm", "application/wasm");
-        MIME_BY_EXTENSION.put("riv", "application/octet-stream");
-        MIME_BY_EXTENSION.put("mp3", "audio/mpeg");
-        MIME_BY_EXTENSION.put("wav", "audio/wav");
-        MIME_BY_EXTENSION.put("ogg", "audio/ogg");
-        MIME_BY_EXTENSION.put("png", "image/png");
-        MIME_BY_EXTENSION.put("jpg", "image/jpeg");
-        MIME_BY_EXTENSION.put("jpeg", "image/jpeg");
-        MIME_BY_EXTENSION.put("gif", "image/gif");
-        MIME_BY_EXTENSION.put("webp", "image/webp");
-        MIME_BY_EXTENSION.put("svg", "image/svg+xml");
-        MIME_BY_EXTENSION.put("ico", "image/x-icon");
-        MIME_BY_EXTENSION.put("ttf", "font/ttf");
-        MIME_BY_EXTENSION.put("otf", "font/otf");
-        MIME_BY_EXTENSION.put("woff", "font/woff");
-        MIME_BY_EXTENSION.put("woff2", "font/woff2");
-        MIME_BY_EXTENSION.put("txt", "text/plain");
-    }
-
-    private LocalWebContent() {
-    }
-
-    /**
-     * True when {@code url} must be served from the APK: only in a standalone flavor, and only
-     * for a packaged sub-app's host.
-     */
-    public static boolean isLocalUrl(@Nullable String url) {
-        if (!BuildConfig.OFFLINE_STANDALONE || url == null || url.isEmpty()) {
-            return false;
-        }
-        return assetDirFor(Uri.parse(url).getHost()) != null;
-    }
-
-    /** The {@code assets/} directory packaged for {@code host}, or {@code null} when none is. */
-    @VisibleForTesting
-    @Nullable
-    static String assetDirFor(@Nullable String host) {
-        if (host == null) {
-            return null;
-        }
-        return PACKAGED_ORIGINS.get(host.toLowerCase(Locale.ROOT));
-    }
-
-    /**
-     * Builds the loader that maps {@code https://<host of url>/} onto that origin's packaged
-     * directory. {@code url} must satisfy {@link #isLocalUrl(String)}.
-     */
-    @NonNull
-    public static WebViewAssetLoader newAssetLoader(@NonNull Context context, @NonNull String url) {
-        String host = Uri.parse(url).getHost();
-        String assetDir = assetDirFor(host);
-        if (assetDir == null) {
-            throw new IllegalArgumentException("No packaged content for host: " + host);
-        }
-        vendorHandler = new WebViewAssetLoader.AssetsPathHandler(context.getApplicationContext());
-        return new WebViewAssetLoader.Builder()
-                .setDomain(host)
-                .setHttpAllowed(false)
-                .addPathHandler("/", new PackagedAppPathHandler(assetDir,
-                        new WebViewAssetLoader.AssetsPathHandler(context.getApplicationContext())))
-                .build();
-    }
-
-    /**
-     * Answers {@code url} from the APK when it targets a packaged host, otherwise {@code null} so
-     * the WebView proceeds normally. A miss is logged so a file missing from the package shows up
-     * in logcat as such rather than as a silent blank screen or a muted puzzle.
-     */
-    @Nullable
-    public static WebResourceResponse intercept(@NonNull WebViewAssetLoader assetLoader,
-                                                @NonNull Uri url) {
-        if (assetDirFor(url.getHost()) == null) {
-            return vendoredCdnFile(assetLoader, url);
-        }
-        WebResourceResponse response = assetLoader.shouldInterceptRequest(url);
-        String assetDir = assetDirFor(url.getHost());
-        String requestPath = url.getPath() == null ? "" : url.getPath();
-        if (response == null && !isKnownAbsent(assetPathFor(assetDir, requestPath))) {
-            Log.w(TAG, "Packaged asset not found: " + url.getPath());
-        }
-        return response;
-    }
-
-    /** The {@code assets/} path vendored for this exact CDN URL, or {@code null}. */
-    @VisibleForTesting
-    @Nullable
-    static String vendoredAssetFor(@Nullable String host, @Nullable String path) {
-        if (host == null || path == null) {
-            return null;
-        }
-        return VENDORED_CDN_FILES.get(host.toLowerCase(Locale.ROOT) + path);
-    }
-
-    /**
-     * Serves a vendored CDN file from the APK. Built on the same {@code AssetsPathHandler} the
-     * loader uses, so it is only reachable while a packaged sub-app is open.
-     */
-    @Nullable
-    private static WebResourceResponse vendoredCdnFile(@NonNull WebViewAssetLoader assetLoader,
-                                                       @NonNull Uri url) {
-        String assetPath = vendoredAssetFor(url.getHost(), url.getPath());
-        if (assetPath == null) {
-            return null;
-        }
-        WebResourceResponse response = vendorHandler.handle(assetPath);
-        if (response == null) {
-            Log.w(TAG, "Vendored CDN file missing from package: " + assetPath);
-            return null;
-        }
-        String mime = mimeTypeFor(assetPath);
-        if (mime != null) {
-            response.setMimeType(mime);
-        }
-        // The sub-app fetches this cross-origin (its origin is the packaged host, the file's is
-        // the CDN), so the response needs CORS headers or the browser discards it.
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Access-Control-Allow-Origin", "*");
-        headers.put("Cross-Origin-Resource-Policy", "cross-origin");
-        response.setResponseHeaders(headers);
-        Log.d(TAG, "Served vendored CDN file: " + url.getHost() + url.getPath());
-        return response;
-    }
-
-    private static volatile WebViewAssetLoader.AssetsPathHandler vendorHandler;
-
-    /**
-     * Routes <em>service worker</em> fetches through the same loader. The packaged FTM build does
-     * not ship a service worker (see tools/package-ftm.js), so this is defence in depth: should a
-     * future package include one, its install-time fetches must still resolve to the APK rather
-     * than the network. Process-wide by Android design; only installed for local content.
-     */
-    public static void installServiceWorkerInterceptor(@NonNull WebViewAssetLoader assetLoader) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE)
-                || !WebViewFeature.isFeatureSupported(
-                        WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)) {
-            Log.w(TAG, "WebView lacks service worker interception");
-            return;
-        }
-        ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(
-                new ServiceWorkerClientCompat() {
-                    @Nullable
-                    @Override
-                    public WebResourceResponse shouldInterceptRequest(
-                            @NonNull WebResourceRequest request) {
-                        return intercept(assetLoader, request.getUrl());
-                    }
-                });
-    }
-
-    /**
-     * Maps a request path (relative to the origin root) to the file inside {@code assets/<assetDir>/}.
-     * Mirrors what a static web server does with the sub-apps' relative URLs: {@code ""} and
-     * directory paths resolve to {@code index.html}, and repeated slashes collapse (the book player
-     * requests {@code content/images//file.png}, which Apache/nginx serve but AssetManager rejects).
-     */
-    @VisibleForTesting
-    @NonNull
-    static String assetPathFor(@NonNull String assetDir, @NonNull String requestPath) {
-        String path = requestPath.replaceAll("/{2,}", "/");
-        while (path.startsWith("/")) {
-            path = path.substring(1);
-        }
-        if (path.isEmpty() || path.endsWith("/")) {
-            path = path + INDEX_FILE;
-        }
-        return assetDir + "/" + path;
-    }
-
-    @VisibleForTesting
-    static boolean isKnownAbsent(@NonNull String assetPath) {
-        for (String absent : KNOWN_ABSENT) {
-            if (absent.equals(assetPath)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @VisibleForTesting
-    @Nullable
-    static String mimeTypeFor(@NonNull String path) {
-        int dot = path.lastIndexOf('.');
-        if (dot < 0 || dot == path.length() - 1) {
-            return null;
-        }
-        return MIME_BY_EXTENSION.get(path.substring(dot + 1).toLowerCase(Locale.ROOT));
-    }
-
     /**
      * Asset paths the sub-apps request on every launch that the packages deliberately do not
-     * contain. Answered with a plain 404 up front so {@code AssetsPathHandler} does not log a
-     * FileNotFoundException stack trace for an expected miss. FTM's {@code sw.js} is dropped by
-     * tools/package-ftm.js; the book player's {@code index.html} references a root {@code app.js}
-     * that its build only ships as {@code dist/app.js}.
+     * contain. Answered with a plain 404 up front, without a log line per launch. FTM's
+     * {@code sw.js} is dropped by tools/package-ftm.js; the book player's {@code index.html}
+     * references a root {@code app.js} that its build only ships as {@code dist/app.js}, and its
+     * {@code firebase-config.json} is a deploy-time file that is not in the repo.
      */
     private static final String[] KNOWN_ABSENT = {
             FTM_ASSET_DIR + "/sw.js",
             BOOKS_ASSET_DIR + "/sw.js",
             BOOKS_ASSET_DIR + "/app.js",
-            // Deploy-time Firebase config for the book player's web analytics; not part of the repo.
             BOOKS_ASSET_DIR + "/firebase-config.json",
     };
 
@@ -304,34 +129,266 @@ public final class LocalWebContent {
                 dotlottieWasm);
     }
 
-    /** Serves {@code assets/<assetDir>/<path>} with an explicit MIME type. */
-    private static final class PackagedAppPathHandler implements WebViewAssetLoader.PathHandler {
+    /**
+     * MIME types by extension for the files the sub-apps serve. Android's {@code MimeTypeMap} on
+     * older WebViews does not know {@code .wasm}/{@code .riv} and may return {@code text/plain}
+     * for {@code .js}; a module script or WebAssembly stream with the wrong type is refused by the
+     * browser, so the type is set explicitly.
+     */
+    private static final Map<String, String> MIME_BY_EXTENSION = new HashMap<>();
 
-        private final String assetDir;
-        private final WebViewAssetLoader.AssetsPathHandler assets;
+    static {
+        MIME_BY_EXTENSION.put("html", "text/html");
+        MIME_BY_EXTENSION.put("js", "text/javascript");
+        MIME_BY_EXTENSION.put("mjs", "text/javascript");
+        MIME_BY_EXTENSION.put("css", "text/css");
+        MIME_BY_EXTENSION.put("json", "application/json");
+        MIME_BY_EXTENSION.put("wasm", "application/wasm");
+        MIME_BY_EXTENSION.put("riv", "application/octet-stream");
+        MIME_BY_EXTENSION.put("lottie", "application/zip");
+        MIME_BY_EXTENSION.put("mp3", "audio/mpeg");
+        MIME_BY_EXTENSION.put("wav", "audio/wav");
+        MIME_BY_EXTENSION.put("ogg", "audio/ogg");
+        MIME_BY_EXTENSION.put("png", "image/png");
+        MIME_BY_EXTENSION.put("jpg", "image/jpeg");
+        MIME_BY_EXTENSION.put("jpeg", "image/jpeg");
+        MIME_BY_EXTENSION.put("gif", "image/gif");
+        MIME_BY_EXTENSION.put("webp", "image/webp");
+        MIME_BY_EXTENSION.put("svg", "image/svg+xml");
+        MIME_BY_EXTENSION.put("ico", "image/x-icon");
+        MIME_BY_EXTENSION.put("ttf", "font/ttf");
+        MIME_BY_EXTENSION.put("otf", "font/otf");
+        MIME_BY_EXTENSION.put("woff", "font/woff");
+        MIME_BY_EXTENSION.put("woff2", "font/woff2");
+        MIME_BY_EXTENSION.put("txt", "text/plain");
+    }
 
-        PackagedAppPathHandler(String assetDir, WebViewAssetLoader.AssetsPathHandler assets) {
-            this.assetDir = assetDir;
-            this.assets = assets;
+    private LocalWebContent() {
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // URL classification (pure, unit-tested)
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * True when {@code url} must be served from the APK: only in a standalone flavor, and only for
+     * a virtual host or a packaged production host.
+     */
+    public static boolean isLocalUrl(@Nullable String url) {
+        if (!BuildConfig.OFFLINE_STANDALONE || url == null || url.isEmpty()) {
+            return false;
+        }
+        String host = Uri.parse(url).getHost();
+        return isVirtualHost(host) || assetDirFor(host) != null;
+    }
+
+    /** {@code *.androidplatform.net}, the hosts the packaged catalogs use. */
+    @VisibleForTesting
+    static boolean isVirtualHost(@Nullable String host) {
+        return host != null
+                && host.toLowerCase(Locale.ROOT).endsWith(VIRTUAL_HOST_SUFFIX)
+                && host.length() > VIRTUAL_HOST_SUFFIX.length();
+    }
+
+    /** The {@code assets/} directory packaged for a production {@code host}, or {@code null}. */
+    @VisibleForTesting
+    @Nullable
+    static String assetDirFor(@Nullable String host) {
+        if (host == null) {
+            return null;
+        }
+        return PACKAGED_ORIGINS.get(host.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * The asset paths to try, in order, for a request. Empty when the host is not served from
+     * the APK. Mirrors a static web server: repeated slashes collapse (the book player requests
+     * {@code content/images//file.png}) and directory paths resolve to {@code index.html}.
+     */
+    @VisibleForTesting
+    @NonNull
+    static List<String> assetCandidatesFor(@Nullable String host, @Nullable String requestPath) {
+        String path = normalizePath(requestPath);
+        List<String> candidates = new ArrayList<>(2);
+        if (isVirtualHost(host)) {
+            if (path.startsWith(ASSETS_PATH_PREFIX)) {
+                candidates.add(withIndex(path.substring(ASSETS_PATH_PREFIX.length())));
+            } else {
+                // A root-absolute path from a sub-app that assumes it is deployed at an origin root.
+                for (String dir : PACKAGED_DIRS) {
+                    candidates.add(dir + withIndexKeepingSlash(path));
+                }
+            }
+            return candidates;
+        }
+        String dir = assetDirFor(host);
+        if (dir != null) {
+            candidates.add(dir + withIndexKeepingSlash(path));
+        }
+        return candidates;
+    }
+
+    /** The {@code assets/} path vendored for this exact CDN URL, or {@code null}. */
+    @VisibleForTesting
+    @Nullable
+    static String vendoredAssetFor(@Nullable String host, @Nullable String path) {
+        if (host == null || path == null) {
+            return null;
+        }
+        return VENDORED_CDN_FILES.get(host.toLowerCase(Locale.ROOT) + path);
+    }
+
+    @VisibleForTesting
+    static boolean isKnownAbsent(@NonNull String assetPath) {
+        for (String absent : KNOWN_ABSENT) {
+            if (absent.equals(assetPath)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @VisibleForTesting
+    @Nullable
+    static String mimeTypeFor(@NonNull String path) {
+        int dot = path.lastIndexOf('.');
+        if (dot < 0 || dot == path.length() - 1) {
+            return null;
+        }
+        return MIME_BY_EXTENSION.get(path.substring(dot + 1).toLowerCase(Locale.ROOT));
+    }
+
+    /** Collapses repeated slashes and guarantees a single leading slash. */
+    private static String normalizePath(@Nullable String requestPath) {
+        String path = requestPath == null ? "" : requestPath.replaceAll("/{2,}", "/");
+        if (!path.startsWith("/")) {
+            path = "/" + path;
+        }
+        return path;
+    }
+
+    /** {@code "dir/"} or {@code ""} → {@code ".../index.html"}; otherwise unchanged. No leading slash. */
+    private static String withIndex(String relativePath) {
+        if (relativePath.isEmpty() || relativePath.endsWith("/")) {
+            return relativePath + INDEX_FILE;
+        }
+        return relativePath;
+    }
+
+    /** Same as {@link #withIndex} for a path that keeps its leading slash. */
+    private static String withIndexKeepingSlash(String absolutePath) {
+        if (absolutePath.endsWith("/")) {
+            return absolutePath + INDEX_FILE;
+        }
+        return absolutePath;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Serving
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Answers requests for packaged content from the APK. One instance per {@code WebApp}
+     * screen; {@link #intercept(Uri)} is called from {@code shouldInterceptRequest} and, through
+     * {@link #installServiceWorkerInterceptor(Server)}, for service-worker fetches.
+     */
+    public static final class Server {
+
+        private final AssetManager assets;
+
+        Server(@NonNull Context context) {
+            this.assets = context.getApplicationContext().getAssets();
         }
 
+        /**
+         * The packaged response for {@code url}, or {@code null} to let the WebView proceed
+         * normally (not a packaged host, or a file that is genuinely not in the package).
+         */
         @Nullable
-        @Override
-        public WebResourceResponse handle(@NonNull String path) {
-            String assetPath = assetPathFor(assetDir, path);
-            if (isKnownAbsent(assetPath)) {
-                Log.d(TAG, "Not packaged by design: " + assetPath);
+        public WebResourceResponse intercept(@NonNull Uri url) {
+            String host = url.getHost();
+            String path = url.getPath();
+
+            String vendored = vendoredAssetFor(host, path);
+            if (vendored != null) {
+                WebResourceResponse response = open(vendored);
+                if (response == null) {
+                    Log.w(TAG, "Vendored CDN file missing from package: " + vendored);
+                } else {
+                    Log.d(TAG, "Served vendored CDN file: " + host + path);
+                }
+                return response;
+            }
+
+            List<String> candidates = assetCandidatesFor(host, path);
+            if (candidates.isEmpty()) {
                 return null;
             }
-            WebResourceResponse response = assets.handle(assetPath);
-            if (response == null) {
+            for (String candidate : candidates) {
+                if (isKnownAbsent(candidate)) {
+                    return null;
+                }
+                WebResourceResponse response = open(candidate);
+                if (response != null) {
+                    return response;
+                }
+            }
+            // Logged so a file missing from the package shows up in logcat as such rather than as
+            // a silent blank page or a muted puzzle.
+            Log.w(TAG, "Packaged asset not found: " + host + path + " (tried " + candidates + ")");
+            return null;
+        }
+
+        /** Opens an asset as a response with an explicit MIME type and permissive CORS headers. */
+        @Nullable
+        private WebResourceResponse open(@NonNull String assetPath) {
+            InputStream stream;
+            try {
+                stream = assets.open(assetPath);
+            } catch (IOException notFound) {
                 return null;
             }
             String mime = mimeTypeFor(assetPath);
-            if (mime != null) {
-                response.setMimeType(mime);
-            }
+            WebResourceResponse response = new WebResourceResponse(
+                    mime != null ? mime : "application/octet-stream", null, stream);
+            // Sub-apps on the virtual host fetch FTM audio and vendored CDN files cross-origin;
+            // without these headers the browser discards the response.
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Access-Control-Allow-Origin", "*");
+            headers.put("Cross-Origin-Resource-Policy", "cross-origin");
+            response.setResponseHeaders(headers);
             return response;
         }
+    }
+
+    /** Creates the server for a packaged sub-app screen. */
+    @NonNull
+    public static Server newServer(@NonNull Context context) {
+        return new Server(context);
+    }
+
+    /**
+     * Routes <em>service worker</em> fetches through the same server. No packaged sub-app ships a
+     * service worker today (tools/package-ftm.js drops FTM's; the book player's is not copied), so
+     * this is defence in depth: should a future package include one, its install-time fetches must
+     * still resolve to the APK rather than the network. Process-wide by Android design; only
+     * installed for local content.
+     */
+    public static void installServiceWorkerInterceptor(@NonNull Server server) {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE)
+                || !WebViewFeature.isFeatureSupported(
+                        WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)) {
+            Log.w(TAG, "WebView lacks service worker interception");
+            return;
+        }
+        ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(
+                new ServiceWorkerClientCompat() {
+                    @Nullable
+                    @Override
+                    public WebResourceResponse shouldInterceptRequest(
+                            @NonNull WebResourceRequest request) {
+                        return server.intercept(request.getUrl());
+                    }
+                });
     }
 }

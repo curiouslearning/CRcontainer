@@ -20,7 +20,6 @@ import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.webkit.WebViewAssetLoader;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
@@ -231,13 +230,13 @@ public class WebApp extends BaseActivity {
             showPrompt("Please Connect to the Network");
             return;
         }
-        final WebViewAssetLoader assetLoader;
+        final LocalWebContent.Server packaged;
         if (isLocalContent) {
-            assetLoader = LocalWebContent.newAssetLoader(this, appUrl);
-            LocalWebContent.installServiceWorkerInterceptor(assetLoader);
+            packaged = LocalWebContent.newServer(this);
+            LocalWebContent.installServiceWorkerInterceptor(packaged);
             Log.i("WebApp", "Opening packaged sub-app from APK assets: " + appUrl);
         } else {
-            assetLoader = null;
+            packaged = null;
         }
 
         webView = findViewById(R.id.web_app);
@@ -251,8 +250,8 @@ public class WebApp extends BaseActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                if (assetLoader != null) {
-                    WebResourceResponse local = LocalWebContent.intercept(assetLoader, request.getUrl());
+                if (packaged != null) {
+                    WebResourceResponse local = packaged.intercept(request.getUrl());
                     if (local != null) {
                         return local;
                     }

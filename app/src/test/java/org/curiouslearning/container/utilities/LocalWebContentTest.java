@@ -7,59 +7,88 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
- * The path and MIME mapping that turns a request on FTM's origin into a file inside
- * {@code assets/feedthemonster/}. Pure functions; the Android {@code AssetsPathHandler} they feed
- * is exercised on-device.
+ * The URL → asset-path rules that let the packaged sub-apps run from the APK. Pure functions; the
+ * Android {@code AssetManager} they feed is exercised on-device.
  */
 public class LocalWebContentTest {
 
-    private static final String FTM = LocalWebContent.FTM_ASSET_DIR;
-    private static final String BOOKS = LocalWebContent.BOOKS_ASSET_DIR;
+    private static final String BUILD_HOST = "mwfpde_french_english_cr-ftm-standalone.androidplatform.net";
 
-    @Test
-    public void eachPackagedHostMapsToItsOwnAssetDirectory() {
-        assertEquals("feedthemonster", LocalWebContent.assetDirFor("feedthemonster.curiouscontent.org"));
-        assertEquals("feedthemonster", LocalWebContent.assetDirFor("FeedTheMonster.CuriousContent.org"));
-        assertEquals("CRWebPlayerJs", LocalWebContent.assetDirFor("curiousreader.curiouscontent.org"));
-        // Anything else stays on the network (assessment, Google Forms, dev hosts).
-        assertNull(LocalWebContent.assetDirFor("assessment.curiouscontent.org"));
-        assertNull(LocalWebContent.assetDirFor("feedthemonsterdev.curiouscontent.org"));
-        assertNull(LocalWebContent.assetDirFor("docs.google.com"));
-        assertNull(LocalWebContent.assetDirFor(null));
+    private static List<String> candidates(String host, String path) {
+        return LocalWebContent.assetCandidatesFor(host, path);
     }
 
     @Test
-    public void rootAndDirectoryPathsResolveToIndexHtml() {
-        assertEquals("feedthemonster/index.html", LocalWebContent.assetPathFor(FTM, ""));
-        assertEquals("feedthemonster/index.html", LocalWebContent.assetPathFor(FTM, "/"));
-        assertEquals("CRWebPlayerJs/index.html", LocalWebContent.assetPathFor(BOOKS, ""));
-        assertEquals("feedthemonster/lang/french/index.html", LocalWebContent.assetPathFor(FTM, "lang/french/"));
+    public void anyAndroidplatformHostIsAVirtualHost_theManifestChoosesTheName() {
+        assertTrue(LocalWebContent.isVirtualHost(BUILD_HOST));
+        assertTrue(LocalWebContent.isVirtualHost("nairobimomone_swahili_english_cr-ftm-standalone.androidplatform.net"));
+        assertTrue(LocalWebContent.isVirtualHost("Appassets.AndroidPlatform.NET"));
+        assertFalse(LocalWebContent.isVirtualHost(".androidplatform.net"));
+        assertFalse(LocalWebContent.isVirtualHost("feedthemonster.curiouscontent.org"));
+        assertFalse(LocalWebContent.isVirtualHost("androidplatform.net.evil.com"));
+        assertFalse(LocalWebContent.isVirtualHost(null));
     }
 
     @Test
-    public void filePathsKeepTheirLocationUnderThePackagedDirectory() {
-        assertEquals("feedthemonster/feedTheMonster.js", LocalWebContent.assetPathFor(FTM, "feedTheMonster.js"));
-        assertEquals("feedthemonster/feedTheMonster.js", LocalWebContent.assetPathFor(FTM, "/feedTheMonster.js"));
-        // The absolute audio URLs in FTM's language JSON land here.
-        assertEquals("feedthemonster/lang/french/audios/a.mp3",
-                LocalWebContent.assetPathFor(FTM, "lang/french/audios/a.mp3"));
-        assertEquals("feedthemonster/assets/rive/rive.wasm",
-                LocalWebContent.assetPathFor(FTM, "assets/rive/rive.wasm"));
-        // The book player's relative BookContent/<book>/content/... requests land here.
-        assertEquals("CRWebPlayerJs/BookContent/LetsFlyEnLv2/content/content.json",
-                LocalWebContent.assetPathFor(BOOKS, "BookContent/LetsFlyEnLv2/content/content.json"));
-        assertEquals("CRWebPlayerJs/dist/app.js", LocalWebContent.assetPathFor(BOOKS, "/dist/app.js"));
+    public void virtualHostAssetsPathMapsStraightOntoAssets() {
+        assertEquals(Collections.singletonList("feedthemonster/index.html"),
+                candidates(BUILD_HOST, "/assets/feedthemonster/index.html"));
+        assertEquals(Collections.singletonList("feedthemonster/index.html"),
+                candidates(BUILD_HOST, "/assets/feedthemonster/"));
+        assertEquals(Collections.singletonList("feedthemonster/lang/french/ftm_french.json"),
+                candidates(BUILD_HOST, "/assets/feedthemonster/lang/french/ftm_french.json"));
+        assertEquals(Collections.singletonList("CRWebPlayerJs/dist/app.js"),
+                candidates(BUILD_HOST, "/assets/CRWebPlayerJs/dist/app.js"));
+    }
+
+    @Test
+    public void rootAbsolutePathsOnAVirtualHostAreLookedUpInEachPackagedApp() {
+        // The Curious Reader player assumes it lives at an origin root.
+        assertEquals(Arrays.asList(
+                        "CRWebPlayerJs/BookContent/LetsFlyEnLv2/content/content.json",
+                        "feedthemonster/BookContent/LetsFlyEnLv2/content/content.json"),
+                candidates(BUILD_HOST, "/BookContent/LetsFlyEnLv2/content/content.json"));
+        assertEquals(Arrays.asList(
+                        "CRWebPlayerJs/interactive-book-static/ColoursEn-1/gdlplayer.umd.js",
+                        "feedthemonster/interactive-book-static/ColoursEn-1/gdlplayer.umd.js"),
+                candidates(BUILD_HOST, "/interactive-book-static/ColoursEn-1/gdlplayer.umd.js"));
+        assertEquals(Arrays.asList("CRWebPlayerJs/Quicksand-Bold.ttf", "feedthemonster/Quicksand-Bold.ttf"),
+                candidates(BUILD_HOST, "/Quicksand-Bold.ttf"));
+    }
+
+    @Test
+    public void productionHostsStayMappedForAbsoluteUrlsEmbeddedInContent() {
+        // FTM's language JSON points puzzle audio at its production host.
+        assertEquals(Collections.singletonList("feedthemonster/lang/french/audios/a.mp3"),
+                candidates("feedthemonster.curiouscontent.org", "/lang/french/audios/a.mp3"));
+        assertEquals(Collections.singletonList("feedthemonster/index.html"),
+                candidates("FeedTheMonster.CuriousContent.org", "/"));
+        assertEquals(Collections.singletonList("CRWebPlayerJs/BookContent/X/content/content.json"),
+                candidates("curiousreader.curiouscontent.org", "/BookContent/X/content/content.json"));
+    }
+
+    @Test
+    public void otherHostsAreNeverServedFromTheApk() {
+        assertTrue(candidates("assessment.curiouscontent.org", "/").isEmpty());
+        assertTrue(candidates("feedthemonsterdev.curiouscontent.org", "/").isEmpty());
+        assertTrue(candidates("docs.google.com", "/forms/x").isEmpty());
+        assertTrue(candidates(null, "/assets/feedthemonster/index.html").isEmpty());
     }
 
     @Test
     public void repeatedSlashesCollapseLikeAStaticServer() {
         // content.json entries such as "/images/file.png" make the player request images//file.png.
-        assertEquals("CRWebPlayerJs/BookContent/ColoursFrenchLv4/content/images/file-61fb29a5596cb.png",
-                LocalWebContent.assetPathFor(BOOKS, "BookContent/ColoursFrenchLv4/content/images//file-61fb29a5596cb.png"));
-        assertEquals("feedthemonster/index.html", LocalWebContent.assetPathFor(FTM, "//"));
-        assertEquals("feedthemonster/lang/french/ftm_french.json",
-                LocalWebContent.assetPathFor(FTM, "///lang//french/ftm_french.json"));
+        assertEquals(Arrays.asList(
+                        "CRWebPlayerJs/BookContent/ColoursFrenchLv4/content/images/file-61fb29a5596cb.png",
+                        "feedthemonster/BookContent/ColoursFrenchLv4/content/images/file-61fb29a5596cb.png"),
+                candidates(BUILD_HOST, "/BookContent/ColoursFrenchLv4/content/images//file-61fb29a5596cb.png"));
+        assertEquals(Collections.singletonList("feedthemonster/index.html"),
+                candidates(BUILD_HOST, "//assets//feedthemonster//"));
     }
 
     @Test
@@ -78,28 +107,31 @@ public class LocalWebContentTest {
 
     @Test
     public void expectedMissesAreRecognisedPerPackage() {
-        assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(FTM, "sw.js")));
-        assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "/app.js")));
-        assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "/sw.js")));
-        assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "firebase-config.json")));
-        assertFalse(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "/dist/app.js")));
-        assertFalse(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(FTM, "feedTheMonster.js")));
+        assertTrue(LocalWebContent.isKnownAbsent("feedthemonster/sw.js"));
+        assertTrue(LocalWebContent.isKnownAbsent("CRWebPlayerJs/sw.js"));
+        assertTrue(LocalWebContent.isKnownAbsent("CRWebPlayerJs/app.js"));
+        assertTrue(LocalWebContent.isKnownAbsent("CRWebPlayerJs/firebase-config.json"));
+        assertFalse(LocalWebContent.isKnownAbsent("CRWebPlayerJs/dist/app.js"));
+        assertFalse(LocalWebContent.isKnownAbsent("feedthemonster/feedTheMonster.js"));
+        // The first candidate for the player's "/sw.js" is the known-absent one.
+        assertEquals("CRWebPlayerJs/sw.js", candidates(BUILD_HOST, "/sw.js").get(0));
     }
 
     @Test
     public void mimeTypesCoverWhatABrowserIsStrictAbout() {
         assertEquals("text/javascript", LocalWebContent.mimeTypeFor("feedthemonster/feedTheMonster.js"));
-        assertEquals("application/wasm", LocalWebContent.mimeTypeFor("feedthemonster/assets/rive/rive.wasm"));
+        assertEquals("application/wasm", LocalWebContent.mimeTypeFor("vendor/dotlottie-player-0.44.0.wasm"));
         assertEquals("application/json", LocalWebContent.mimeTypeFor("feedthemonster/lang/french/ftm_french.json"));
         assertEquals("text/html", LocalWebContent.mimeTypeFor("feedthemonster/index.html"));
         assertEquals("audio/mpeg", LocalWebContent.mimeTypeFor("x/y.MP3"));
         assertEquals("font/ttf", LocalWebContent.mimeTypeFor("assets/fonts/NotoSans-Regular.ttf"));
         assertEquals("font/otf", LocalWebContent.mimeTypeFor("CRWebPlayerJs/dist/fonts/Quicksand_Bold.otf"));
         assertEquals("image/webp", LocalWebContent.mimeTypeFor("CRWebPlayerJs/dist/images/red_bird_256.webp"));
+        assertEquals("image/svg+xml", LocalWebContent.mimeTypeFor("feedthemonster/assets/images/Pink_Stone.svg"));
     }
 
     @Test
-    public void unknownOrMissingExtensionsFallBackToTheHandlerDefault() {
+    public void unknownOrMissingExtensionsFallBackToTheServerDefault() {
         assertNull(LocalWebContent.mimeTypeFor("feedthemonster/PACKAGE_INFO"));
         assertNull(LocalWebContent.mimeTypeFor("feedthemonster/file."));
         assertNull(LocalWebContent.mimeTypeFor("feedthemonster/data.unknownext"));

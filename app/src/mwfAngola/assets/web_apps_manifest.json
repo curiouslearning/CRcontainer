@@ -1,12 +1,12 @@
 {
-  "version": "mwf-angola-3",
+  "version": "mwf-angola-5",
   "web_apps": [
     {
       "appId": 2,
       "app_id": "feed-the-monster",
       "appIconUrl": "file:///android_asset/images/ftm_brazilianportuguese.png",
       "title": "Feed The Monster Brazilianportuguese",
-      "appUrl": "https://feedthemonster.curiouscontent.org/?cr_lang=brazilianportuguese",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=brazilianportuguese",
       "language": "Português - Brazilian",
       "languageInEnglishName": "BrazilianPortuguese"
     },
@@ -15,7 +15,7 @@
       "app_id": "feed-the-monster",
       "appIconUrl": "file:///android_asset/images/ftm_english.png",
       "title": "Feed The Monster US English",
-      "appUrl": "https://feedthemonster.curiouscontent.org/?cr_lang=english",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=english",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -23,7 +23,7 @@
       "appId": 197,
       "appIconUrl": "file:///android_asset/images/LetsFly_icon.png",
       "title": "Curious Reader Let's Fly English Level 2",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=LetsFlyEnLv2",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=LetsFlyEnLv2",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -31,7 +31,7 @@
       "appId": 198,
       "appIconUrl": "file:///android_asset/images/ftm_TheLostDoll_prod.png",
       "title": "Curious Reader The Lost Doll English Level 4",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=TheLostDollEnLv4",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=TheLostDollEnLv4",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -39,7 +39,7 @@
       "appId": 200,
       "appIconUrl": "file:///android_asset/images/ftm_CicadasSong_prod.png",
       "title": "Curious Reader Cicadas Song English Level 4",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=CicadasSongEnLv4",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=CicadasSongEnLv4",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -47,7 +47,7 @@
       "appId": 202,
       "appIconUrl": "file:///android_asset/images/colours_of_nature.png",
       "title": "Curious Colours Of Nature English Level 2",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=ColoursOfNatureEnLv2",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=ColoursOfNatureEnLv2",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -55,7 +55,7 @@
       "appId": 203,
       "appIconUrl": "file:///android_asset/images/i_am_not_afraid.png",
       "title": "Curious I Am Not Afraid Level 4",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=IAmNotAfraidEnLv4",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=IAmNotAfraidEnLv4",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -63,7 +63,7 @@
       "appId": 205,
       "appIconUrl": "file:///android_asset/images/ftm_tallandshort_prod.png",
       "title": "Curious Tall And Short Level 4",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=TallAndShortEnLv4",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=TallAndShortEnLv4",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -71,7 +71,7 @@
       "appId": 206,
       "appIconUrl": "file:///android_asset/images/friends.png",
       "title": "Curious Reader Friends English Level 2",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=FriendsEnLv2",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=FriendsEnLv2",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -79,7 +79,7 @@
       "appId": 208,
       "appIconUrl": "file:///android_asset/images/ftm_HideAndSeek_prod.png",
       "title": "Curious Reader Hide And Seek English Level 2",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=HideAndSeekEnLv2",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=HideAndSeekEnLv2",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -87,7 +87,7 @@
       "appId": 207,
       "appIconUrl": "file:///android_asset/images/ftm_Colours_prod.png",
       "title": "Curious Reader Colours Gdl Book English",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=gdl-ColoursEn-1",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=gdl-ColoursEn-1",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -95,7 +95,7 @@
       "appId": 199,
       "appIconUrl": "file:///android_asset/images/ftm_TheBeeAndTheElephant_prod.png",
       "title": "Curious Reader The Bee And The Elephant Gdl Book English",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=gdl-TheBeeAndTheElephantEn-1",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=gdl-TheBeeAndTheElephantEn-1",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
@@ -103,7 +103,7 @@
       "appId": 275,
       "appIconUrl": "file:///android_asset/images/mom_cooks_gdl_book.png",
       "title": "Curious Reader I Love My Mom Gdl Book English",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=gdl-ILoveMyMomEn-1",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=gdl-ILoveMyMomEn-1",
       "language": "English - US",
       "languageInEnglishName": "English"
     }

@@ -49,7 +49,7 @@ Container (Java/Gradle), all gated on `OFFLINE_STANDALONE`:
 | `data/respository/WebAppRepository.java` | `fetchWebApp()` loads the packaged manifest instead of calling the API; `getUpdatedAppManifest()` is a no-op so the remote manifest can never replace the packaged catalog. |
 | `presentation/viewmodals/HomeViewModal.java` | Exposes the manifest-error LiveData. |
 | `MainActivity.java` | Pre-selects `DEFAULT_LANGUAGE` when nothing is stored yet, then calls `loadApps()` directly from `onCreate` so the catalog no longer waits on the referrer / Facebook callbacks (those still run for attribution). Shows a toast if the packaged manifest is unusable. |
-| `utilities/LocalWebContent.java` (new) | `WebViewAssetLoader` that serves each packaged origin from its `assets/` directory: `feedthemonster.curiouscontent.org` → `assets/feedthemonster/`, `curiousreader.curiouscontent.org` → `assets/CRWebPlayerJs/` (root → `index.html`, explicit MIME types for `.js/.wasm/.json/...`), plus service-worker request interception. |
+| `utilities/LocalWebContent.java` (new) | Serves packaged content to the WebView: any `*.androidplatform.net` virtual host from `assets/` (plus root-absolute fallbacks for the book player), the two production hosts for absolute URLs embedded in content, and a short list of vendored CDN files; explicit MIME types and CORS headers; service-worker request interception. |
 | `WebApp.java` | For local content: skips the connectivity prompt, installs the asset loader in `shouldInterceptRequest`, ignores `cachedStatus(false)`. |
 | `app/fastlane/Fastfile` | CI builds/uploads the `online` flavor explicitly (`assembleOnlineDebug`, `bundleOnlineRelease`) so flavors cannot change what reaches the Play Store. |
 | `app/src/mwfCongo/assets/web_apps_manifest.json`, `app/src/mwfAngola/assets/web_apps_manifest.json` | Packaged catalogs: FTM per language plus the packaged Curious Reader books (same `appId`/`app_id` values as production). |
@@ -57,15 +57,44 @@ Container (Java/Gradle), all gated on `OFFLINE_STANDALONE`:
 | `app/src/mwfShared/assets/images/*.png` | FTM icons, referenced as `file:///android_asset/images/...` (Picasso's asset handler, no network). |
 | `app/src/mwfShared/assets/feedthemonster/` | The packaged FTM build, produced by `tools/package-ftm.js` (below). Not hand-edited. |
 
-### Why the packaged FTM is served on its real origin
+### Why the production hosts are also served from the APK
 
 FTM's language JSON references all puzzle and feedback audio by **absolute**
-`https://feedthemonster.curiouscontent.org/lang/<lang>/audios/*.mp3` URLs. Serving the package on
-that exact origin makes them resolve to the APK without rewriting any content, keeps the origin a
-secure context (service worker, Cache API, `localStorage` all work), and makes FTM's environment
-detection and the container's `attribution.hostname` identical to the online build, so the
-Firestore data Literacy Coach reads is indistinguishable. In the `online` flavor the host is never
-intercepted.
+`https://feedthemonster.curiouscontent.org/lang/<lang>/audios/*.mp3` URLs. Answering that host from
+the APK makes them resolve without rewriting any content. The catalog itself uses the per-build
+virtual host above, so `attribution.hostname` and FTM's environment detection see the standalone
+build, not production. In the `online` flavor neither host is intercepted.
+
+### Telling standalone data apart: the per-build virtual host
+
+Every `appUrl` in a packaged manifest lives on a build-specific virtual host under
+`androidplatform.net` (reserved by AndroidX for app-served content; it never resolves on the
+internet), in the same shape the earlier partner builds used:
+
+```
+https://mwfpde_french_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=french
+https://mwfpde_french_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=gdl-ColoursEn-1
+https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=english
+```
+
+The host is the research marker. It appears unchanged in:
+
+* Firestore `summary_data` / `user_sessions_data`: `attribution.hostname` (the container derives it
+  from the launched URL).
+* Firebase Analytics from the container: `web_app_url` on `app_launch` / `app_exit`.
+* The sub-app's own page URL, so FTM's and the book player's GA4 `page_location` carry it too.
+
+The container does not hard-code the host: `LocalWebContent` serves any `*.androidplatform.net`
+host from `assets/`, so renaming a build is a manifest edit. Path rules: `/assets/<dir>/<file>` maps
+straight onto `assets/<dir>/<file>`; any other root-absolute path (the Curious Reader player
+requests `/BookContent/...`, `/interactive-book-static/...`, `/dist/...` as if deployed at an origin
+root) is looked up in each packaged sub-app directory. The two production hosts
+(`feedthemonster.curiouscontent.org`, `curiousreader.curiouscontent.org`) are still answered from
+the APK because FTM's language JSON references its puzzle audio by absolute production URL; those
+fetches are now cross-origin, so every packaged response carries `Access-Control-Allow-Origin: *`.
+
+Container-side checks that depend on the URL still hold: `isFtmApp` looks for `feedthemonster`
+in the URL (the asset directory name keeps it lowercase), and `app_id` comes from the manifest.
 
 ### The "Parents feedback form"
 
