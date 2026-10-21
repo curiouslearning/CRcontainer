@@ -233,7 +233,7 @@ public class WebApp extends BaseActivity {
         }
         final WebViewAssetLoader assetLoader;
         if (isLocalContent) {
-            assetLoader = LocalWebContent.newAssetLoader(this);
+            assetLoader = LocalWebContent.newAssetLoader(this, appUrl);
             LocalWebContent.installServiceWorkerInterceptor(assetLoader);
             Log.i("WebApp", "Opening packaged sub-app from APK assets: " + appUrl);
         } else {

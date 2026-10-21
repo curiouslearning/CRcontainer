@@ -49,10 +49,11 @@ Container (Java/Gradle), all gated on `OFFLINE_STANDALONE`:
 | `data/respository/WebAppRepository.java` | `fetchWebApp()` loads the packaged manifest instead of calling the API; `getUpdatedAppManifest()` is a no-op so the remote manifest can never replace the packaged catalog. |
 | `presentation/viewmodals/HomeViewModal.java` | Exposes the manifest-error LiveData. |
 | `MainActivity.java` | Pre-selects `DEFAULT_LANGUAGE` when nothing is stored yet, then calls `loadApps()` directly from `onCreate` so the catalog no longer waits on the referrer / Facebook callbacks (those still run for attribution). Shows a toast if the packaged manifest is unusable. |
-| `utilities/LocalWebContent.java` (new) | `WebViewAssetLoader` that serves `https://feedthemonster.curiouscontent.org/*` from `assets/feedthemonster/` (root → `index.html`, explicit MIME types for `.js/.wasm/.json/...`), plus service-worker request interception. |
+| `utilities/LocalWebContent.java` (new) | `WebViewAssetLoader` that serves each packaged origin from its `assets/` directory: `feedthemonster.curiouscontent.org` → `assets/feedthemonster/`, `curiousreader.curiouscontent.org` → `assets/CRWebPlayerJs/` (root → `index.html`, explicit MIME types for `.js/.wasm/.json/...`), plus service-worker request interception. |
 | `WebApp.java` | For local content: skips the connectivity prompt, installs the asset loader in `shouldInterceptRequest`, ignores `cachedStatus(false)`. |
 | `app/fastlane/Fastfile` | CI builds/uploads the `online` flavor explicitly (`assembleOnlineDebug`, `bundleOnlineRelease`) so flavors cannot change what reaches the Play Store. |
-| `app/src/mwfCongo/assets/web_apps_manifest.json`, `app/src/mwfAngola/assets/web_apps_manifest.json` | Packaged catalogs (two FTM entries each, same `appId`/`app_id` values as production). |
+| `app/src/mwfCongo/assets/web_apps_manifest.json`, `app/src/mwfAngola/assets/web_apps_manifest.json` | Packaged catalogs: FTM per language plus the packaged Curious Reader books (same `appId`/`app_id` values as production). |
+| `app/src/mwfShared/assets/CRWebPlayerJs/` | The Curious Reader player and `BookContent/`, see "Packaging the Curious Reader books". |
 | `app/src/mwfShared/assets/images/*.png` | FTM icons, referenced as `file:///android_asset/images/...` (Picasso's asset handler, no network). |
 | `app/src/mwfShared/assets/feedthemonster/` | The packaged FTM build, produced by `tools/package-ftm.js` (below). Not hand-edited. |
 
@@ -111,6 +112,47 @@ already served from the APK), and injects one inline `<script>` into `index.html
 No FTM source is modified. `PACKAGE_INFO.json` next to `index.html` records the source commit,
 languages and sizes.
 
+## Packaging the Curious Reader books
+
+The interactive books use the Curious Reader web player, packaged under
+`app/src/mwfShared/assets/CRWebPlayerJs/` and served on its production origin
+`https://curiousreader.curiouscontent.org/` (so the catalog `appUrl`s are the production ones,
+`?book=<slug>`). Layout, which the player's relative paths require:
+
+```
+CRWebPlayerJs/
+  index.html, manifest.json      # the player's container build (copied by hand from CRWebPlayer)
+  dist/                          # app.js, styles, fonts, images
+  BookContent/<slug>/content/    # content.json, images/, audios/   <- tools/package-books.js
+```
+
+The player build shipped here has no service worker and hides its loading screen on a timer, so
+nothing gates on caching. It calls `window.Android.setContainerAppOrientation("landscape")`, which
+the container already supports.
+
+Books come from the CRWebPlayer repo's `BookContent/` directory and are copied with
+
+```bash
+node tools/package-books.js --source /path/to/CRWebPlayer/BookContent --books ChakusCycleFrench,FriendsFrench
+node tools/package-books.js --verify      # re-check everything packaged
+```
+
+The script converts WAV narration to MP3 with ffmpeg (the authored books are mostly WAV; the ten
+French books went from 147 MB to 59 MB) and rewrites `content.json`, then verifies that every image
+and audio file referenced by every packaged book exists. Catalog entries reuse the production
+`appId`, title and icon file name for each book; icons live in `app/src/mwfShared/assets/images/`
+and can be replaced file-for-file.
+
+Packaged: 10 English books in `app/src/mwfShared/assets/CRWebPlayerJs/BookContent` (both
+flavors) and 10 French books in `app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` (Congo only;
+Gradle merges the flavor's assets over the shared ones, so the player sees a single `BookContent/`).
+Use `--out app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` when packaging French titles. This
+matches the production catalog for those languages minus `TogetherEnglishUs` (47 MB) and the two
+GDL English books. There are no Brazilian Portuguese books in the production catalog.
+
+Nine Swahili book folders were also copied into the shared `BookContent/` at one point; they are
+not referenced by either manifest and add ~48 MB to both APKs until removed.
+
 ## Verification status (2026-10-21)
 
 Unit tests: 107 pass (`./gradlew testOnlineDebugUnitTest`; 96 pre-existing + 11 new for
@@ -125,6 +167,7 @@ APKs. They still need a repeat on a physical low-end device before hand-off.
 | A. Fresh offline install, first launch (`mwfCongo`) | Pass. Catalog with the French FTM icon in ~6 s, no popup, no network request needed. Log: `Local manifest loaded: version=mwf-congo-1 apps=2 languages=[French, English]`. |
 | B. Language switching offline | Pass. Dropdown lists exactly `English - US` / `Français`; French → English → French each reload the catalog. Same for `mwfAngola` (`Português - Brazilian` initial). |
 | C. Offline FTM | Pass. FTM v1.8.1 start screen, level map and puzzles render from the APK; the only asset miss is `sw.js` (by design). Level 1 completed (2 stars recorded in `localStorage`); dragging the correct stone gives "Bien fait". Every puzzle/feedback audio URL in the three language JSONs resolves from the APK and decodes (English 172, French 87, Portuguese 95 files); the only misses are `are-you-sure.mp3`, `Select-your-player.mp3`, `watch-me-grow.mp3`, which FTM parses but never plays and which are absent upstream too. FTM reopens offline after a force-stop of the container. |
+| C. Books offline | Pass. `ColoursFrenchLv4` and `LetsFlyEnLv2` open from the APK in landscape, pages turn, narration and page images resolve with no asset misses. |
 | C. Bridge | Pass. `summary_data` + `user_sessions_data` payloads accepted per puzzle offline; `getMonsterEvolutionState` polling works. |
 | D. Learner ID / QR offline | Pass. Overlay shows the QR and `cr_user_id_<id>`. Note the QR payload is the bare id (no `cr_user_id_` prefix), unchanged from the online build. Camera / Photo-QR scanning into Literacy Coach not tested here. |
 | E. Sync after reconnect | Pass with the evidence available from logs: after going online, Firestore acknowledged a summary update (`Updated summary payload with id: …` is logged on server ack) and the next launch prefetched `1 existing summary docs` from the server. Firestore delivers a client's queued writes in order, so the offline `user_sessions_data` writes were flushed first. Not verified in the Firestore console / Literacy Coach dashboard. |
@@ -138,10 +181,11 @@ were immediate. Worth re-checking on real hardware.
 
 | APK (debug, unsigned-release will be similar) | Size |
 |---|---|
-| `app-mwfCongo-debug.apk` | 56.1 MB |
-| `app-mwfAngola-debug.apk` | 56.1 MB |
+| `app-mwfCongo-debug.apk` (FTM + 10 English + 10 French books) | see hand-off notes |
+| `app-mwfAngola-debug.apk` (FTM + 10 English books) | see hand-off notes |
 | `app-online-debug.apk` (unchanged) | 33.6 MB |
 
+Books: English 29 MB, French 55 MB after WAV→MP3 conversion (147 MB before); player 1 MB.
 Packaged FTM: 28.6 MB (assets 22.9 MB = images 14 MB, fonts 5.3 MB, audio 2.5 MB, Rive 1.9 MB;
 `lang/` 4.8 MB for three languages). Not packaged: the other 59 languages (~226 MB) and the
 embedded assessment module (~53 MB, only scheduled by a Statsig config that defaults to off).

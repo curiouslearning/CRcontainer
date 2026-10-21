@@ -1,5 +1,5 @@
 {
-  "version": "mwf-congo-1",
+  "version": "mwf-congo-2",
   "web_apps": [
     {
       "appId": 28,
@@ -11,11 +11,171 @@
       "languageInEnglishName": "French"
     },
     {
+      "appId": 278,
+      "appIconUrl": "file:///android_asset/images/ftm_Colours_prod.png",
+      "title": "Curious Reader Colours French Lv4",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=ColoursFrenchLv4",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 279,
+      "appIconUrl": "file:///android_asset/images/playground.png",
+      "title": "Curious Reader Playground French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=PlaygroundFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 280,
+      "appIconUrl": "file:///android_asset/images/chakus_cycle.png",
+      "title": "Curious Reader Chakus Cycle French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=ChakusCycleFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 281,
+      "appIconUrl": "file:///android_asset/images/friends.png",
+      "title": "Curious Reader Friends French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=FriendsFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 282,
+      "appIconUrl": "file:///android_asset/images/frogs_starry_wish.png",
+      "title": "Curious Reader Frogs Starry Wish French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=FrogsStarryWishFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 283,
+      "appIconUrl": "file:///android_asset/images/dads_boots.png",
+      "title": "Curious Reader Dads Boots French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=DadsBootsFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 284,
+      "appIconUrl": "file:///android_asset/images/ftm_tallandshort_prod.png",
+      "title": "Curious Reader Tall And Short French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=TallAndShortFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 285,
+      "appIconUrl": "file:///android_asset/images/the_lion_runs.png",
+      "title": "Curious Reader The Lion Runs And The Cow Walks French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=TheLionRunsAndTheCowWalksFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 286,
+      "appIconUrl": "file:///android_asset/images/who_Can_Help_Me.png",
+      "title": "Curious Reader Who Can Help Me French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=WhoCanHelpMeFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 287,
+      "appIconUrl": "file:///android_asset/images/what_day_is_it.png",
+      "title": "Curious Reader What Day Is It French",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=WhatDayIsItFrench",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
       "appId": 0,
       "app_id": "feed-the-monster",
       "appIconUrl": "file:///android_asset/images/ftm_english.png",
       "title": "Feed The Monster US English",
       "appUrl": "https://feedthemonster.curiouscontent.org/?cr_lang=english",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 197,
+      "appIconUrl": "file:///android_asset/images/LetsFly_icon.png",
+      "title": "Curious Reader Let's Fly English Level 2",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=LetsFlyEnLv2",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 198,
+      "appIconUrl": "file:///android_asset/images/ftm_TheLostDoll_prod.png",
+      "title": "Curious Reader The Lost Doll English Level 4",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=TheLostDollEnLv4",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 199,
+      "appIconUrl": "file:///android_asset/images/ftm_TheBeeAndTheElephant_prod.png",
+      "title": "Curious Reader The Bee And The Elephant English Level 4",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=TheBeeAndTheElephantEnLv4",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 200,
+      "appIconUrl": "file:///android_asset/images/ftm_CicadasSong_prod.png",
+      "title": "Curious Reader Cicadas Song English Level 4",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=CicadasSongEnLv4",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 202,
+      "appIconUrl": "file:///android_asset/images/colours_of_nature.png",
+      "title": "Curious Colours Of Nature English Level 2",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=ColoursOfNatureEnLv2",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 203,
+      "appIconUrl": "file:///android_asset/images/i_am_not_afraid.png",
+      "title": "Curious I Am Not Afraid Level 4",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=IAmNotAfraidEnLv4",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 205,
+      "appIconUrl": "file:///android_asset/images/ftm_tallandshort_prod.png",
+      "title": "Curious Tall And Short Level 4",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=TallAndShortEnLv4",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 206,
+      "appIconUrl": "file:///android_asset/images/friends.png",
+      "title": "Curious Reader Friends English Level 2",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=FriendsEnLv2",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 207,
+      "appIconUrl": "file:///android_asset/images/ftm_Colours_prod.png",
+      "title": "Curious Reader Colours English Level 4",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=ColoursEnLv4",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 208,
+      "appIconUrl": "file:///android_asset/images/ftm_HideAndSeek_prod.png",
+      "title": "Curious Reader Hide And Seek English Level 2",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=HideAndSeekEnLv2",
       "language": "English - US",
       "languageInEnglishName": "English"
     }

@@ -21,14 +21,15 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Serves the Feed The Monster build packaged inside the APK to the WebView, on FTM's own
- * production origin, for the offline standalone flavors.
+ * Serves the sub-apps packaged inside the APK to the WebView, each on its own production origin,
+ * for the offline standalone flavors.
  *
  * <p>The packaged catalog uses the <em>same</em> URLs as the Play Store catalog
- * ({@code https://feedthemonster.curiouscontent.org/?cr_lang=french}). In a standalone flavor
- * every request to that host is answered by {@link WebViewAssetLoader} from
- * {@code assets/feedthemonster/} and never reaches the network. Keeping the real origin matters
- * for three reasons:
+ * ({@code https://feedthemonster.curiouscontent.org/?cr_lang=french},
+ * {@code https://curiousreader.curiouscontent.org/?book=LetsFlyEnLv2}). In a standalone flavor
+ * every request to a packaged host is answered by {@link WebViewAssetLoader} from the matching
+ * directory under {@code assets/} ({@code PACKAGED_ORIGINS}) and never reaches the network.
+ * Keeping the real origins matters for three reasons:
  * <ul>
  *   <li>FTM's language JSON references its puzzle/feedback audio by <em>absolute</em>
  *       {@code https://feedthemonster.curiouscontent.org/lang/...} URLs, so they resolve to the
@@ -46,11 +47,24 @@ public final class LocalWebContent {
 
     private static final String TAG = "LocalWebContent";
 
-    /** Host of the packaged sub-app. Must match the {@code appUrl}s in the flavor manifests. */
-    public static final String DOMAIN = "feedthemonster.curiouscontent.org";
+    /** Feed The Monster: production build packaged by tools/package-ftm.js. */
+    public static final String FTM_DOMAIN = "feedthemonster.curiouscontent.org";
+    public static final String FTM_ASSET_DIR = "feedthemonster";
 
-    /** Directory under {@code assets/} that holds the FTM production build. */
-    public static final String ASSET_DIR = "feedthemonster";
+    /** Curious Reader book player: {@code index.html} + {@code dist/} + {@code BookContent/<book>/}. */
+    public static final String BOOKS_DOMAIN = "curiousreader.curiouscontent.org";
+    public static final String BOOKS_ASSET_DIR = "CRWebPlayerJs";
+
+    /**
+     * Host -> directory under {@code assets/} whose contents are served at that origin's root.
+     * Must match the {@code appUrl} hosts used in the flavor manifests.
+     */
+    private static final Map<String, String> PACKAGED_ORIGINS = new HashMap<>();
+
+    static {
+        PACKAGED_ORIGINS.put(FTM_DOMAIN, FTM_ASSET_DIR);
+        PACKAGED_ORIGINS.put(BOOKS_DOMAIN, BOOKS_ASSET_DIR);
+    }
 
     private static final String INDEX_FILE = "index.html";
 
@@ -92,39 +106,59 @@ public final class LocalWebContent {
 
     /**
      * True when {@code url} must be served from the APK: only in a standalone flavor, and only
-     * for the packaged sub-app's host.
+     * for a packaged sub-app's host.
      */
     public static boolean isLocalUrl(@Nullable String url) {
         if (!BuildConfig.OFFLINE_STANDALONE || url == null || url.isEmpty()) {
             return false;
         }
-        return DOMAIN.equalsIgnoreCase(Uri.parse(url).getHost());
+        return assetDirFor(Uri.parse(url).getHost()) != null;
     }
 
-    /** Builds the loader that maps {@code https://}{@link #DOMAIN}{@code /} onto {@code assets/feedthemonster/}. */
+    /** The {@code assets/} directory packaged for {@code host}, or {@code null} when none is. */
+    @VisibleForTesting
+    @Nullable
+    static String assetDirFor(@Nullable String host) {
+        if (host == null) {
+            return null;
+        }
+        return PACKAGED_ORIGINS.get(host.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Builds the loader that maps {@code https://<host of url>/} onto that origin's packaged
+     * directory. {@code url} must satisfy {@link #isLocalUrl(String)}.
+     */
     @NonNull
-    public static WebViewAssetLoader newAssetLoader(@NonNull Context context) {
+    public static WebViewAssetLoader newAssetLoader(@NonNull Context context, @NonNull String url) {
+        String host = Uri.parse(url).getHost();
+        String assetDir = assetDirFor(host);
+        if (assetDir == null) {
+            throw new IllegalArgumentException("No packaged content for host: " + host);
+        }
         return new WebViewAssetLoader.Builder()
-                .setDomain(DOMAIN)
+                .setDomain(host)
                 .setHttpAllowed(false)
-                .addPathHandler("/", new PackagedAppPathHandler(
+                .addPathHandler("/", new PackagedAppPathHandler(assetDir,
                         new WebViewAssetLoader.AssetsPathHandler(context.getApplicationContext())))
                 .build();
     }
 
     /**
-     * Answers {@code url} from the APK when it targets {@link #DOMAIN}, otherwise {@code null} so
+     * Answers {@code url} from the APK when it targets a packaged host, otherwise {@code null} so
      * the WebView proceeds normally. A miss is logged so a file missing from the package shows up
      * in logcat as such rather than as a silent blank screen or a muted puzzle.
      */
     @Nullable
     public static WebResourceResponse intercept(@NonNull WebViewAssetLoader assetLoader,
                                                 @NonNull Uri url) {
-        if (!DOMAIN.equalsIgnoreCase(url.getHost())) {
+        if (assetDirFor(url.getHost()) == null) {
             return null;
         }
         WebResourceResponse response = assetLoader.shouldInterceptRequest(url);
-        if (response == null && !isKnownAbsent(url.getPath())) {
+        String assetDir = assetDirFor(url.getHost());
+        String requestPath = url.getPath() == null ? "" : url.getPath();
+        if (response == null && !isKnownAbsent(assetPathFor(assetDir, requestPath))) {
             Log.w(TAG, "Packaged asset not found: " + url.getPath());
         }
         return response;
@@ -155,29 +189,28 @@ public final class LocalWebContent {
     }
 
     /**
-     * Maps a request path (relative to the origin root) to the file inside
-     * {@code assets/feedthemonster/}. {@code ""} and directory paths resolve to {@code index.html},
-     * mirroring a static web server, which is what FTM's relative URLs expect.
+     * Maps a request path (relative to the origin root) to the file inside {@code assets/<assetDir>/}.
+     * Mirrors what a static web server does with the sub-apps' relative URLs: {@code ""} and
+     * directory paths resolve to {@code index.html}, and repeated slashes collapse (the book player
+     * requests {@code content/images//file.png}, which Apache/nginx serve but AssetManager rejects).
      */
     @VisibleForTesting
     @NonNull
-    static String assetPathFor(@NonNull String requestPath) {
-        String path = requestPath;
+    static String assetPathFor(@NonNull String assetDir, @NonNull String requestPath) {
+        String path = requestPath.replaceAll("/{2,}", "/");
         while (path.startsWith("/")) {
             path = path.substring(1);
         }
         if (path.isEmpty() || path.endsWith("/")) {
             path = path + INDEX_FILE;
         }
-        return ASSET_DIR + "/" + path;
+        return assetDir + "/" + path;
     }
 
-    private static boolean isKnownAbsent(@Nullable String requestPath) {
-        if (requestPath == null) {
-            return false;
-        }
+    @VisibleForTesting
+    static boolean isKnownAbsent(@NonNull String assetPath) {
         for (String absent : KNOWN_ABSENT) {
-            if (requestPath.equals("/" + absent) || requestPath.equals(absent)) {
+            if (absent.equals(assetPath)) {
                 return true;
             }
         }
@@ -195,31 +228,36 @@ public final class LocalWebContent {
     }
 
     /**
-     * Files FTM requests that the package deliberately does not contain. Answered with a plain 404
-     * up front so {@code AssetsPathHandler} does not log a FileNotFoundException stack trace for an
-     * expected miss on every launch. {@code sw.js} is dropped by tools/package-ftm.js.
+     * Asset paths the sub-apps request on every launch that the packages deliberately do not
+     * contain. Answered with a plain 404 up front so {@code AssetsPathHandler} does not log a
+     * FileNotFoundException stack trace for an expected miss. FTM's {@code sw.js} is dropped by
+     * tools/package-ftm.js; the book player's {@code index.html} references a root {@code app.js}
+     * that its build only ships as {@code dist/app.js}.
      */
-    private static final String[] KNOWN_ABSENT = {"sw.js"};
+    private static final String[] KNOWN_ABSENT = {
+            FTM_ASSET_DIR + "/sw.js",
+            BOOKS_ASSET_DIR + "/app.js",
+    };
 
-    /** Serves {@code assets/feedthemonster/<path>} with an explicit MIME type. */
+    /** Serves {@code assets/<assetDir>/<path>} with an explicit MIME type. */
     private static final class PackagedAppPathHandler implements WebViewAssetLoader.PathHandler {
 
+        private final String assetDir;
         private final WebViewAssetLoader.AssetsPathHandler assets;
 
-        PackagedAppPathHandler(WebViewAssetLoader.AssetsPathHandler assets) {
+        PackagedAppPathHandler(String assetDir, WebViewAssetLoader.AssetsPathHandler assets) {
+            this.assetDir = assetDir;
             this.assets = assets;
         }
 
         @Nullable
         @Override
         public WebResourceResponse handle(@NonNull String path) {
-            for (String absent : KNOWN_ABSENT) {
-                if (absent.equals(path) || ("/" + absent).equals(path)) {
-                    Log.d(TAG, "Not packaged by design: " + absent);
-                    return null;
-                }
+            String assetPath = assetPathFor(assetDir, path);
+            if (isKnownAbsent(assetPath)) {
+                Log.d(TAG, "Not packaged by design: " + assetPath);
+                return null;
             }
-            String assetPath = assetPathFor(path);
             WebResourceResponse response = assets.handle(assetPath);
             if (response == null) {
                 return null;
