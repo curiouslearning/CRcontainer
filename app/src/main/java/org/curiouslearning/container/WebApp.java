@@ -12,16 +12,20 @@ import android.view.View;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.webkit.WebViewAssetLoader;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import org.curiouslearning.container.utilities.LocalWebContent;
 import io.sentry.Breadcrumb;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
@@ -62,6 +66,8 @@ public class WebApp extends BaseActivity {
     private Runnable monsterStateCheckRunnable;
     private boolean isMonsterCheckRunning;
     private boolean isFtmApp;
+    /** True when this sub-app is packaged in the APK and served by {@link LocalWebContent}. */
+    private boolean isLocalContent;
     /** Container-measured usage timing; null when this sub-app has no resolvable app_id. */
     private SubAppUsageTracker usageTracker;
 
@@ -218,9 +224,20 @@ public class WebApp extends BaseActivity {
     }
 
     private void loadWebView() {
-        if (!isInternetConnected(getApplicationContext()) && !isDataCached) {
+        isLocalContent = LocalWebContent.isLocalUrl(appUrl);
+        // A packaged sub-app needs no network, ever. The prompt is only for remote sub-apps that
+        // have not yet been cached by their service worker.
+        if (!isLocalContent && !isInternetConnected(getApplicationContext()) && !isDataCached) {
             showPrompt("Please Connect to the Network");
             return;
+        }
+        final WebViewAssetLoader assetLoader;
+        if (isLocalContent) {
+            assetLoader = LocalWebContent.newAssetLoader(this);
+            LocalWebContent.installServiceWorkerInterceptor(assetLoader);
+            Log.i("WebApp", "Opening packaged sub-app from APK assets: " + appUrl);
+        } else {
+            assetLoader = null;
         }
 
         webView = findViewById(R.id.web_app);
@@ -232,6 +249,17 @@ public class WebApp extends BaseActivity {
 
         // Create custom WebViewClient for FTM to handle monster state API
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                if (assetLoader != null) {
+                    WebResourceResponse local = LocalWebContent.intercept(assetLoader, request.getUrl());
+                    if (local != null) {
+                        return local;
+                    }
+                }
+                return super.shouldInterceptRequest(view, request);
+            }
+
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
@@ -385,7 +413,7 @@ public class WebApp extends BaseActivity {
             editor.putBoolean(String.valueOf(urlIndex), dataCachedStatus);
             editor.commit();
 
-            if (!isInternetConnected(getApplicationContext()) && !dataCachedStatus) {
+            if (!isLocalContent && !isInternetConnected(getApplicationContext()) && !dataCachedStatus) {
                 showPrompt("Please Connect to the Network");
             }
         }

@@ -1,0 +1,23 @@
+{
+  "packagedAt": "2026-10-21T11:05:31.717Z",
+  "sourceBuildDir": "D:\\Github\\FeedTheMonsterJS-mwf\\build",
+  "sourceCommit": "0a0920d86738c229df9cfcc89232bc11a7b935cf",
+  "sourceCommitInfo": "2026-09-03T15:52:16+05:30 Merge pull request #2031 from curiouslearning/develop",
+  "languages": [
+    "english",
+    "french",
+    "brazilianportuguese"
+  ],
+  "serviceWorkerRemoved": true,
+  "assessmentSurveyIncluded": false,
+  "indexHtmlSeeds": [
+    "is_cached[<cr_lang>]=true",
+    "CRFeatureFlags.gate:mr-75=true"
+  ],
+  "sizes": {
+    "total": "28.6 MB",
+    "assets": "22.9 MB",
+    "lang": "4.8 MB",
+    "assessmentSurvey": "absent"
+  }
+}

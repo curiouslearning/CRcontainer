@@ -69,6 +69,48 @@ android {
         buildConfig = true
     }
 
+    // Distribution flavors.
+    //
+    //  online     - the regular Play Store build. Catalog comes from the remote manifest (API_URL),
+    //               sub-apps load from their deployed URLs. Identical to the app before flavors
+    //               existed; every BuildConfig flag below is inert here.
+    //  mwfCongo   - MWF PDE standalone APK for the Republic of Congo (French + English).
+    //  mwfAngola  - MWF PDE standalone APK for Angola (Brazilian Portuguese + English).
+    //
+    // The two mwf* flavors are fully offline from first launch: the catalog is the bundled
+    // web_apps_manifest.json in the flavor's assets, icons and Feed The Monster are packaged in
+    // the APK (src/mwfShared/assets) and served through WebViewAssetLoader, and nothing on the
+    // startup path waits on the network. They deliberately share applicationId with `online`
+    // because google-services.json (Firebase) and the Literacy Coach data pipeline are keyed on
+    // the package name.
+    flavorDimensions "distribution"
+    productFlavors {
+        online {
+            dimension "distribution"
+            isDefault = true
+            buildConfigField "boolean", "OFFLINE_STANDALONE", "false"
+            buildConfigField "String", "DEFAULT_LANGUAGE", "\"\""
+        }
+        mwfCongo {
+            dimension "distribution"
+            buildConfigField "boolean", "OFFLINE_STANDALONE", "true"
+            // languageInEnglishName of the entry that must be selected on first launch.
+            buildConfigField "String", "DEFAULT_LANGUAGE", "\"French\""
+        }
+        mwfAngola {
+            dimension "distribution"
+            buildConfigField "boolean", "OFFLINE_STANDALONE", "true"
+            buildConfigField "String", "DEFAULT_LANGUAGE", "\"BrazilianPortuguese\""
+        }
+    }
+
+    sourceSets {
+        // Assets common to every standalone flavor (icons, the packaged FTM build). Each flavor's
+        // own src/<flavor>/assets adds its web_apps_manifest.json on top and overrides main's.
+        mwfCongo { assets.srcDirs += ['src/mwfShared/assets'] }
+        mwfAngola { assets.srcDirs += ['src/mwfShared/assets'] }
+    }
+
     testOptions {
         unitTests.all { test ->
             jacoco {
@@ -151,6 +193,9 @@ dependencies {
     implementation "com.android.installreferrer:installreferrer:2.2"
     implementation 'com.google.zxing:core:3.4.1'
     implementation 'androidx.appcompat:appcompat:1.5.1'
+    // WebViewAssetLoader + service-worker interception for sub-apps packaged in the APK
+    // (offline standalone flavors). See utilities/LocalWebContent.
+    implementation 'androidx.webkit:webkit:1.14.0'
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation(platform("io.sentry:sentry-bom:7.17.0"))
@@ -186,7 +231,7 @@ def coverageSourceDirs = [
         "src/main/java"
 ]
 
-task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
+task jacocoTestReport(type: JacocoReport, dependsOn: ['testOnlineDebugUnitTest']) {
     group = "Reporting"
     description = "Generate Jacoco coverage reports after running tests."
 
@@ -196,7 +241,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     }
 
     classDirectories.setFrom(fileTree(
-            dir: "$buildDir/intermediates/classes/debug/transformDebugClassesWithAsm/dirs",
+            dir: "$buildDir/intermediates/classes/onlineDebug/transformOnlineDebugClassesWithAsm/dirs",
             excludes: [
                     '**/R.class',
                     '**/R$*.class',
@@ -213,7 +258,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
 
     sourceDirectories.setFrom(files(coverageSourceDirs))
     executionData.setFrom(files(
-            "$buildDir/jacoco/testDebugUnitTest.exec",
+            "$buildDir/jacoco/testOnlineDebugUnitTest.exec",
             "$buildDir/outputs/code-coverage/connected/*coverage.ec"
     ))
 }

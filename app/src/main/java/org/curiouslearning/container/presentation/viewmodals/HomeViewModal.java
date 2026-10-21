@@ -40,4 +40,9 @@ public class HomeViewModal extends AndroidViewModel {
     public void getUpdatedAppManifest(String manifestVersion) {
         webAppRepository.getUpdatedAppManifest(manifestVersion);
     }
+
+    /** Offline standalone builds only: reason the packaged manifest could not be loaded. */
+    public LiveData<String> getLocalManifestError() {
+        return webAppRepository.getLocalManifestError();
+    }
 }

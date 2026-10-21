@@ -7,7 +7,9 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
+import org.curiouslearning.container.BuildConfig;
 import org.curiouslearning.container.data.database.WebAppDatabase;
+import org.curiouslearning.container.data.local.LocalManifestLoader;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.remote.RetrofitInstance;
 import org.curiouslearning.container.utilities.ConnectionUtils;
@@ -24,6 +26,10 @@ public class WebAppRepository {
 
     private boolean isFetching = false;
 
+    // Set when the packaged manifest of an offline standalone build cannot be loaded, so the UI
+    // can show a diagnostic instead of an indefinite loading indicator. Never set for online builds.
+    private final MutableLiveData<String> localManifestError = new MutableLiveData<>();
+
     public WebAppRepository(Application application) {
         this.application = application;
         retrofitInstance = RetrofitInstance.getInstance();
@@ -32,6 +38,24 @@ public class WebAppRepository {
 
     public void fetchWebApp() {
         if (isFetching) {
+            return;
+        }
+        if (BuildConfig.OFFLINE_STANDALONE) {
+            // Standalone builds never consult the remote manifest: the packaged one is the source
+            // of truth and must be usable without any connectivity, including on first launch.
+            isFetching = true;
+            LocalManifestLoader.loadInto(application, webAppDatabase, new LocalManifestLoader.Listener() {
+                @Override
+                public void onLoaded(String version, int appCount) {
+                    isFetching = false;
+                }
+
+                @Override
+                public void onFailed(String reason) {
+                    isFetching = false;
+                    localManifestError.postValue(reason);
+                }
+            });
             return;
         }
         if (ConnectionUtils.getInstance().isInternetConnected(application)) {
@@ -82,7 +106,16 @@ public class WebAppRepository {
         return webAppDatabase.getAllLanguagesInEnglish();
     }
 
+    public LiveData<String> getLocalManifestError() {
+        return localManifestError;
+    }
+
     public void getUpdatedAppManifest(String manifestVersion) {
+        if (BuildConfig.OFFLINE_STANDALONE) {
+            // The remote manifest would replace the packaged catalog with entries whose content is
+            // not on the device. Standalone catalogs change only with a new APK.
+            return;
+        }
         if (ConnectionUtils.getInstance().isInternetConnected(application)) {
             retrofitInstance.getUpdatedAppManifest(webAppDatabase, manifestVersion);
         }

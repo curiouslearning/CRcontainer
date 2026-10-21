@@ -32,8 +32,11 @@ platform :android do
     if last_commit.downcase.include?("release")
       UI.message("Release commit detected on branch '#{current_branch}'. Building AAB...")
 
+      # The app has distribution flavors; only `online` goes to the Play Store. The mwf*
+      # standalone flavors are built on demand with `./gradlew assembleMwfCongoRelease` etc.
       gradle(
         task: "bundle",
+        flavor: "online",
         build_type: "Release",
         project_dir: "../",
         properties: {
@@ -73,6 +76,7 @@ platform :android do
 
       gradle(
         task: "assemble",
+        flavor: "online",
         build_type: "Debug",
         project_dir: "../"
       )
@@ -80,7 +84,7 @@ platform :android do
       require 'fileutils'
 
       app_dir = File.expand_path("..", __dir__)
-      apk_path = File.join(app_dir, "build/outputs/apk/debug/app-debug.apk")
+      apk_path = File.join(app_dir, "build/outputs/apk/online/debug/app-online-debug.apk")
       destination_dir = "debug_apks"
       timestamp = Time.now.strftime("%Y%m%d-%H%M%S")
       destination_path = File.join(destination_dir, "app-debug.apk")

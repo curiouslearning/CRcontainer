@@ -1,0 +1,23 @@
+{
+  "version": "mwf-angola-1",
+  "web_apps": [
+    {
+      "appId": 2,
+      "app_id": "feed-the-monster",
+      "appIconUrl": "file:///android_asset/images/ftm_brazilianportuguese.png",
+      "title": "Feed The Monster Brazilianportuguese",
+      "appUrl": "https://feedthemonster.curiouscontent.org/?cr_lang=brazilianportuguese",
+      "language": "Português - Brazilian",
+      "languageInEnglishName": "BrazilianPortuguese"
+    },
+    {
+      "appId": 0,
+      "app_id": "feed-the-monster",
+      "appIconUrl": "file:///android_asset/images/ftm_english.png",
+      "title": "Feed The Monster US English",
+      "appUrl": "https://feedthemonster.curiouscontent.org/?cr_lang=english",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    }
+  ]
+}

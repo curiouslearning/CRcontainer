@@ -1,0 +1,23 @@
+{
+  "version": "mwf-congo-1",
+  "web_apps": [
+    {
+      "appId": 28,
+      "app_id": "feed-the-monster",
+      "appIconUrl": "file:///android_asset/images/ftm_french.png",
+      "title": "Feed The Monster French",
+      "appUrl": "https://feedthemonster.curiouscontent.org/?cr_lang=french",
+      "language": "Français",
+      "languageInEnglishName": "French"
+    },
+    {
+      "appId": 0,
+      "app_id": "feed-the-monster",
+      "appIconUrl": "file:///android_asset/images/ftm_english.png",
+      "title": "Feed The Monster US English",
+      "appUrl": "https://feedthemonster.curiouscontent.org/?cr_lang=english",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    }
+  ]
+}
