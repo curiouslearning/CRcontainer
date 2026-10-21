@@ -189,7 +189,6 @@ public class MainActivity extends BaseActivity {
         initialSlackAlertTime = AnalyticsUtils.getCurrentEpochTime();
         homeViewModal = new HomeViewModal((Application) getApplicationContext(), this);
         cachePseudoId();
-        applyStandaloneDefaultLanguage();
 
         // Check if we're starting in offline mode
         if (!isInternetConnected(getApplicationContext())) {
@@ -306,10 +305,12 @@ public class MainActivity extends BaseActivity {
         Log.d(TAG, "onCreate: Selected language: " + selectedLanguage);
         Log.d(TAG, "onCreate: Manifest version: " + manifestVersion);
         if (BuildConfig.OFFLINE_STANDALONE) {
-            // Show the packaged catalog immediately. In the online build the first loadApps() is
+            // Drive the first screen from local state immediately. In the online build this is
             // driven by the Install Referrer / Facebook deferred-link callbacks, which can take
             // several seconds of retries (or never complete) on a device without Play services or
-            // connectivity. Those callbacks still run for attribution; they just no longer gate the UI.
+            // connectivity. Those callbacks still run for attribution; they just no longer gate the
+            // UI. No language is preselected: on a fresh install the language dropdown is shown
+            // and the catalog stays empty until the user chooses.
             homeViewModal.getLocalManifestError().observe(this, reason -> {
                 if (reason == null || reason.isEmpty()) {
                     return;
@@ -319,7 +320,11 @@ public class MainActivity extends BaseActivity {
                         "This build's app catalog could not be loaded. Please reinstall the app.",
                         Toast.LENGTH_LONG).show();
             });
-            loadApps(selectedLanguage);
+            if (selectedLanguage == null || selectedLanguage.isEmpty()) {
+                showLanguagePopup();
+            } else {
+                loadApps(selectedLanguage);
+            }
         }
         if (manifestVersion != null && manifestVersion != "") {
             homeViewModal.getUpdatedAppManifest(manifestVersion);
@@ -1397,24 +1402,6 @@ public class MainActivity extends BaseActivity {
                 }
             }
         });
-    }
-
-    /**
-     * Offline standalone flavors ship with a build-time initial language ({@code
-     * BuildConfig.DEFAULT_LANGUAGE}, a {@code languageInEnglishName} from the packaged manifest).
-     * Applied only when nothing has been selected yet, so a user's later choice in the language
-     * popup is never overridden. No-op for the online build, whose DEFAULT_LANGUAGE is empty.
-     */
-    private void applyStandaloneDefaultLanguage() {
-        if (!BuildConfig.OFFLINE_STANDALONE || BuildConfig.DEFAULT_LANGUAGE.isEmpty()) {
-            return;
-        }
-        if (selectedLanguage != null && !selectedLanguage.isEmpty()) {
-            return;
-        }
-        selectedLanguage = BuildConfig.DEFAULT_LANGUAGE;
-        storeSelectLanguage(selectedLanguage);
-        Log.i(TAG, "Standalone build: initial language set to " + selectedLanguage);
     }
 
     private void hydrateAttributionContext() {

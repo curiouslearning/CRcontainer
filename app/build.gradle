@@ -89,18 +89,16 @@ android {
             dimension "distribution"
             isDefault = true
             buildConfigField "boolean", "OFFLINE_STANDALONE", "false"
-            buildConfigField "String", "DEFAULT_LANGUAGE", "\"\""
         }
+        // No language is preselected in the standalone flavors: a fresh install shows the language
+        // dropdown (packaged languages only) and remembers the choice like the online app.
         mwfCongo {
             dimension "distribution"
             buildConfigField "boolean", "OFFLINE_STANDALONE", "true"
-            // languageInEnglishName of the entry that must be selected on first launch.
-            buildConfigField "String", "DEFAULT_LANGUAGE", "\"French\""
         }
         mwfAngola {
             dimension "distribution"
             buildConfigField "boolean", "OFFLINE_STANDALONE", "true"
-            buildConfigField "String", "DEFAULT_LANGUAGE", "\"BrazilianPortuguese\""
         }
     }
 

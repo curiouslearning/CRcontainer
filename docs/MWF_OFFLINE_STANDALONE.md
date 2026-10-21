@@ -5,10 +5,10 @@ launch**: show the catalog, switch language, open Feed The Monster (FTM) and com
 the Curious Reader user ID / QR code, and still sync play data to Firestore whenever connectivity
 appears.
 
-| Flavor      | Region            | Initial language                   | Second language | Build task                      |
+| Flavor      | Region            | Initial language                   | Languages       | Build task                      |
 |-------------|-------------------|------------------------------------|-----------------|---------------------------------|
-| `mwfCongo`  | Republic of Congo | French (`French`)                  | English         | `./gradlew assembleMwfCongoRelease`  |
-| `mwfAngola` | Angola            | Brazilian Portuguese (`BrazilianPortuguese`) | English | `./gradlew assembleMwfAngolaRelease` |
+| `mwfCongo`  | Republic of Congo | chosen on first launch (dropdown)  | French, English | `./gradlew assembleMwfCongoRelease`  |
+| `mwfAngola` | Angola            | chosen on first launch (dropdown)  | Brazilian Portuguese, English | `./gradlew assembleMwfAngolaRelease` |
 | `online`    | everyone else     | chosen by the user / deferred link | all             | unchanged (`assembleOnlineDebug`, `bundleOnlineRelease`) |
 
 The regular Play Store app is the `online` flavor. Its behaviour is unchanged; every standalone
@@ -44,11 +44,11 @@ Container (Java/Gradle), all gated on `OFFLINE_STANDALONE`:
 
 | File | Change |
 |------|--------|
-| `app/build.gradle` | `flavorDimensions "distribution"` with `online` (default), `mwfCongo`, `mwfAngola`; `OFFLINE_STANDALONE` and `DEFAULT_LANGUAGE` BuildConfig fields; `src/mwfShared/assets` shared source set; `androidx.webkit` dependency; jacoco task names flavor-qualified. |
+| `app/build.gradle` | `flavorDimensions "distribution"` with `online` (default), `mwfCongo`, `mwfAngola`; `OFFLINE_STANDALONE` BuildConfig field; `src/mwfShared/assets` shared source set; `androidx.webkit` dependency; jacoco task names flavor-qualified. |
 | `data/local/LocalManifestLoader.java` (new) | Reads `assets/web_apps_manifest.json`, validates every entry, writes it to Room through the same replace-all path a remote refresh uses. Missing/invalid file → `Log.e` + Sentry message + error LiveData (never an indefinite spinner). |
 | `data/respository/WebAppRepository.java` | `fetchWebApp()` loads the packaged manifest instead of calling the API; `getUpdatedAppManifest()` is a no-op so the remote manifest can never replace the packaged catalog. |
 | `presentation/viewmodals/HomeViewModal.java` | Exposes the manifest-error LiveData. |
-| `MainActivity.java` | Pre-selects `DEFAULT_LANGUAGE` when nothing is stored yet, then calls `loadApps()` directly from `onCreate` so the catalog no longer waits on the referrer / Facebook callbacks (those still run for attribution). Shows a toast if the packaged manifest is unusable. |
+| `MainActivity.java` | Drives the first screen from local state directly in `onCreate`: the language dropdown on a fresh install (no language is preselected), otherwise `loadApps()` so the catalog no longer waits on the referrer / Facebook callbacks (those still run for attribution). Shows a toast if the packaged manifest is unusable. |
 | `utilities/LocalWebContent.java` (new) | Serves packaged content to the WebView: any `*.androidplatform.net` virtual host from `assets/` (plus root-absolute fallbacks for the book player), the two production hosts for absolute URLs embedded in content, and a short list of vendored CDN files; explicit MIME types and CORS headers; service-worker request interception. |
 | `WebApp.java` | For local content: skips the connectivity prompt, installs the asset loader in `shouldInterceptRequest`, ignores `cachedStatus(false)`. |
 | `app/src/mwfShared/AndroidManifest.xml` (new), `MyApplication.java`, `app/build.gradle` (`sentry { ignoredFlavors }`) | Sentry is off in the standalone flavors: no DSN / auto-init in the merged manifest, no manual init, and the Sentry Gradle plugin skips instrumentation and uploads for them. Firebase Crashlytics and Analytics are unchanged. |
@@ -221,8 +221,8 @@ APKs. They still need a repeat on a physical low-end device before hand-off.
 
 | Test | Result |
 |------|--------|
-| A. Fresh offline install, first launch (`mwfCongo`) | Pass. Catalog with the French FTM icon in ~6 s, no popup, no network request needed. Log: `Local manifest loaded: version=mwf-congo-1 apps=2 languages=[French, English]`. |
-| B. Language switching offline | Pass. Dropdown lists exactly `English - US` / `Français`; French → English → French each reload the catalog. Same for `mwfAngola` (`Português - Brazilian` initial). |
+| A. Fresh offline install, first launch (`mwfCongo`) | Pass. The language dropdown, offering only the packaged languages, opens within a few seconds; choosing one shows the catalog. (The build originally preselected French; changed on request so the user always picks on a fresh install.) Log: `Local manifest loaded: version=mwf-congo-1 apps=2 languages=[French, English]`. |
+| B. Language switching offline | Pass. Dropdown lists exactly `English - US` / `Français`; French → English → French each reload the catalog. Same for `mwfAngola` with `Português - Brazilian`. |
 | C. Offline FTM | Pass. FTM v1.8.1 start screen, level map and puzzles render from the APK; the only asset miss is `sw.js` (by design). Level 1 completed (2 stars recorded in `localStorage`); dragging the correct stone gives "Bien fait". Every puzzle/feedback audio URL in the three language JSONs resolves from the APK and decodes (English 172, French 87, Portuguese 95 files); the only misses are `are-you-sure.mp3`, `Select-your-player.mp3`, `watch-me-grow.mp3`, which FTM parses but never plays and which are absent upstream too. FTM reopens offline after a force-stop of the container. |
 | C. Books offline | Pass. `ColoursFrenchLv4` and `LetsFlyEnLv2` open from the APK in landscape, pages turn, narration and page images resolve with no asset misses. GDL `gdl-ColoursEn-1` opens with the rebuilt player; Lottie runtime served from the vendored WebAssembly file. |
 | C. Bridge | Pass. `summary_data` + `user_sessions_data` payloads accepted per puzzle offline; `getMonsterEvolutionState` polling works. |
