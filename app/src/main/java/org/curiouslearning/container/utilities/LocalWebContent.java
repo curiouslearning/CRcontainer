@@ -136,6 +136,7 @@ public final class LocalWebContent {
         if (assetDir == null) {
             throw new IllegalArgumentException("No packaged content for host: " + host);
         }
+        vendorHandler = new WebViewAssetLoader.AssetsPathHandler(context.getApplicationContext());
         return new WebViewAssetLoader.Builder()
                 .setDomain(host)
                 .setHttpAllowed(false)
@@ -153,7 +154,7 @@ public final class LocalWebContent {
     public static WebResourceResponse intercept(@NonNull WebViewAssetLoader assetLoader,
                                                 @NonNull Uri url) {
         if (assetDirFor(url.getHost()) == null) {
-            return null;
+            return vendoredCdnFile(assetLoader, url);
         }
         WebResourceResponse response = assetLoader.shouldInterceptRequest(url);
         String assetDir = assetDirFor(url.getHost());
@@ -163,6 +164,48 @@ public final class LocalWebContent {
         }
         return response;
     }
+
+    /** The {@code assets/} path vendored for this exact CDN URL, or {@code null}. */
+    @VisibleForTesting
+    @Nullable
+    static String vendoredAssetFor(@Nullable String host, @Nullable String path) {
+        if (host == null || path == null) {
+            return null;
+        }
+        return VENDORED_CDN_FILES.get(host.toLowerCase(Locale.ROOT) + path);
+    }
+
+    /**
+     * Serves a vendored CDN file from the APK. Built on the same {@code AssetsPathHandler} the
+     * loader uses, so it is only reachable while a packaged sub-app is open.
+     */
+    @Nullable
+    private static WebResourceResponse vendoredCdnFile(@NonNull WebViewAssetLoader assetLoader,
+                                                       @NonNull Uri url) {
+        String assetPath = vendoredAssetFor(url.getHost(), url.getPath());
+        if (assetPath == null) {
+            return null;
+        }
+        WebResourceResponse response = vendorHandler.handle(assetPath);
+        if (response == null) {
+            Log.w(TAG, "Vendored CDN file missing from package: " + assetPath);
+            return null;
+        }
+        String mime = mimeTypeFor(assetPath);
+        if (mime != null) {
+            response.setMimeType(mime);
+        }
+        // The sub-app fetches this cross-origin (its origin is the packaged host, the file's is
+        // the CDN), so the response needs CORS headers or the browser discards it.
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put("Cross-Origin-Resource-Policy", "cross-origin");
+        response.setResponseHeaders(headers);
+        Log.d(TAG, "Served vendored CDN file: " + url.getHost() + url.getPath());
+        return response;
+    }
+
+    private static volatile WebViewAssetLoader.AssetsPathHandler vendorHandler;
 
     /**
      * Routes <em>service worker</em> fetches through the same loader. The packaged FTM build does
@@ -236,8 +279,30 @@ public final class LocalWebContent {
      */
     private static final String[] KNOWN_ABSENT = {
             FTM_ASSET_DIR + "/sw.js",
+            BOOKS_ASSET_DIR + "/sw.js",
             BOOKS_ASSET_DIR + "/app.js",
+            // Deploy-time Firebase config for the book player's web analytics; not part of the repo.
+            BOOKS_ASSET_DIR + "/firebase-config.json",
     };
+
+    /**
+     * Third-party files a packaged sub-app fetches from a public CDN at runtime, keyed by the
+     * exact {@code host/path} it requests and mapped to a copy under {@code assets/vendor/}. The
+     * vendored GDL player ({@code gdlplayer.umd.js}) loads the dotlottie WebAssembly runtime from
+     * jsDelivr with unpkg as fallback; without it every Lottie animation in a GDL book is blank
+     * offline. Only these exact URLs are answered, nothing else on those hosts.
+     */
+    private static final Map<String, String> VENDORED_CDN_FILES = new HashMap<>();
+
+    static {
+        String dotlottieWasm = "vendor/dotlottie-player-0.44.0.wasm";
+        VENDORED_CDN_FILES.put(
+                "cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web@0.44.0/dist/dotlottie-player.wasm",
+                dotlottieWasm);
+        VENDORED_CDN_FILES.put(
+                "unpkg.com/@lottiefiles/dotlottie-web@0.44.0/dist/dotlottie-player.wasm",
+                dotlottieWasm);
+    }
 
     /** Serves {@code assets/<assetDir>/<path>} with an explicit MIME type. */
     private static final class PackagedAppPathHandler implements WebViewAssetLoader.PathHandler {

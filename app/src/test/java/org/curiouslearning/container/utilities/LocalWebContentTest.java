@@ -63,9 +63,25 @@ public class LocalWebContentTest {
     }
 
     @Test
+    public void onlyTheExactCdnFilesTheGdlPlayerNeedsAreVendored() {
+        assertEquals("vendor/dotlottie-player-0.44.0.wasm", LocalWebContent.vendoredAssetFor(
+                "cdn.jsdelivr.net", "/npm/@lottiefiles/dotlottie-web@0.44.0/dist/dotlottie-player.wasm"));
+        assertEquals("vendor/dotlottie-player-0.44.0.wasm", LocalWebContent.vendoredAssetFor(
+                "unpkg.com", "/@lottiefiles/dotlottie-web@0.44.0/dist/dotlottie-player.wasm"));
+        // A different version, any other path, or any other host is not served from the APK.
+        assertNull(LocalWebContent.vendoredAssetFor(
+                "cdn.jsdelivr.net", "/npm/@lottiefiles/dotlottie-web@0.45.0/dist/dotlottie-player.wasm"));
+        assertNull(LocalWebContent.vendoredAssetFor("cdn.jsdelivr.net", "/npm/lodash/lodash.min.js"));
+        assertNull(LocalWebContent.vendoredAssetFor("storage.googleapis.com", "/workbox-cdn/releases/6.4.1/workbox-sw.js"));
+        assertNull(LocalWebContent.vendoredAssetFor(null, "/x"));
+    }
+
+    @Test
     public void expectedMissesAreRecognisedPerPackage() {
         assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(FTM, "sw.js")));
         assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "/app.js")));
+        assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "/sw.js")));
+        assertTrue(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "firebase-config.json")));
         assertFalse(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(BOOKS, "/dist/app.js")));
         assertFalse(LocalWebContent.isKnownAbsent(LocalWebContent.assetPathFor(FTM, "feedTheMonster.js")));
     }

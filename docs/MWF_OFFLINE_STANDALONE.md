@@ -126,9 +126,37 @@ CRWebPlayerJs/
   BookContent/<slug>/content/    # content.json, images/, audios/   <- tools/package-books.js
 ```
 
-The player build shipped here has no service worker and hides its loading screen on a timer, so
-nothing gates on caching. It calls `window.Android.setContainerAppOrientation("landscape")`, which
-the container already supports.
+The player is built from the CRWebPlayer repo (`main`, which has GDL book support) with one
+change: `App.initialize()` renders the book before, not after, its service-worker setup, and the
+setup races `navigator.serviceWorker.ready` against a timeout and stops when no worker is
+registered. On `main` the CR-book path awaits `serviceWorker.ready`, which never resolves when no
+`sw.js` is served (as in the APK) and can hang Android WebViews even when one is; the GDL path
+already worked this way. The change lives on the local branch `mwf-container-player` in the
+worktree `D:\Github\CRWebPlayer-mwf` (not pushed) and is worth upstreaming. Build with
+`npx webpack` there and copy `index.html`, `manifest.json` and `dist/` (minus `dist/sw.js`) into
+`CRWebPlayerJs/`; also copy the repo-root `Quicksand-Bold.ttf`, which the player's CSS requests
+from the origin root. No service worker is shipped. The player calls
+`window.Android.setContainerAppOrientation("landscape")`, which the container already supports.
+
+### GDL books
+
+GDL ("interactive book") titles use the vendored `gdl-player` web component instead of the CR page
+engine. Each lives in `CRWebPlayerJs/interactive-book-static/<Id>/` (`content.json`, `assets/`,
+`audio/`, `gdlplayer.umd.js`, `my-lib-style.css`), exactly the layout production serves, and is
+addressed as `?book=gdl-<Id>`. Packaged: `ColoursEn-1`, `TheBeeAndTheElephantEn-1`,
+`ILoveMyMomEn-1` (production `appId`s 207, 199, 275); they replace the older CR versions
+`ColoursEnLv4` and `TheBeeAndTheElephantEnLv4`, which were removed.
+
+All three use Lottie animations, and `gdlplayer.umd.js` loads the dotlottie WebAssembly runtime
+from jsDelivr (unpkg as fallback). Offline that fails and every animated page is blank, so the
+exact file (`@lottiefiles/dotlottie-web@0.44.0/dist/dotlottie-player.wasm`, 1.8 MB) is vendored
+at `app/src/mwfShared/assets/vendor/` and `LocalWebContent` answers those two exact CDN URLs from
+it while a packaged sub-app is open. Nothing else on those hosts is intercepted. If a future
+`gdlplayer.umd.js` bumps the dotlottie version, vendor the matching file and update the map.
+
+The player also requests `firebase-config.json` from the origin root; it is a deploy-time file
+that is not in the repo, so the book player's own Firebase web analytics are off in the
+standalone builds (the container's Firebase analytics are unaffected).
 
 Books come from the CRWebPlayer repo's `BookContent/` directory and are copied with
 
@@ -143,8 +171,8 @@ and audio file referenced by every packaged book exists. Catalog entries reuse t
 `appId`, title and icon file name for each book; icons live in `app/src/mwfShared/assets/images/`
 and can be replaced file-for-file.
 
-Packaged: 10 English books in `app/src/mwfShared/assets/CRWebPlayerJs/BookContent` (both
-flavors) and 10 French books in `app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` (Congo only;
+Packaged: 8 English CR books plus 3 English GDL books in `app/src/mwfShared/assets/CRWebPlayerJs`
+(both flavors) and 10 French books in `app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` (Congo only;
 Gradle merges the flavor's assets over the shared ones, so the player sees a single `BookContent/`).
 Use `--out app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` when packaging French titles. This
 matches the production catalog for those languages minus `TogetherEnglishUs` (47 MB) and the two
@@ -167,7 +195,7 @@ APKs. They still need a repeat on a physical low-end device before hand-off.
 | A. Fresh offline install, first launch (`mwfCongo`) | Pass. Catalog with the French FTM icon in ~6 s, no popup, no network request needed. Log: `Local manifest loaded: version=mwf-congo-1 apps=2 languages=[French, English]`. |
 | B. Language switching offline | Pass. Dropdown lists exactly `English - US` / `Français`; French → English → French each reload the catalog. Same for `mwfAngola` (`Português - Brazilian` initial). |
 | C. Offline FTM | Pass. FTM v1.8.1 start screen, level map and puzzles render from the APK; the only asset miss is `sw.js` (by design). Level 1 completed (2 stars recorded in `localStorage`); dragging the correct stone gives "Bien fait". Every puzzle/feedback audio URL in the three language JSONs resolves from the APK and decodes (English 172, French 87, Portuguese 95 files); the only misses are `are-you-sure.mp3`, `Select-your-player.mp3`, `watch-me-grow.mp3`, which FTM parses but never plays and which are absent upstream too. FTM reopens offline after a force-stop of the container. |
-| C. Books offline | Pass. `ColoursFrenchLv4` and `LetsFlyEnLv2` open from the APK in landscape, pages turn, narration and page images resolve with no asset misses. |
+| C. Books offline | Pass. `ColoursFrenchLv4` and `LetsFlyEnLv2` open from the APK in landscape, pages turn, narration and page images resolve with no asset misses. GDL `gdl-ColoursEn-1` opens with the rebuilt player; Lottie runtime served from the vendored WebAssembly file. |
 | C. Bridge | Pass. `summary_data` + `user_sessions_data` payloads accepted per puzzle offline; `getMonsterEvolutionState` polling works. |
 | D. Learner ID / QR offline | Pass. Overlay shows the QR and `cr_user_id_<id>`. Note the QR payload is the bare id (no `cr_user_id_` prefix), unchanged from the online build. Camera / Photo-QR scanning into Literacy Coach not tested here. |
 | E. Sync after reconnect | Pass with the evidence available from logs: after going online, Firestore acknowledged a summary update (`Updated summary payload with id: …` is logged on server ack) and the next launch prefetched `1 existing summary docs` from the server. Firestore delivers a client's queued writes in order, so the offline `user_sessions_data` writes were flushed first. Not verified in the Firestore console / Literacy Coach dashboard. |
