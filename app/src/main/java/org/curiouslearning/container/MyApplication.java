@@ -1,6 +1,7 @@
 package org.curiouslearning.container;
 
 import android.app.Application;
+import android.util.Log;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
 
@@ -21,15 +22,17 @@ public class MyApplication extends Application {
         FacebookSdk.fullyInitialize();
         FacebookSdk.setAdvertiserIDCollectionEnabled(true);
         AppEventsLogger.activateApp(this);
-        SentryAndroid.init(this, options -> {
-            options.setDsn(
-                    "https://3e3bfa9bd4473edd4e0b0d502195f4de@o4504951275651072.ingest.us.sentry.io/4510001311383552"); // replace
-                                                                                                                        // with
-                                                                                                                        // your
-                                                                                                                        // DSN
-            options.setEnvironment(BuildConfig.BUILD_TYPE);
-
-        });
+        if (BuildConfig.OFFLINE_STANDALONE) {
+            // Standalone builds do not report to Sentry (auto-init is also disabled in the flavor
+            // manifest overlay). Sentry.* calls elsewhere are no-ops on an uninitialised SDK.
+            Log.i("MyApplication", "Standalone build: Sentry disabled");
+        } else {
+            SentryAndroid.init(this, options -> {
+                options.setDsn(
+                        "https://3e3bfa9bd4473edd4e0b0d502195f4de@o4504951275651072.ingest.us.sentry.io/4510001311383552");
+                options.setEnvironment(BuildConfig.BUILD_TYPE);
+            });
+        }
         // RiveInitializer is auto-initialized via AndroidManifest.xml (InitializationProvider)
 
         // MR-156: load the cached country and refresh it when the 7-day TTL lapses,

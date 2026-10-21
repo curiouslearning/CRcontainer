@@ -107,8 +107,16 @@ android {
     sourceSets {
         // Assets common to every standalone flavor (icons, the packaged FTM build). Each flavor's
         // own src/<flavor>/assets adds its web_apps_manifest.json on top and overrides main's.
-        mwfCongo { assets.srcDirs += ['src/mwfShared/assets'] }
-        mwfAngola { assets.srcDirs += ['src/mwfShared/assets'] }
+        // src/mwfShared/AndroidManifest.xml is the flavor manifest overlay for both (it disables
+        // Sentry's auto-init; see that file).
+        mwfCongo {
+            assets.srcDirs += ['src/mwfShared/assets']
+            manifest.srcFile 'src/mwfShared/AndroidManifest.xml'
+        }
+        mwfAngola {
+            assets.srcDirs += ['src/mwfShared/assets']
+            manifest.srcFile 'src/mwfShared/AndroidManifest.xml'
+        }
     }
 
     testOptions {
@@ -267,6 +275,10 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testOnlineDebugUnitTest']
 sentry {
     org = "curious-learning"
     projectName = "cr-container"
+
+    // The offline standalone flavors do not report to Sentry (see src/mwfShared/AndroidManifest.xml
+    // and MyApplication), so skip their bytecode instrumentation and source/mapping uploads too.
+    ignoredFlavors = ["mwfCongo", "mwfAngola"]
 
     // this will upload your source code to Sentry to show it as part of the stack traces
     // disable if you don't want to expose your sources
