@@ -200,12 +200,11 @@ and audio file referenced by every packaged book exists. Catalog entries reuse t
 `appId`, title and icon file name for each book; icons live in `app/src/mwfShared/assets/images/`
 and can be replaced file-for-file.
 
-Packaged: 8 English CR books plus 3 English GDL books in `app/src/mwfShared/assets/CRWebPlayerJs`
-(both flavors) and 10 French books in `app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` (Congo only;
+Packaged: 9 English CR books (including `TogetherEnglishUs`, 23 MB after conversion) plus 3 English
+GDL books in `app/src/mwfShared/assets/CRWebPlayerJs` (both flavors) and 10 French books in `app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` (Congo only;
 Gradle merges the flavor's assets over the shared ones, so the player sees a single `BookContent/`).
 Use `--out app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` when packaging French titles. This
-matches the production catalog for those languages minus `TogetherEnglishUs` (47 MB) and the two
-GDL English books. There are no Brazilian Portuguese books in the production catalog.
+matches the production catalog for those languages. There are no Brazilian Portuguese books in the production catalog.
 
 Nine Swahili book folders were also copied into the shared `BookContent/` at one point; they are
 not referenced by either manifest and add ~48 MB to both APKs until removed.

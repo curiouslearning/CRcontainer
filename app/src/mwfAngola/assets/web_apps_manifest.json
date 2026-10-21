@@ -1,5 +1,5 @@
 {
-  "version": "mwf-angola-5",
+  "version": "mwf-angola-6",
   "web_apps": [
     {
       "appId": 2,
@@ -80,6 +80,14 @@
       "appIconUrl": "file:///android_asset/images/ftm_HideAndSeek_prod.png",
       "title": "Curious Reader Hide And Seek English Level 2",
       "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=HideAndSeekEnLv2",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 213,
+      "appIconUrl": "file:///android_asset/images/together_book.png",
+      "title": "Curious Reader Together English",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=TogetherEnglishUs",
       "language": "English - US",
       "languageInEnglishName": "English"
     },
