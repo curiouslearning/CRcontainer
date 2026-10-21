@@ -51,7 +51,7 @@ Container (Java/Gradle), all gated on `OFFLINE_STANDALONE`:
 | `MainActivity.java` | Drives the first screen from local state directly in `onCreate`: the language dropdown on a fresh install (no language is preselected), otherwise `loadApps()` so the catalog no longer waits on the referrer / Facebook callbacks (those still run for attribution). Shows a toast if the packaged manifest is unusable. |
 | `utilities/LocalWebContent.java` (new) | Serves packaged content to the WebView: any `*.androidplatform.net` virtual host from `assets/` (plus root-absolute fallbacks for the book player), the two production hosts for absolute URLs embedded in content, and a short list of vendored CDN files; explicit MIME types and CORS headers; service-worker request interception. |
 | `WebApp.java` | For local content: skips the connectivity prompt, installs the asset loader in `shouldInterceptRequest`, ignores `cachedStatus(false)`. |
-| `app/src/mwfShared/AndroidManifest.xml` (new), `MyApplication.java`, `app/build.gradle` (`sentry { ignoredFlavors }`) | Sentry is off in the standalone flavors: no DSN / auto-init in the merged manifest, no manual init, and the Sentry Gradle plugin skips instrumentation and uploads for them. Firebase Crashlytics and Analytics are unchanged. |
+| `integrations/AppIntegrations`, `integrations/CrashReporter`, `LaunchAttribution` (one version in `src/online/java`, a no-op twin in `src/mwfShared/java`), `src/online/AndroidManifest.xml`, `app/build.gradle` | The Facebook SDK, the Play Install Referrer library and Sentry are `onlineImplementation` dependencies now: the standalone APKs do not contain them. All code that touched them moved behind those three classes (the online versions are the previous inline code, unchanged). Firebase Analytics, Firestore and Crashlytics stay in every flavor. |
 | `app/fastlane/Fastfile` | CI builds/uploads the `online` flavor explicitly (`assembleOnlineDebug`, `bundleOnlineRelease`) so flavors cannot change what reaches the Play Store. |
 | `app/src/mwfCongo/assets/web_apps_manifest.json`, `app/src/mwfAngola/assets/web_apps_manifest.json` | Packaged catalogs: FTM per language plus the packaged Curious Reader books (same `appId`/`app_id` values as production). |
 | `app/src/mwfShared/assets/CRWebPlayerJs/` | The Curious Reader player and `BookContent/`, see "Packaging the Curious Reader books". |
@@ -265,9 +265,9 @@ the title/feedback font mapping is confirmed; `assets/images` could be re-encode
   account with backup enabled and was online to back up; that cannot be relied on in the field.
   Fellows should record the ID / QR screenshot before reinstalling. Upgrading in place (install the
   new APK over the old one) keeps it.
-* **Statsig / Facebook / Firebase traffic still attempted.** The FTM bundle and the container still
-  try to reach Statsig, Facebook Pixel, Firebase and Sentry; offline these fail asynchronously and
-  are swallowed. On a captive or half-working network FTM's Statsig init can wait up to ~10 s
+* **Statsig / Firebase traffic still attempted.** The FTM bundle still tries to reach Statsig and
+  the Facebook Pixel, and the container Firebase; offline these fail asynchronously and are
+  swallowed. The container itself no longer carries the Facebook SDK, Install Referrer or Sentry. On a captive or half-working network FTM's Statsig init can wait up to ~10 s
   before the game starts.
 * **Assessments and Curious Reader books are not packaged.** Only FTM is.
 * **Country metadata** (`metadata.country`) is `unknown` until the device is online once.

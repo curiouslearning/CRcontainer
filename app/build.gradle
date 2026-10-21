@@ -105,15 +105,17 @@ android {
     sourceSets {
         // Assets common to every standalone flavor (icons, the packaged FTM build). Each flavor's
         // own src/<flavor>/assets adds its web_apps_manifest.json on top and overrides main's.
-        // src/mwfShared/AndroidManifest.xml is the flavor manifest overlay for both (it disables
-        // Sentry's auto-init; see that file).
+        // src/mwfShared/java holds the standalone twins of the flavor-specific classes that the
+        // online flavor implements with the Facebook SDK, the Play Install Referrer and Sentry
+        // (integrations/AppIntegrations, integrations/CrashReporter, LaunchAttribution). The
+        // online versions live in the conventional src/online/java.
         mwfCongo {
             assets.srcDirs += ['src/mwfShared/assets']
-            manifest.srcFile 'src/mwfShared/AndroidManifest.xml'
+            java.srcDirs += ['src/mwfShared/java']
         }
         mwfAngola {
             assets.srcDirs += ['src/mwfShared/assets']
-            manifest.srcFile 'src/mwfShared/AndroidManifest.xml'
+            java.srcDirs += ['src/mwfShared/java']
         }
     }
 
@@ -195,8 +197,8 @@ dependencies {
     //picasso (image caching)
     implementation 'com.squareup.picasso:picasso:2.71828'
 
-    //install refferal
-    implementation "com.android.installreferrer:installreferrer:2.2"
+    // Play Install Referrer: online flavor only (sideloaded standalone builds have no referrer).
+    onlineImplementation "com.android.installreferrer:installreferrer:2.2"
     implementation 'com.google.zxing:core:3.4.1'
     implementation 'androidx.appcompat:appcompat:1.5.1'
     // WebViewAssetLoader + service-worker interception for sub-apps packaged in the APK
@@ -204,8 +206,10 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.14.0'
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation(platform("io.sentry:sentry-bom:7.17.0"))
-    implementation("io.sentry:sentry-android") {
+    // Sentry: online flavor only. The standalone flavors report nothing to Sentry and do not
+    // ship the SDK (see integrations/CrashReporter in each flavor source set).
+    onlineImplementation(platform("io.sentry:sentry-bom:7.17.0"))
+    onlineImplementation("io.sentry:sentry-android") {
         exclude group: "io.sentry", module: "sentry-android-ndk"
     }
     // Source: https://mvnrepository.com/artifact/app.rive/rive-android
@@ -227,7 +231,8 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
     androidTestImplementation 'org.mockito:mockito-android:4.11.0'
 
-    implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
+    // Facebook SDK (deferred deep links, app events): online flavor only.
+    onlineImplementation 'com.facebook.android:facebook-android-sdk:17.0.0'
 }
 jacoco {
     toolVersion = "0.8.10" // or latest stable version
@@ -274,9 +279,13 @@ sentry {
     org = "curious-learning"
     projectName = "cr-container"
 
-    // The offline standalone flavors do not report to Sentry (see src/mwfShared/AndroidManifest.xml
-    // and MyApplication), so skip their bytecode instrumentation and source/mapping uploads too.
+    // The offline standalone flavors do not ship the Sentry SDK at all, so skip their bytecode
+    // instrumentation and source/mapping uploads, and stop the plugin from adding the SDK
+    // dependency to every variant (it is declared as onlineImplementation above).
     ignoredFlavors = ["mwfCongo", "mwfAngola"]
+    autoInstallation {
+        enabled = false
+    }
 
     // this will upload your source code to Sentry to show it as part of the stack traces
     // disable if you don't want to expose your sources

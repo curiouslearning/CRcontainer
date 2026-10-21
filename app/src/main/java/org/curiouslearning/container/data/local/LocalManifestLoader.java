@@ -18,6 +18,7 @@ import com.google.gson.reflect.TypeToken;
 import org.curiouslearning.container.data.database.WebAppDatabase;
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.data.model.WebAppResponse;
+import org.curiouslearning.container.integrations.CrashReporter;
 import org.curiouslearning.container.utilities.CacheUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 
-import io.sentry.Sentry;
 
 /**
  * Loads the catalog from the manifest packaged in the APK ({@code assets/web_apps_manifest.json})
@@ -83,8 +83,8 @@ public final class LocalManifestLoader {
                 String reason = "Packaged manifest unusable (" + MANIFEST_ASSET + "): " + e.getMessage();
                 Log.e(TAG, reason, e);
                 // A missing/invalid bundled manifest is a packaging bug, not an offline condition,
-                // so it stays observable in Sentry.
-                Sentry.captureMessage(reason);
+                // so it is reported (Sentry in the online flavor, logcat in the standalone ones).
+                CrashReporter.message(reason);
                 if (listener != null) {
                     listener.onFailed(reason);
                 }

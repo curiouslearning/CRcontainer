@@ -6,7 +6,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.android.installreferrer.api.ReferrerDetails;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.io.UnsupportedEncodingException;
@@ -159,17 +158,22 @@ public class AnalyticsUtils {
 
     }
 
-    public static void logReferrerEvent(Context context, String eventName, ReferrerDetails response) {
-        if (response != null) {
+    /**
+     * Logs the Play Install Referrer payload. Takes plain values rather than the library's
+     * {@code ReferrerDetails} so this class compiles in the standalone flavors, which do not ship
+     * the Install Referrer library.
+     */
+    public static void logReferrerEvent(Context context, String eventName, String referrerUrl,
+            long referrerClickTimestampSeconds, long installBeginTimestampSeconds) {
+        {
             FirebaseAnalytics firebaseAnalytics = getFirebaseAnalytics(context);
-            String referrerUrl = response.getInstallReferrer();
             // below one is the url for testing purpose
             // String referrerUrl =
             // "source=facebook&utm_medium=print&campaign_id=120208084211250195&deferred_deeplink=curiousreader://app?language=nepali";
             Bundle bundle = new Bundle();
             bundle.putString("referrer_url", referrerUrl);
-            bundle.putLong("referrer_click_time", response.getReferrerClickTimestampSeconds());
-            bundle.putLong("app_install_time", response.getInstallBeginTimestampSeconds());
+            bundle.putLong("referrer_click_time", referrerClickTimestampSeconds);
+            bundle.putLong("app_install_time", installBeginTimestampSeconds);
 
             // Add the raw_referrer_url from SharedPreferences (only if not empty)
             addRawReferrerUrl(context, bundle);

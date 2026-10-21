@@ -34,9 +34,6 @@ import android.graphics.Bitmap;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.facebook.FacebookSdk;
-import com.facebook.appevents.AppEventsLogger;
-import com.facebook.applinks.AppLinkData;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
@@ -53,7 +50,7 @@ import org.curiouslearning.container.core.usage.SharedPreferencesOpenStretchStor
 import org.curiouslearning.container.data.model.WebApp;
 import org.curiouslearning.container.databinding.ActivityMainBinding;
 import org.curiouslearning.container.firebase.AnalyticsUtils;
-import org.curiouslearning.container.installreferrer.InstallReferrerManager;
+import org.curiouslearning.container.integrations.CrashReporter;
 import org.curiouslearning.container.presentation.adapters.WebAppsAdapter;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.presentation.viewmodals.HomeViewModal;
@@ -95,7 +92,6 @@ import app.rive.runtime.kotlin.RiveAnimationView;
 import app.rive.runtime.kotlin.core.Alignment;
 import app.rive.runtime.kotlin.core.Fit;
 import app.rive.runtime.kotlin.core.Loop;
-import io.sentry.Sentry;
 
 public class MainActivity extends BaseActivity {
 
@@ -105,15 +101,15 @@ public class MainActivity extends BaseActivity {
     public HomeViewModal homeViewModal;
     private SharedPreferences cachedPseudo;
     private Button settingsButton;
-    private Dialog dialog;
+    Dialog dialog;
     private ProgressBar loadingIndicator;
     private static final String SHARED_PREFS_NAME = "appCached";
-    private static final String REFERRER_HANDLED_KEY = "isReferrerHandled";
+    static final String REFERRER_HANDLED_KEY = "isReferrerHandled";
     private static final String UTM_PREFS_NAME = "utmPrefs";
     private final String isValidLanguage = "notValidLanguage";
-    private SharedPreferences utmPrefs;
-    private SharedPreferences prefs;
-    private String selectedLanguage;
+    SharedPreferences utmPrefs;
+    SharedPreferences prefs;
+    String selectedLanguage;
     private String manifestVersion;
     private static final String TAG = "MainActivity";
     private AudioPlayer audioPlayer;
@@ -122,14 +118,15 @@ public class MainActivity extends BaseActivity {
     // getInstance holds the canonical reference; this field is kept for readability.
     private DefaultAppEventPayloadHandler summaryHandler;
     private String appVersion;
-    private boolean isReferrerHandled;
-    private boolean isAttributionComplete = false;
+    boolean isReferrerHandled;
+    boolean isAttributionComplete = false;
     private boolean isHandlingIdConfirmation = false;
     private boolean isShowingEnrollmentSuccess = false;
     private long initialSlackAlertTime;
     private GestureDetectorCompat gestureDetector;
     private TextView textView;
-    private InstallReferrerManager.ReferrerStatus currentReferrerStatus;
+    /** Debug-overlay text describing install-referrer progress; set by LaunchAttribution. */
+    private String referrerDebugStatus;
     private FrameLayout qrOverlay;
     private ImageView qrCodeImageView;
     private TextView qrIdTextView;
@@ -201,104 +198,14 @@ public class MainActivity extends BaseActivity {
             // event
         }
 
-        InstallReferrerManager.ReferrerCallback referrerCallback = new InstallReferrerManager.ReferrerCallback() {
-            @Override
-            public void onReferrerStatusUpdate(InstallReferrerManager.ReferrerStatus status) {
-                currentReferrerStatus = status;
-                updateDebugOverlay();
-            }
-
-            @Override
-            public void onReferrerReceived(String deferredLang, String fullURL) {
-                String language = deferredLang.trim();
-
-                if (!isReferrerHandled) {
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putBoolean(REFERRER_HANDLED_KEY, true);
-                    editor.apply();
-                    if ((language != null && language.length() > 0) || fullURL.contains("curiousreader://app")) {
-                        isAttributionComplete = true;
-                        // Store deferred deeplink
-                        editor = prefs.edit();
-                        editor.putString("deferred_deeplink", fullURL);
-                        editor.apply();
-
-                        // Store UTM parameters first
-                        SharedPreferences.Editor utmEditor = utmPrefs.edit();
-                        Uri uri = Uri.parse("http://dummyurl.com/?" + fullURL);
-                        String source = uri.getQueryParameter("source");
-                        String campaign_id = uri.getQueryParameter("campaign_id");
-                        // Never overwrite stored attribution with null/empty values.
-                        SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs",
-                                MODE_PRIVATE);
-                        SharedPreferences.Editor installReferrerEditor = installReferrerPrefs.edit();
-                        if (source != null && !source.trim().isEmpty()) {
-                            utmEditor.putString("source", source);
-                            installReferrerEditor.putString("source", source);
-                        }
-                        if (campaign_id != null && !campaign_id.trim().isEmpty()) {
-                            utmEditor.putString("campaign_id", campaign_id);
-                            installReferrerEditor.putString("campaign_id", campaign_id);
-                        }
-                        utmEditor.apply();
-                        installReferrerEditor.apply();
-
-                        hydrateAttributionContext();
-
-                        // Now check offline mode and log event with the stored UTM params
-                        if (!isInternetConnected(getApplicationContext())) {
-                            logStartedInOfflineMode();
-                        }
-                        updateDebugOverlay(); // Always update the overlay
-
-                        validLanguage(language, "google", fullURL.replace("deferred_deeplink=", ""));
-                        String pseudoId = prefs.getString("pseudoId", "");
-                        String manifestVrsn = prefs.getString("manifestVersion", "");
-                        String lang = "";
-                        if (language != null && language.length() > 0)
-                            lang = Character.toUpperCase(language.charAt(0))
-                                    + language.substring(1).toLowerCase();
-                        selectedLanguage = lang;
-                        storeSelectLanguage(lang);
-                        updateDebugOverlay();
-
-                        if (isAttributionComplete) {
-                            AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId,
-                                    language,
-                                    manifestVrsn, "true", fullURL.replace("deferred_deeplink=", ""));
-                        } else {
-                            Log.d(TAG, "Attribution not complete. Skipping event log.");
-                        }
-                        Log.d(TAG, "Referrer language received: " + language + " " + lang);
-                    } else {
-                        fetchFacebookDeferredData();
-                    }
-                } else {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (selectedLanguage.equals("")) {
-                                showLanguagePopup();
-                            } else {
-                                loadApps(selectedLanguage);
-                            }
-                        }
-                    });
-                }
-            }
-        };
-        InstallReferrerManager installReferrerManager = new InstallReferrerManager(getApplicationContext(),
-                referrerCallback);
-        installReferrerManager.checkPlayStoreAvailability();
+        // Install attribution (Play Install Referrer, Facebook deferred deep link) is flavor
+        // specific: the online flavor's LaunchAttribution reads it and drives the first screen; the
+        // standalone flavors' twin is a no-op (those libraries are not in their APKs).
+        LaunchAttribution.start(this);
         handleIncomingIntent(getIntent());
         audioPlayer = new AudioPlayer();
         FirebaseApp.initializeApp(this);
         warmFirestoreDataSync();
-        FacebookSdk.setAutoInitEnabled(true);
-        FacebookSdk.fullyInitialize();
-        FacebookSdk.setAdvertiserIDCollectionEnabled(true);
-        Log.d(TAG, "onCreate: Initializing MainActivity and FacebookSdk");
-        AppEventsLogger.activateApp(getApplication());
         appVersion = AppUtils.getAppVersionName(this);
         manifestVersion = prefs.getString("manifestVersion", "");
         initRecyclerView();
@@ -794,68 +701,6 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    private void fetchFacebookDeferredData() {
-        AppLinkData.fetchDeferredAppLinkData(this, new AppLinkData.CompletionHandler() {
-            @Override
-            public void onDeferredAppLinkDataFetched(AppLinkData appLinkData) {
-                String pseudoId = prefs.getString("pseudoId", "");
-                String manifestVrsn = prefs.getString("manifestVersion", "");
-                if (dialog != null && dialog.isShowing()) {
-                    dialog.dismiss();
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: dialog is equal to null ");
-                }
-                Log.d(TAG, "onDeferredAppLinkDataFetched:Facebook AppLinkData: " + appLinkData);
-                if (appLinkData != null) {
-                    Uri deepLinkUri = appLinkData.getTargetUri();
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: DeepLink URI: " + deepLinkUri);
-                    String language = ((Uri) deepLinkUri).getQueryParameter("language");
-                    String source = ((Uri) deepLinkUri).getQueryParameter("source");
-                    String campaign_id = ((Uri) deepLinkUri).getQueryParameter("campaign_id");
-                    // Never overwrite stored attribution with null/empty values.
-                    SharedPreferences.Editor editor = utmPrefs.edit();
-                    if (source != null && !source.trim().isEmpty()) {
-                        editor.putString("source", source);
-                    }
-                    if (campaign_id != null && !campaign_id.trim().isEmpty()) {
-                        editor.putString("campaign_id", campaign_id);
-                    }
-                    editor.apply();
-                    validLanguage(language, "facebook", String.valueOf(deepLinkUri));
-                    String lang = "";
-                    if (language != null && language.length() > 0) {
-                        lang = Character.toUpperCase(language.charAt(0)) + language.substring(1).toLowerCase();
-                    }
-                    Log.d(TAG, "onDeferredAppLinkDataFetched: Language from deep link: " + lang);
-                    selectedLanguage = lang;
-                    storeSelectLanguage(lang);
-                    isAttributionComplete = true;
-                    AnalyticsUtils.storeReferrerParams(MainActivity.this, source, campaign_id);
-                    hydrateAttributionContext();
-
-                    if (isAttributionComplete) {
-                        AnalyticsUtils.logLanguageSelectEvent(MainActivity.this, "language_selected", pseudoId, lang,
-                                manifestVrsn, "true", String.valueOf(deepLinkUri));
-                    } else {
-                        Log.d(TAG, "Attribution not complete. Skipping event log.");
-                    }
-
-                } else {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (selectedLanguage.equals("")) {
-                                showLanguagePopup();
-                            } else {
-                                loadApps(selectedLanguage);
-                            }
-
-                        }
-                    });
-                }
-            }
-        });
-    }
-
     private void generateQRCode(String text, ImageView imageView) {
         if (imageView == null)
             return;
@@ -1012,7 +857,7 @@ public class MainActivity extends BaseActivity {
         return pseudoId;
     }
 
-    private void validLanguage(String deferredLang, String source, String deepLinkUri) {
+    void validLanguage(String deferredLang, String source, String deepLinkUri) {
         String language = deferredLang == null ? null : deferredLang.trim();
         long currentEpochTime = AnalyticsUtils.getCurrentEpochTime();
         String pseudoId = prefs.getString("pseudoId", "");
@@ -1040,7 +885,7 @@ public class MainActivity extends BaseActivity {
                         new IllegalArgumentException(errorMsg));
                 // Slack alert
                 SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-                Sentry.captureMessage("Missing Language when selecting Language ");
+                CrashReporter.message("Missing Language when selecting Language ");
                 showLanguagePopup();
                 return;
             }
@@ -1051,7 +896,7 @@ public class MainActivity extends BaseActivity {
                 if (lowerCaseLanguages != null && lowerCaseLanguages.size() > 0
                         && !lowerCaseLanguages.contains(language.toLowerCase().trim())) {
                     SlackUtils.sendMessageToSlack(MainActivity.this, String.valueOf(message));
-                    Sentry.captureMessage("Incorrect Language when selecting Language ");
+                    CrashReporter.message("Incorrect Language when selecting Language ");
                     showLanguagePopup();
                     loadingIndicator.setVisibility(View.GONE);
                     selectedLanguage = "";
@@ -1068,7 +913,7 @@ public class MainActivity extends BaseActivity {
         });
     }
 
-    private void showLanguagePopup() {
+    void showLanguagePopup() {
         if (isHandlingIdConfirmation || isShowingEnrollmentSuccess) {
             Log.d(TAG, "showLanguagePopup: Skipped because study enrollment confirmation UI is active.");
             return;
@@ -1404,7 +1249,11 @@ public class MainActivity extends BaseActivity {
         });
     }
 
-    private void hydrateAttributionContext() {
+    void setReferrerDebugStatus(String status) {
+        referrerDebugStatus = status;
+    }
+
+    void hydrateAttributionContext() {
         SharedPreferences installReferrerPrefs = getSharedPreferences("InstallReferrerPrefs", MODE_PRIVATE);
         String source = installReferrerPrefs.getString("source", "");
         String campaignId = installReferrerPrefs.getString("campaign_id", "");
@@ -1415,7 +1264,7 @@ public class MainActivity extends BaseActivity {
                 campaignId == null || campaignId.trim().isEmpty() ? "" : campaignId.trim());
     }
 
-    private void storeSelectLanguage(String language) {
+    void storeSelectLanguage(String language) {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("selectedLanguage", language);
         editor.apply();
@@ -1440,11 +1289,11 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    private boolean isInternetConnected(Context context) {
+    boolean isInternetConnected(Context context) {
         return ConnectionUtils.getInstance().isInternetConnected(context);
     }
 
-    private void updateDebugOverlay() {
+    void updateDebugOverlay() {
         View offlineOverlay = findViewById(R.id.offline_mode_overlay);
         if (offlineOverlay != null) {
             // Don't change visibility here, let it be controlled by the trigger button
@@ -1472,26 +1321,8 @@ public class MainActivity extends BaseActivity {
 
             // Referrer & Attribution Section
             debugInfo.append("=== Referrer & Attribution ===\n");
-            if (currentReferrerStatus != null) {
-                debugInfo.append("Referrer Status: ").append(currentReferrerStatus.state);
-                if (currentReferrerStatus.state.equals("RETRYING")) {
-                    debugInfo.append(" (Attempt ").append(currentReferrerStatus.currentAttempt)
-                            .append("/").append(currentReferrerStatus.maxAttempts).append(")");
-                }
-                debugInfo.append("\n");
-
-                // Show successful attempt number if available
-                if (currentReferrerStatus.successfulAttempt > 0) {
-                    debugInfo.append("Referrer Handled After: ").append(currentReferrerStatus.successfulAttempt)
-                            .append(" attempt(s)\n");
-                }
-
-                if (currentReferrerStatus.lastError != null) {
-                    debugInfo.append("Last Error: ").append(currentReferrerStatus.lastError).append("\n");
-                }
-            } else {
-                debugInfo.append("Referrer Status: NOT_STARTED\n");
-            }
+            debugInfo.append("Referrer Status: ")
+                    .append(referrerDebugStatus != null ? referrerDebugStatus : "NOT_STARTED").append("\n");
             debugInfo.append("Referrer Handled: ").append(isReferrerHandled).append("\n");
             debugInfo.append("Attribution Complete: ").append(isAttributionComplete).append("\n");
             String deferredDeeplink = prefs.getString("deferred_deeplink", "");
@@ -1524,7 +1355,7 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    private void logStartedInOfflineMode() {
+    void logStartedInOfflineMode() {
         AnalyticsUtils.logStartedInOfflineModeEvent(MainActivity.this,
                 "started_in_offline_mode", prefs.getString("pseudoId", ""));
         updateDebugOverlay();

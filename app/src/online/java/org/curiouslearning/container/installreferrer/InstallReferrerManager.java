@@ -385,8 +385,13 @@ public class InstallReferrerManager {
     }
 
     public void logFirstOpenEvent(ReferrerDetails referrerDetails) {
-
-        AnalyticsUtils.logReferrerEvent(this.context, "first_open_cl", referrerDetails);
+        if (referrerDetails == null) {
+            return;
+        }
+        AnalyticsUtils.logReferrerEvent(this.context, "first_open_cl",
+                referrerDetails.getInstallReferrer(),
+                referrerDetails.getReferrerClickTimestampSeconds(),
+                referrerDetails.getInstallBeginTimestampSeconds());
     }
 
     public interface ReferrerCallback {

@@ -25,13 +25,14 @@ import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
 import org.curiouslearning.container.utilities.LocalWebContent;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
-import io.sentry.SentryLevel;
 
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
 import org.curiouslearning.container.core.subapp.emitter.AppEventEmitter;
+import org.curiouslearning.container.integrations.CrashReporter;
+
+import java.util.HashMap;
+import java.util.Map;
 import org.curiouslearning.container.core.usage.SubAppIdResolver;
 import org.curiouslearning.container.core.usage.SubAppUsageTracker;
 
@@ -303,16 +304,13 @@ public class WebApp extends BaseActivity {
                 boolean organicReferrer = rawReferrer != null
                         && rawReferrer.contains("utm_source=google-play")
                         && rawReferrer.contains("utm_medium=organic");
-                Breadcrumb crumb = new Breadcrumb();
-                crumb.setCategory("attribution");
-                crumb.setLevel(SentryLevel.INFO);
-                crumb.setMessage("FTM opened without full attribution");
-                crumb.setData("app_url", appUrl);
-                crumb.setData("has_source", hasSource);
-                crumb.setData("has_campaign_id", hasCampaignId);
-                crumb.setData("organic_referrer", organicReferrer);
-                crumb.setData("referrer_present", rawReferrer != null && !rawReferrer.isEmpty());
-                Sentry.addBreadcrumb(crumb);
+                Map<String, Object> crumb = new HashMap<>();
+                crumb.put("app_url", appUrl);
+                crumb.put("has_source", hasSource);
+                crumb.put("has_campaign_id", hasCampaignId);
+                crumb.put("organic_referrer", organicReferrer);
+                crumb.put("referrer_present", rawReferrer != null && !rawReferrer.isEmpty());
+                CrashReporter.breadcrumb("attribution", "FTM opened without full attribution", crumb);
                 Log.w("WebApp", "Missing attribution for app: " + appUrl
                         + " (source=" + hasSource + ", campaign_id=" + hasCampaignId
                         + ", organic=" + organicReferrer + ")");
@@ -342,7 +340,7 @@ public class WebApp extends BaseActivity {
         String modifiedUrl = originalUri.toString() + separator + "cr_user_id=" +
                 pseudoId;
         if (pseudoId == null || pseudoId.isEmpty()) {
-            Sentry.captureMessage("Missing cr_user_id for app: " + appUrl);
+            CrashReporter.message("Missing cr_user_id for app: " + appUrl);
             Log.e("WebApp", "Missing cr_user_id when building URL");
         }
         return modifiedUrl;
