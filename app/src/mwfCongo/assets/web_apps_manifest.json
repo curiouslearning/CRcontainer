@@ -1,5 +1,5 @@
 {
-  "version": "mwf-congo-2",
+  "version": "mwf-congo-3",
   "web_apps": [
     {
       "appId": 28,
@@ -116,14 +116,6 @@
       "languageInEnglishName": "English"
     },
     {
-      "appId": 199,
-      "appIconUrl": "file:///android_asset/images/ftm_TheBeeAndTheElephant_prod.png",
-      "title": "Curious Reader The Bee And The Elephant English Level 4",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=TheBeeAndTheElephantEnLv4",
-      "language": "English - US",
-      "languageInEnglishName": "English"
-    },
-    {
       "appId": 200,
       "appIconUrl": "file:///android_asset/images/ftm_CicadasSong_prod.png",
       "title": "Curious Reader Cicadas Song English Level 4",
@@ -164,18 +156,34 @@
       "languageInEnglishName": "English"
     },
     {
-      "appId": 207,
-      "appIconUrl": "file:///android_asset/images/ftm_Colours_prod.png",
-      "title": "Curious Reader Colours English Level 4",
-      "appUrl": "https://curiousreader.curiouscontent.org/?book=ColoursEnLv4",
-      "language": "English - US",
-      "languageInEnglishName": "English"
-    },
-    {
       "appId": 208,
       "appIconUrl": "file:///android_asset/images/ftm_HideAndSeek_prod.png",
       "title": "Curious Reader Hide And Seek English Level 2",
       "appUrl": "https://curiousreader.curiouscontent.org/?book=HideAndSeekEnLv2",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 207,
+      "appIconUrl": "file:///android_asset/images/ftm_Colours_prod.png",
+      "title": "Curious Reader Colours Gdl Book English",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=gdl-ColoursEn-1",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 199,
+      "appIconUrl": "file:///android_asset/images/ftm_TheBeeAndTheElephant_prod.png",
+      "title": "Curious Reader The Bee And The Elephant Gdl Book English",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=gdl-TheBeeAndTheElephantEn-1",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 275,
+      "appIconUrl": "file:///android_asset/images/mom_cooks_gdl_book.png",
+      "title": "Curious Reader I Love My Mom Gdl Book English",
+      "appUrl": "https://curiousreader.curiouscontent.org/?book=gdl-ILoveMyMomEn-1",
       "language": "English - US",
       "languageInEnglishName": "English"
     }
