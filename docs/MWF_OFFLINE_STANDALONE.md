@@ -156,10 +156,12 @@ CRWebPlayerJs/
   BookContent/<slug>/content/    # content.json, images/, audios/   <- tools/package-books.js
 ```
 
-The player is built from the CRWebPlayer repo (`main`, which has GDL book support) with one
-change: `App.initialize()` renders the book before, not after, its service-worker setup, and the
-setup races `navigator.serviceWorker.ready` against a timeout and stops when no worker is
-registered. On `main` the CR-book path awaits `serviceWorker.ready`, which never resolves when no
+The player is built from the CRWebPlayer repo (`main`, which has GDL book support) with two
+changes: `App.initialize()` renders the book before, not after, its service-worker setup, and both
+the CR and the GDL service-worker setup race `navigator.serviceWorker.ready` against a timeout and
+stop (hiding the loading screen) when no worker is registered. Without the GDL half, a GDL book
+opened while the device is online sat on its loading screen for 60 s waiting for caching progress
+from a worker the package does not ship. On `main` the CR-book path awaits `serviceWorker.ready`, which never resolves when no
 `sw.js` is served (as in the APK) and can hang Android WebViews even when one is; the GDL path
 already worked this way. The change lives on the local branch `mwf-container-player` in the
 worktree `D:\Github\CRWebPlayer-mwf` (not pushed) and is worth upstreaming. Build with
