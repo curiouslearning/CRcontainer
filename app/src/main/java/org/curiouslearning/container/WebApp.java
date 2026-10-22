@@ -22,7 +22,9 @@ import org.curiouslearning.container.firebase.AnalyticsUtils;
 import org.curiouslearning.container.presentation.base.BaseActivity;
 import org.curiouslearning.container.utilities.ConnectionUtils;
 import org.curiouslearning.container.utilities.AudioPlayer;
+import io.sentry.Breadcrumb;
 import io.sentry.Sentry;
+import io.sentry.SentryLevel;
 
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
@@ -53,6 +55,7 @@ public class WebApp extends BaseActivity {
 
     private static final String SHARED_PREFS_NAME = "appCached";
     private static final String UTM_PREFS_NAME = "utmPrefs";
+    private static final String INSTALL_REFERRER_PREFS_NAME = "InstallReferrerPrefs";
     private AudioPlayer audioPlayer;
     ImageView goBack;
     private android.os.Handler monsterStateCheckHandler;
@@ -193,6 +196,16 @@ public class WebApp extends BaseActivity {
         }
         source = utmPrefs.getString("source", "");
         campaignId = utmPrefs.getString("campaign_id", "");
+        // Fallback: InstallReferrerPrefs holds the same attribution (written by the
+        // Facebook deferred deep link and first-open paths). Use it if utmPrefs is empty.
+        SharedPreferences installReferrerPrefs = getApplicationContext()
+                .getSharedPreferences(INSTALL_REFERRER_PREFS_NAME, Context.MODE_PRIVATE);
+        if (source == null || source.trim().isEmpty()) {
+            source = installReferrerPrefs.getString("source", "");
+        }
+        if (campaignId == null || campaignId.trim().isEmpty()) {
+            campaignId = installReferrerPrefs.getString("campaign_id", "");
+        }
         goBack = findViewById(R.id.button2);
         goBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -245,17 +258,37 @@ public class WebApp extends BaseActivity {
         if (isFtmApp) {
             System.out
                     .println(">> url source and campaign params added to the subapp url " + source + " " + campaignId);
-            if (source != null && !source.isEmpty()) {
+            boolean hasSource = source != null && !source.isEmpty();
+            boolean hasCampaignId = campaignId != null && !campaignId.isEmpty();
+            if (hasSource) {
                 appUrl = addSourceToUrl(appUrl);
-            } else {
-                Sentry.captureMessage("Missing source when building URL for app: " + appUrl);
-                Log.w("WebApp", "Missing source parameter for app: " + appUrl);
             }
-            if (campaignId != null && !campaignId.isEmpty()) {
+            if (hasCampaignId) {
                 appUrl = addCampaignIdToUrl(appUrl);
-            } else {
-                Sentry.captureMessage("Missing campaign_id when building URL for app: " + appUrl);
-                Log.w("WebApp", "Missing campaign_id parameter for app: " + appUrl);
+            }
+            if (!hasSource || !hasCampaignId) {
+                // Missing attribution is the normal state for organic installs, sideloads and
+                // devices without the Install Referrer API, so it is not reported as an error.
+                // Record a breadcrumb so any later Sentry event carries the context.
+                String rawReferrer = getApplicationContext()
+                        .getSharedPreferences("install_referrer_prefs", Context.MODE_PRIVATE)
+                        .getString("raw_referrer_url", "");
+                boolean organicReferrer = rawReferrer != null
+                        && rawReferrer.contains("utm_source=google-play")
+                        && rawReferrer.contains("utm_medium=organic");
+                Breadcrumb crumb = new Breadcrumb();
+                crumb.setCategory("attribution");
+                crumb.setLevel(SentryLevel.INFO);
+                crumb.setMessage("FTM opened without full attribution");
+                crumb.setData("app_url", appUrl);
+                crumb.setData("has_source", hasSource);
+                crumb.setData("has_campaign_id", hasCampaignId);
+                crumb.setData("organic_referrer", organicReferrer);
+                crumb.setData("referrer_present", rawReferrer != null && !rawReferrer.isEmpty());
+                Sentry.addBreadcrumb(crumb);
+                Log.w("WebApp", "Missing attribution for app: " + appUrl
+                        + " (source=" + hasSource + ", campaign_id=" + hasCampaignId
+                        + ", organic=" + organicReferrer + ")");
             }
         }
         appUrl = addContainerAppVersionToUrl(appUrl);

@@ -217,10 +217,16 @@ public class AnalyticsUtils {
     }
 
     public static void storeReferrerParams(Context context, String source, String campaign_id) {
+        // Only persist non-empty values so a later organic/empty referrer cannot wipe
+        // attribution that was already stored.
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(SOURCE, source);
-        editor.putString(CAMPAIGN_ID, campaign_id);
+        if (source != null && !source.trim().isEmpty()) {
+            editor.putString(SOURCE, source);
+        }
+        if (campaign_id != null && !campaign_id.trim().isEmpty()) {
+            editor.putString(CAMPAIGN_ID, campaign_id);
+        }
         editor.apply();
     }
 

@@ -358,12 +358,25 @@ public class InstallReferrerManager {
         content = urlDecode(content);
 
         Log.d("referral data", uri + " " + campaign_id + " " + source + " " + content + " " + referrerUrl);
+        // Only persist non-empty values. This method runs on every launch (the Play
+        // referrer is re-read each cold start), so an organic/empty referrer must not
+        // wipe attribution that was stored earlier (e.g. from a Facebook deferred deep link).
         SharedPreferences prefs = context.getSharedPreferences(UTM_PREFS_NAME, Context.MODE_PRIVATE);
-
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(SOURCE, source);
-        editor.putString(CAMPAIGN_ID, campaign_id);
-        editor.apply();
+        boolean hasChanges = false;
+        if (!TextUtils.isEmpty(source)) {
+            editor.putString(SOURCE, source);
+            hasChanges = true;
+        }
+        if (!TextUtils.isEmpty(campaign_id)) {
+            editor.putString(CAMPAIGN_ID, campaign_id);
+            hasChanges = true;
+        }
+        if (hasChanges) {
+            editor.apply();
+        } else {
+            Log.d("referrer", "No source/campaign_id in referrer; preserving existing utmPrefs values");
+        }
         params.put("source", source);
         params.put("campaign_id", campaign_id);
         // params.put("content", content);
