@@ -219,6 +219,22 @@ Cape Verdean Creole books (`Kriolu - Cape Verde` in production) are not packaged
 Only books referenced by a manifest are kept under `BookContent/`; `tools/package-books.js --verify`
 lists what is packaged.
 
+### Byte ranges for narration (fixed 2026-10-23)
+
+QA found pages whose narration lost its last words (Together p4 English; Frog's Starry Wish p3,
+Dad's Boots p7, What Day Is It p6 in French). The audio files are byte-identical to production and
+play in full from a blob or from the CDN, so the loss was in how the packaged copy was served. The
+book player creates every page's `<audio>` up front; Chromium preloads part of each file, stops,
+and later resumes with `Range: bytes=<start>-`. The WebView already seeks an intercepted
+`InputStream` to that start, but it reports status 200 with no `Content-Range`. Chromium reads a 200
+answer to a range request as "the server ignored my range", skips `start` bytes a second time, and
+the page plays `start` bytes short (Together p4: 16.9 KB, about 2 s, exactly the last words).
+`LocalWebContent.Server` now answers a satisfiable `Range` on any uncompressed asset with
+`206 Partial Content` + `Content-Range` + `Accept-Ranges: bytes`, leaves the seeking to the WebView,
+and caps the stream at the range end (`BoundedInputStream`). Measured on the emulator before/after:
+Together p4 played 12.6 s of its 14.3 s file (jump 12.19 → 14.34), after the fix 14.3 s with no jump;
+the other pages were unchanged. Unit tests: `LocalWebContentTest` (range parsing, bounded stream).
+
 ## Verification status (2026-10-21)
 
 Unit tests: 107 pass (`./gradlew testOnlineDebugUnitTest`; 96 pre-existing + 11 new for

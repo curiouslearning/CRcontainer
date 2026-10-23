@@ -252,7 +252,7 @@ public class WebApp extends BaseActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 if (packaged != null) {
-                    WebResourceResponse local = packaged.intercept(request.getUrl());
+                    WebResourceResponse local = packaged.intercept(request.getUrl(), request.getRequestHeaders());
                     if (local != null) {
                         return local;
                     }

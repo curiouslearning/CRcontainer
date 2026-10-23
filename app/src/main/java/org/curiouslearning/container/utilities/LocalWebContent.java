@@ -1,6 +1,7 @@
 package org.curiouslearning.container.utilities;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.util.Log;
@@ -16,6 +17,7 @@ import androidx.webkit.WebViewFeature;
 
 import org.curiouslearning.container.BuildConfig;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -306,12 +308,23 @@ public final class LocalWebContent {
          */
         @Nullable
         public WebResourceResponse intercept(@NonNull Uri url) {
+            return intercept(url, null);
+        }
+
+        /**
+         * As {@link #intercept(Uri)}, honouring an HTTP {@code Range} request header so that media
+         * elements get {@code 206 Partial Content} answers (see {@link #open(String, String)}).
+         */
+        @Nullable
+        public WebResourceResponse intercept(@NonNull Uri url,
+                                             @Nullable Map<String, String> requestHeaders) {
             String host = url.getHost();
             String path = url.getPath();
+            String range = headerValue(requestHeaders, "Range");
 
             String vendored = vendoredAssetFor(host, path);
             if (vendored != null) {
-                WebResourceResponse response = open(vendored);
+                WebResourceResponse response = open(vendored, range);
                 if (response == null) {
                     Log.w(TAG, "Vendored CDN file missing from package: " + vendored);
                 } else {
@@ -328,7 +341,7 @@ public final class LocalWebContent {
                 if (isKnownAbsent(candidate)) {
                     return null;
                 }
-                WebResourceResponse response = open(candidate);
+                WebResourceResponse response = open(candidate, range);
                 if (response != null) {
                     return response;
                 }
@@ -339,9 +352,23 @@ public final class LocalWebContent {
             return null;
         }
 
-        /** Opens an asset as a response with an explicit MIME type and permissive CORS headers. */
+        /**
+         * Opens an asset as a response with an explicit MIME type and permissive CORS headers.
+         *
+         * <p>Byte ranges: the WebView itself seeks an intercepted stream to the start of a
+         * requested {@code Range} and sizes {@code Content-Length} accordingly, but it leaves the
+         * status at 200 and adds no {@code Content-Range}. Chromium's media loader reads a 200
+         * answer to a range request as "the server ignored my range and sent the whole file" and
+         * skips the first {@code start} bytes <em>again</em>. For a book narration whose preload
+         * stopped part-way and resumed with {@code Range: bytes=start-}, that double skip drops
+         * {@code start} bytes: the page's audio jumps and ends early, losing its last words. So
+         * when the request carries a satisfiable range and the asset's length is known (stored
+         * uncompressed, as all media is), the answer is {@code 206 Partial Content} with
+         * {@code Content-Range}, the stream is capped at the range end, and the seeking is left
+         * to the WebView, which is what Chromium expects of a range-capable server.
+         */
         @Nullable
-        private WebResourceResponse open(@NonNull String assetPath) {
+        private WebResourceResponse open(@NonNull String assetPath, @Nullable String rangeHeader) {
             InputStream stream;
             try {
                 stream = assets.open(assetPath);
@@ -349,15 +376,167 @@ public final class LocalWebContent {
                 return null;
             }
             String mime = mimeTypeFor(assetPath);
-            WebResourceResponse response = new WebResourceResponse(
-                    mime != null ? mime : "application/octet-stream", null, stream);
+            String contentType = mime != null ? mime : "application/octet-stream";
             // Sub-apps on the virtual host fetch FTM audio and vendored CDN files cross-origin;
             // without these headers the browser discards the response.
             Map<String, String> headers = new HashMap<>();
             headers.put("Access-Control-Allow-Origin", "*");
             headers.put("Cross-Origin-Resource-Policy", "cross-origin");
+
+            long length = assetLength(assetPath);
+            if (length >= 0) {
+                headers.put("Accept-Ranges", "bytes");
+                long[] range = parseRange(rangeHeader, length);
+                if (range != null) {
+                    long start = range[0];
+                    long end = range[1];
+                    headers.put("Content-Range", "bytes " + start + "-" + end + "/" + length);
+                    // Not skipped here: the WebView advances the stream to `start` itself and
+                    // sets Content-Length from what remains, so neither is done twice.
+                    return new WebResourceResponse(contentType, null, 206, "Partial Content",
+                            headers, new BoundedInputStream(stream, end + 1));
+                }
+            }
+            WebResourceResponse response = new WebResourceResponse(contentType, null, stream);
             response.setResponseHeaders(headers);
             return response;
+        }
+
+        /** Size of an uncompressed asset, or -1 when unknown (compressed assets have no descriptor). */
+        private long assetLength(@NonNull String assetPath) {
+            try (AssetFileDescriptor fd = assets.openFd(assetPath)) {
+                return fd.getLength();
+            } catch (IOException compressedOrMissing) {
+                return -1;
+            }
+        }
+    }
+
+    /** Case-insensitive header lookup ({@code WebResourceRequest} does not normalise names). */
+    @Nullable
+    static String headerValue(@Nullable Map<String, String> headers, @NonNull String name) {
+        if (headers == null) {
+            return null;
+        }
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            if (name.equalsIgnoreCase(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Parses a single-range {@code Range} header ({@code bytes=start-end}, {@code bytes=start-},
+     * {@code bytes=-suffix}) against a resource of {@code length} bytes.
+     *
+     * @return {@code {start, end}} (inclusive, clamped to the resource) for a satisfiable range, or
+     *         {@code null} when there is no usable range, in which case the whole resource is served
+     *         with status 200 (absent, malformed, multi-range, or unsatisfiable headers alike; a
+     *         200 is always a correct answer to a range request).
+     */
+    @VisibleForTesting
+    @Nullable
+    static long[] parseRange(@Nullable String header, long length) {
+        if (header == null || length <= 0) {
+            return null;
+        }
+        String spec = header.trim();
+        if (!spec.regionMatches(true, 0, "bytes=", 0, 6)) {
+            return null;
+        }
+        spec = spec.substring(6).trim();
+        if (spec.isEmpty() || spec.indexOf(',') >= 0) {
+            return null;
+        }
+        int dash = spec.indexOf('-');
+        if (dash < 0) {
+            return null;
+        }
+        String first = spec.substring(0, dash).trim();
+        String last = spec.substring(dash + 1).trim();
+        try {
+            long start;
+            long end;
+            if (first.isEmpty()) {
+                // Suffix range: the last N bytes.
+                if (last.isEmpty()) {
+                    return null;
+                }
+                long suffix = Long.parseLong(last);
+                if (suffix <= 0) {
+                    return null;
+                }
+                start = Math.max(0, length - suffix);
+                end = length - 1;
+            } else {
+                start = Long.parseLong(first);
+                end = last.isEmpty() ? length - 1 : Math.min(Long.parseLong(last), length - 1);
+            }
+            if (start < 0 || start >= length || end < start) {
+                return null;
+            }
+            return new long[]{start, end};
+        } catch (NumberFormatException malformed) {
+            return null;
+        }
+    }
+
+    /**
+     * Caps a stream at an absolute position, counting bytes both read and skipped, so a range
+     * answer ends at the range's last byte after the WebView has skipped to its first.
+     */
+    @VisibleForTesting
+    static final class BoundedInputStream extends FilterInputStream {
+
+        private long remaining;
+
+        BoundedInputStream(@NonNull InputStream in, long limit) {
+            super(in);
+            this.remaining = Math.max(0, limit);
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+            int b = super.read();
+            if (b >= 0) {
+                remaining--;
+            }
+            return b;
+        }
+
+        @Override
+        public int read(@NonNull byte[] buffer, int offset, int count) throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+            int n = super.read(buffer, offset, (int) Math.min(count, remaining));
+            if (n > 0) {
+                remaining -= n;
+            }
+            return n;
+        }
+
+        @Override
+        public long skip(long count) throws IOException {
+            long n = super.skip(Math.min(count, remaining));
+            if (n > 0) {
+                remaining -= n;
+            }
+            return n;
+        }
+
+        @Override
+        public int available() throws IOException {
+            return (int) Math.min(super.available(), remaining);
+        }
+
+        @Override
+        public boolean markSupported() {
+            return false;
         }
     }
 
@@ -387,7 +566,7 @@ public final class LocalWebContent {
                     @Override
                     public WebResourceResponse shouldInterceptRequest(
                             @NonNull WebResourceRequest request) {
-                        return server.intercept(request.getUrl());
+                        return server.intercept(request.getUrl(), request.getRequestHeaders());
                     }
                 });
     }

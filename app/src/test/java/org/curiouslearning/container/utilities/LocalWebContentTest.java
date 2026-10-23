@@ -136,4 +136,81 @@ public class LocalWebContentTest {
         assertNull(LocalWebContent.mimeTypeFor("feedthemonster/file."));
         assertNull(LocalWebContent.mimeTypeFor("feedthemonster/data.unknownext"));
     }
+
+    // ---- Byte ranges (media elements resume preloaded narration with Range requests) ----
+
+    private static void assertRange(long start, long end, long[] range) {
+        assertTrue("expected a range", range != null);
+        assertEquals(start, range[0]);
+        assertEquals(end, range[1]);
+    }
+
+    @Test
+    public void rangeHeaderFormsChromiumSends() {
+        assertRange(0, 115199, LocalWebContent.parseRange("bytes=0-", 115200));
+        assertRange(98304, 115199, LocalWebContent.parseRange("bytes=98304-", 115200));
+        assertRange(100, 199, LocalWebContent.parseRange("bytes=100-199", 115200));
+        assertRange(114700, 115199, LocalWebContent.parseRange("bytes=-500", 115200));
+        // An end past the resource is clamped, as RFC 9110 requires.
+        assertRange(100, 115199, LocalWebContent.parseRange("bytes=100-999999", 115200));
+        assertRange(0, 115199, LocalWebContent.parseRange("bytes=-999999", 115200));
+        assertRange(5, 5, LocalWebContent.parseRange(" BYTES=5-5 ", 10));
+    }
+
+    @Test
+    public void unusableRangesFallBackToAFullResponse() {
+        assertNull(LocalWebContent.parseRange(null, 115200));
+        assertNull(LocalWebContent.parseRange("", 115200));
+        assertNull(LocalWebContent.parseRange("items=0-5", 115200));
+        assertNull(LocalWebContent.parseRange("bytes=", 115200));
+        assertNull(LocalWebContent.parseRange("bytes=abc-", 115200));
+        assertNull(LocalWebContent.parseRange("bytes=0-5,10-20", 115200));
+        assertNull(LocalWebContent.parseRange("bytes=50-10", 115200));
+        assertNull(LocalWebContent.parseRange("bytes=115200-", 115200)); // unsatisfiable
+        assertNull(LocalWebContent.parseRange("bytes=-0", 115200));
+        assertNull(LocalWebContent.parseRange("bytes=0-", 0)); // unknown/empty resource
+    }
+
+    @Test
+    public void headerLookupIgnoresCase() {
+        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("range", "bytes=0-");
+        assertEquals("bytes=0-", LocalWebContent.headerValue(headers, "Range"));
+        assertNull(LocalWebContent.headerValue(headers, "If-Range"));
+        assertNull(LocalWebContent.headerValue(null, "Range"));
+    }
+
+    @Test
+    public void boundedStreamEndsAtTheRangeEndAfterTheWebViewSkipsToItsStart() throws Exception {
+        byte[] data = new byte[1000];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) (i % 251);
+        }
+        // Range bytes=100-199: cap at absolute position 200, then the WebView skips 100 itself.
+        LocalWebContent.BoundedInputStream in = new LocalWebContent.BoundedInputStream(
+                new java.io.ByteArrayInputStream(data), 200);
+        assertEquals(200, in.available());
+        assertEquals(100, in.skip(100));
+        assertEquals(100, in.available());
+        byte[] out = new byte[1000];
+        int total = 0;
+        int n;
+        while ((n = in.read(out, total, out.length - total)) > 0) {
+            total += n;
+        }
+        assertEquals(100, total);
+        assertEquals(data[100], out[0]);
+        assertEquals(data[199], out[99]);
+        assertEquals(-1, in.read());
+        assertEquals(0, in.skip(10));
+    }
+
+    @Test
+    public void boundedStreamNeverOverreadsSingleBytes() throws Exception {
+        LocalWebContent.BoundedInputStream in = new LocalWebContent.BoundedInputStream(
+                new java.io.ByteArrayInputStream(new byte[]{1, 2, 3, 4}), 2);
+        assertEquals(1, in.read());
+        assertEquals(2, in.read());
+        assertEquals(-1, in.read());
+    }
 }
