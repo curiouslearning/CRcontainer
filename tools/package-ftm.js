@@ -13,9 +13,16 @@
  *  2. Keeps only the requested languages under lang/. The build contains all ~62 languages
  *     (~230 MB); the three MWF languages are ~6 MB.
  *  2b. Leaves out assessment-survey/ (~53 MB) unless --include-assessment is given. FTM's in-game
- *     assessments are scheduled by a Statsig dynamic config that defaults to disabled, so a device
- *     that is offline never schedules one. With the flag, the module is kept and its audio pruned
- *     to the packaged languages.
+ *     assessments are scheduled by a Statsig dynamic config, which an offline device cannot fetch
+ *     (so nothing is scheduled) but an online one can. When one is scheduled, FTM first probes
+ *     assessment-survey/data/<key>.json with a HEAD request; the FTM build packaged here (branch
+ *     mwf-container-ftm in the FTM worktree) skips the assessment and resumes the level when that
+ *     probe fails for both the requested and the default key, and the container answers the whole
+ *     directory with an immediate 404 (LocalWebContent.KNOWN_ABSENT_DIRS). Stock FTM instead opened
+ *     the dimmed overlay around a player that could never load. With the flag, the module is kept
+ *     and its audio pruned to the packaged languages; note the embedded player also expects a
+ *     service worker (navigator.serviceWorker.ready) to finish its loading screen, so including it
+ *     needs that path verified in the WebView first.
  *  3. Drops sw.js. FTM's service worker loads Workbox from a Google CDN with importScripts(), so
  *     it cannot even start offline, and in the container every file is already served from the
  *     APK by WebViewAssetLoader - there is nothing for a worker to cache. Not shipping it makes the
@@ -99,8 +106,11 @@ function mb(bytes) {
 
 function gitInfo(dir) {
     try {
-        const commit = execSync('git rev-parse HEAD', { cwd: dir, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-        const describe = execSync('git log -1 --format=%cI%x20%s', { cwd: dir, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+        const git = (cmd) => execSync(cmd, { cwd: dir, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+        const dirty = git('git status --porcelain --untracked-files=no') !== '';
+        const commit = git('git rev-parse HEAD') + (dirty ? '-dirty' : '');
+        const branch = git('git branch --show-current') || '(detached)';
+        const describe = branch + ' ' + git('git log -1 --format=%cI%x20%s') + (dirty ? ' (+ uncommitted changes)' : '');
         return { commit, describe };
     } catch (e) {
         return { commit: 'unknown', describe: 'unknown' };

@@ -118,6 +118,21 @@ public class LocalWebContentTest {
     }
 
     @Test
+    public void ftmAssessmentModuleIsAKnownAbsentDirectory() {
+        // FTM's HEAD probe before it opens an in-game assessment; must be a definite miss.
+        assertTrue(LocalWebContent.isInKnownAbsentDirectory(
+                "feedthemonster/assessment-survey/data/english-lettersounds.json"));
+        assertTrue(LocalWebContent.isInKnownAbsentDirectory(
+                "feedthemonster/assessment-survey/data/zulu-lettersounds.json"));
+        assertTrue(LocalWebContent.isInKnownAbsentDirectory("feedthemonster/assessment-survey/css/style.css"));
+        assertFalse(LocalWebContent.isInKnownAbsentDirectory("feedthemonster/assessment-survey"));
+        assertFalse(LocalWebContent.isInKnownAbsentDirectory("feedthemonster/lang/english/ftm_english.json"));
+        assertFalse(LocalWebContent.isInKnownAbsentDirectory("CRWebPlayerJs/assessment-survey/data/x.json"));
+        assertEquals("feedthemonster/assessment-survey/data/english-lettersounds.json",
+                candidates(BUILD_HOST, "/assets/feedthemonster/assessment-survey/data/english-lettersounds.json").get(0));
+    }
+
+    @Test
     public void mimeTypesCoverWhatABrowserIsStrictAbout() {
         assertEquals("text/javascript", LocalWebContent.mimeTypeFor("feedthemonster/feedTheMonster.js"));
         assertEquals("application/wasm", LocalWebContent.mimeTypeFor("vendor/dotlottie-player-0.44.0.wasm"));

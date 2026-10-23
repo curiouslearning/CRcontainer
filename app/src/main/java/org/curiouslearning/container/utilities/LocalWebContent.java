@@ -17,6 +17,7 @@ import androidx.webkit.WebViewFeature;
 
 import org.curiouslearning.container.BuildConfig;
 
+import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -110,6 +111,19 @@ public final class LocalWebContent {
             BOOKS_ASSET_DIR + "/sw.js",
             BOOKS_ASSET_DIR + "/app.js",
             BOOKS_ASSET_DIR + "/firebase-config.json",
+    };
+
+    /**
+     * Whole directories the packages deliberately leave out, answered with an immediate
+     * {@code 404} rather than handed back to the WebView (which would try the network for a host
+     * that does not exist and only fail once DNS gives up). FTM probes
+     * {@code assessment-survey/data/<key>.json} with a {@code HEAD} before it opens its in-game
+     * assessment overlay; tools/package-ftm.js does not ship that module, and a fast, definite
+     * "not here" is what lets FTM skip the assessment and carry on with the level instead of
+     * dimming the game behind a player that can never load.
+     */
+    private static final String[] KNOWN_ABSENT_DIRS = {
+            FTM_ASSET_DIR + "/assessment-survey/",
     };
 
     /**
@@ -250,6 +264,17 @@ public final class LocalWebContent {
         return false;
     }
 
+    /** Whether {@code assetPath} lies in a directory the package is known not to contain. */
+    @VisibleForTesting
+    static boolean isInKnownAbsentDirectory(@NonNull String assetPath) {
+        for (String dir : KNOWN_ABSENT_DIRS) {
+            if (assetPath.startsWith(dir)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @VisibleForTesting
     @Nullable
     static String mimeTypeFor(@NonNull String path) {
@@ -341,6 +366,9 @@ public final class LocalWebContent {
                 if (isKnownAbsent(candidate)) {
                     return null;
                 }
+                if (isInKnownAbsentDirectory(candidate)) {
+                    return notFound();
+                }
                 WebResourceResponse response = open(candidate, range);
                 if (response != null) {
                     return response;
@@ -350,6 +378,18 @@ public final class LocalWebContent {
             // a silent blank page or a muted puzzle.
             Log.w(TAG, "Packaged asset not found: " + host + path + " (tried " + candidates + ")");
             return null;
+        }
+
+        /** A definite, CORS-visible {@code 404} for content the package is known not to carry. */
+        @NonNull
+        private static WebResourceResponse notFound() {
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Access-Control-Allow-Origin", "*");
+            WebResourceResponse response = new WebResourceResponse("text/plain", "utf-8",
+                    new ByteArrayInputStream(new byte[0]));
+            response.setStatusCodeAndReasonPhrase(404, "Not Found");
+            response.setResponseHeaders(headers);
+            return response;
         }
 
         /**

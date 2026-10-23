@@ -139,8 +139,36 @@ already served from the APK), and injects one inline `<script>` into `index.html
   features library never caches a `false`, so the seed persists; a `true` from Statsig when online
   simply refreshes it.
 
-No FTM source is modified. `PACKAGE_INFO.json` next to `index.html` records the source commit,
-languages and sizes.
+`PACKAGE_INFO.json` next to `index.html` records the source commit, branch, languages and sizes.
+
+### The one FTM source change (branch `mwf-container-ftm`)
+
+The packaged build comes from the local branch `mwf-container-ftm` in the worktree
+`D:\Github\FeedTheMonsterJS-mwf` (cut from `origin/test` at `0a0920d`, not pushed; worth
+upstreaming). It changes one behaviour: **an in-game assessment that cannot load is skipped
+instead of opened.**
+
+Why: `assessment-survey/` is not packaged, but the schedule for in-game assessments is a Statsig
+dynamic config (`assessmentlevels`) that FTM re-reads from the network on every level
+(`getDynamicConfig(key, useCache=false)`, so no packaging-time seed can pin it). Offline nothing
+is scheduled; online, English gameplay reaches the configured level and stock FTM opens its
+dimmed overlay around the embedded assessment player, which can never report "loaded" because
+its data file is missing - the game sits behind a blank mask with only the small skip button in the
+top-right corner. With the change, `AssessmentSurveyManager.open()` rejects when neither the
+requested data file nor the default (`zulu-lettersounds`) answers its `HEAD` probe, and the
+gameplay flow's existing `catch` resumes the level (next puzzle or mini-game) as if no assessment
+had been scheduled. Files: `src/assessment/assessment-data-key.ts`
+(`resolveAvailableAssessmentDataKey`), `src/assessment/assessment-survey-manager.ts`,
+`src/scenes/start-scene/start-scene.ts` (dev button logs instead of an unhandled rejection), and
+the manager spec. The container side answers the whole `assessment-survey/` directory with an
+immediate `404` (`LocalWebContent.KNOWN_ABSENT_DIRS`) so the probe does not wait on DNS for a
+host that does not exist.
+
+If the fellowship ever wants in-game assessments in the standalone builds, package the module with
+`--include-assessment` (about 11 MB after audio pruning: English and French data exist, Brazilian
+Portuguese does not) **and** verify the embedded player's loading screen in the WebView first: it
+awaits `navigator.serviceWorker.ready`, which never resolves without a worker (the same hang the
+book player had).
 
 ## Packaging the Curious Reader books
 
@@ -270,7 +298,8 @@ were immediate. Worth re-checking on real hardware.
 Books: English 29 MB, French 55 MB after WAV→MP3 conversion (147 MB before); player 1 MB.
 Packaged FTM: 28.6 MB (assets 22.9 MB = images 14 MB, fonts 5.3 MB, audio 2.5 MB, Rive 1.9 MB;
 `lang/` 4.8 MB for three languages). Not packaged: the other 59 languages (~226 MB) and the
-embedded assessment module (~53 MB, only scheduled by a Statsig config that defaults to off).
+embedded assessment module (~53 MB; see "The one FTM source change" for what happens when Statsig
+schedules an assessment while online).
 
 Further reductions available if needed: `assets/fonts` ships 20 font files but the three MWF
 languages map to `Consolas.ttf` (fallback `NotoSans-Regular.ttf`), so ~4.5 MB could be pruned once
