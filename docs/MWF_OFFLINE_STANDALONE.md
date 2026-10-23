@@ -204,10 +204,17 @@ and audio file referenced by every packaged book exists. Catalog entries reuse t
 and can be replaced file-for-file.
 
 Packaged: 9 English CR books (including `TogetherEnglishUs`, 23 MB after conversion) plus 3 English
-GDL books in `app/src/mwfShared/assets/CRWebPlayerJs` (both flavors) and 10 French books in `app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` (Congo only;
-Gradle merges the flavor's assets over the shared ones, so the player sees a single `BookContent/`).
-Use `--out app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` when packaging French titles. This
-matches the production catalog for those languages. There are no Brazilian Portuguese books in the production catalog.
+GDL books in `app/src/mwfShared/assets/CRWebPlayerJs` (both flavors), 10 French books in
+`app/src/mwfCongo/assets/CRWebPlayerJs/BookContent` (Congo only) and 5 Cape Verde Portuguese books
+(`ChakusCycleCVPortuguese`, `FriendsCVPortugueseLv4`, `PlaygroundCVPortuguese`,
+`TallAndShortCVPortugueseLv4`, `TheLionRunsAndTheCowWalksCVPortuguese`, 10.5 MB after conversion) in
+`app/src/mwfAngola/assets/CRWebPlayerJs/BookContent` (Angola only). Gradle merges the flavor's assets
+over the shared ones, so the player sees a single `BookContent/`. Use
+`--out app/src/<flavor>/assets/CRWebPlayerJs/BookContent` when packaging a flavor-specific title.
+The French and English lists match the production catalog for those languages. The production
+catalog has no Brazilian Portuguese books, so the Angola build lists the Cape Verde Portuguese
+books (production `appId` 129-132 and 178) under its `Português - Brazilian` language; the three
+Cape Verdean Creole books (`Kriolu - Cape Verde` in production) are not packaged.
 
 Only books referenced by a manifest are kept under `BookContent/`; `tools/package-books.js --verify`
 lists what is packaged.
@@ -241,7 +248,7 @@ were immediate. Worth re-checking on real hardware.
 | APK (debug, unsigned-release will be similar) | Size |
 |---|---|
 | `app-mwfCongo-debug.apk` (FTM + 10 English + 10 French books) | see hand-off notes |
-| `app-mwfAngola-debug.apk` (FTM + 10 English books) | see hand-off notes |
+| `app-mwfAngola-debug.apk` (FTM + 10 English + 5 Cape Verde Portuguese books) | see hand-off notes |
 | `app-online-debug.apk` (unchanged) | 33.6 MB |
 
 Books: English 29 MB, French 55 MB after WAV→MP3 conversion (147 MB before); player 1 MB.

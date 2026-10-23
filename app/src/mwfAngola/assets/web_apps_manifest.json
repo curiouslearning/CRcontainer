@@ -1,5 +1,5 @@
 {
-  "version": "mwf-angola-6",
+  "version": "mwf-angola-7",
   "web_apps": [
     {
       "appId": 2,
@@ -7,6 +7,46 @@
       "appIconUrl": "file:///android_asset/images/ftm_brazilianportuguese.png",
       "title": "Feed The Monster Brazilianportuguese",
       "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=brazilianportuguese",
+      "language": "Português - Brazilian",
+      "languageInEnglishName": "BrazilianPortuguese"
+    },
+    {
+      "appId": 178,
+      "appIconUrl": "file:///android_asset/images/chakus_cycle.png",
+      "title": "Curious Reader Chaku's Cycle Cape Verde Portuguese",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=ChakusCycleCVPortuguese",
+      "language": "Português - Brazilian",
+      "languageInEnglishName": "BrazilianPortuguese"
+    },
+    {
+      "appId": 131,
+      "appIconUrl": "file:///android_asset/images/friends.png",
+      "title": "Curious Reader Friends Cape Verde Portuguese Level 4",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=FriendsCVPortugueseLv4",
+      "language": "Português - Brazilian",
+      "languageInEnglishName": "BrazilianPortuguese"
+    },
+    {
+      "appId": 129,
+      "appIconUrl": "file:///android_asset/images/playground.png",
+      "title": "Curious Reader Playground Cape Verde Portuguese",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=PlaygroundCVPortuguese",
+      "language": "Português - Brazilian",
+      "languageInEnglishName": "BrazilianPortuguese"
+    },
+    {
+      "appId": 130,
+      "appIconUrl": "file:///android_asset/images/ftm_tallandshort_prod.png",
+      "title": "Curious Reader Tall And Short Cape Verde Portuguese Level 4",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=TallAndShortCVPortugueseLv4",
+      "language": "Português - Brazilian",
+      "languageInEnglishName": "BrazilianPortuguese"
+    },
+    {
+      "appId": 132,
+      "appIconUrl": "file:///android_asset/images/the_lion_runs.png",
+      "title": "Curious Reader The Lion Runs And The Cow Walks Cape Verde Portuguese",
+      "appUrl": "https://mwfpde_brazilianportuguese_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=TheLionRunsAndTheCowWalksCVPortuguese",
       "language": "Português - Brazilian",
       "languageInEnglishName": "BrazilianPortuguese"
     },
