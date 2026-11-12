@@ -76,6 +76,7 @@ android {
     //               existed; every BuildConfig flag below is inert here.
     //  mwfCongo   - MWF PDE standalone APK for the Republic of Congo (French + English).
     //  mwfAngola  - MWF PDE standalone APK for Angola (Brazilian Portuguese + English).
+    //  soorty     - Soorty partnership standalone APK for Pakistan (Urdu + English).
     //
     // The two mwf* flavors are fully offline from first launch: the catalog is the bundled
     // web_apps_manifest.json in the flavor's assets, icons and Feed The Monster are packaged in
@@ -100,6 +101,10 @@ android {
             dimension "distribution"
             buildConfigField "boolean", "OFFLINE_STANDALONE", "true"
         }
+        soorty {
+            dimension "distribution"
+            buildConfigField "boolean", "OFFLINE_STANDALONE", "true"
+        }
     }
 
     sourceSets {
@@ -114,6 +119,10 @@ android {
             java.srcDirs += ['src/mwfShared/java']
         }
         mwfAngola {
+            assets.srcDirs += ['src/mwfShared/assets']
+            java.srcDirs += ['src/mwfShared/java']
+        }
+        soorty {
             assets.srcDirs += ['src/mwfShared/assets']
             java.srcDirs += ['src/mwfShared/java']
         }
@@ -282,7 +291,7 @@ sentry {
     // The offline standalone flavors do not ship the Sentry SDK at all, so skip their bytecode
     // instrumentation and source/mapping uploads, and stop the plugin from adding the SDK
     // dependency to every variant (it is declared as onlineImplementation above).
-    ignoredFlavors = ["mwfCongo", "mwfAngola"]
+    ignoredFlavors = ["mwfCongo", "mwfAngola", "soorty"]
     autoInstallation {
         enabled = false
     }
