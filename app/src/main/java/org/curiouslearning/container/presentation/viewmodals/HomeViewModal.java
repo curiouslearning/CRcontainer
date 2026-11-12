@@ -33,6 +33,11 @@ public class HomeViewModal extends AndroidViewModel {
         return webAppRepository.getAllLanguagesInEnglish();
     }
 
+    /** Standalone flavors: (re)load the packaged manifest into Room, replacing any stored catalog. */
+    public void loadPackagedManifest() {
+        webAppRepository.fetchWebApp();
+    }
+
     public LiveData<List<WebApp>> getAllWebApps() {
         return webAppRepository.getAllWebApps(lifecycleOwner);
     }

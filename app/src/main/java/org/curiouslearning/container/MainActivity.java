@@ -227,6 +227,36 @@ public class MainActivity extends BaseActivity {
                         "This build's app catalog could not be loaded. Please reinstall the app.",
                         Toast.LENGTH_LONG).show();
             });
+            // Always reload the packaged catalog: when this APK is installed over the online app
+            // (same applicationId) Room still holds the remote catalog, whose languages and URLs
+            // are not on the device.
+            homeViewModal.loadPackagedManifest();
+            final String defaultLanguage = BuildConfig.DEFAULT_LANGUAGE;
+            // A language remembered from a previous install may not be packaged in this build.
+            homeViewModal.getAllLanguagesInEnglish().observe(this, languages -> {
+                if (languages == null || languages.isEmpty()
+                        || selectedLanguage == null || selectedLanguage.isEmpty()) {
+                    return;
+                }
+                for (String language : languages) {
+                    if (selectedLanguage.equalsIgnoreCase(language)) {
+                        return;
+                    }
+                }
+                Log.w(TAG, "onCreate: Stored language not packaged in this build: " + selectedLanguage);
+                if (!defaultLanguage.isEmpty() && !defaultLanguage.equalsIgnoreCase(selectedLanguage)) {
+                    selectedLanguage = defaultLanguage;
+                    loadApps(selectedLanguage);
+                } else {
+                    selectedLanguage = "";
+                    showLanguagePopup();
+                }
+            });
+            if ((selectedLanguage == null || selectedLanguage.isEmpty()) && !defaultLanguage.isEmpty()) {
+                // Flavors with a default language skip the first-launch dropdown.
+                selectedLanguage = defaultLanguage;
+                AppContext.getInstance().set(AppContextKey.LANGUAGE, selectedLanguage);
+            }
             if (selectedLanguage == null || selectedLanguage.isEmpty()) {
                 showLanguagePopup();
             } else {
