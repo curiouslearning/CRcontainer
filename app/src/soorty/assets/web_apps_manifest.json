@@ -1,5 +1,5 @@
 {
-  "version": "soorty-1",
+  "version": "soorty-2",
   "web_apps": [
     {
       "appId": 272,
@@ -7,6 +7,30 @@
       "appIconUrl": "file:///android_asset/images/ftm_urdu.png",
       "title": "Feed The Monster Urdu",
       "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=urdu",
+      "language": "اردو",
+      "languageInEnglishName": "Urdu"
+    },
+    {
+      "appId": 9001,
+      "appIconUrl": "file:///android_asset/images/ftm_Colours_prod.png",
+      "title": "Curious Reader Colours Gdl Book Urdu",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=gdl-colours-ur",
+      "language": "اردو",
+      "languageInEnglishName": "Urdu"
+    },
+    {
+      "appId": 9002,
+      "appIconUrl": "file:///android_asset/images/ftm_TheBeeAndTheElephant_prod.png",
+      "title": "Curious Reader The Bee And The Elephant Gdl Book Urdu",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=gdl-bee-and-the-elephant-ur",
+      "language": "اردو",
+      "languageInEnglishName": "Urdu"
+    },
+    {
+      "appId": 9003,
+      "appIconUrl": "file:///android_asset/images/together_book.png",
+      "title": "Curious Reader Together Gdl Book Urdu",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/CRWebPlayerJs/index.html?book=gdl-together-ur",
       "language": "اردو",
       "languageInEnglishName": "Urdu"
     },
