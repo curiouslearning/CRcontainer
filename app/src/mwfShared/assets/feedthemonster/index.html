@@ -87,7 +87,7 @@
 (function () {
   try {
     var lang = new URLSearchParams(window.location.search).get("cr_lang") || "english";
-    var packagedLangs = ["english","french","brazilianportuguese","urdu"];
+    var packagedLangs = ["english","french","brazilianportuguese","urdu","pashto"];
     if (packagedLangs.indexOf(lang) !== -1) {
       var cached = new Map(JSON.parse(localStorage.getItem("is_cached") || "[]"));
       if (cached.get(lang) !== true) {

@@ -1,0 +1,683 @@
+html.assessment-survey-standalone,
+body.assessment-survey-standalone {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: BalooBhai2, Kalam, sans-serif;
+  height: 100%;
+  overflow: hidden;
+}
+
+@font-face {
+  font-family: Kalam;
+  src: url(Kalam-Bold.ttf);
+}
+
+@font-face {
+  font-family: BalooBhai2;
+  src: url(BalooBhai2-VariableFont_wght.ttf);
+}
+
+body.assessment-survey-standalone {
+  background-color: #3d85d1;
+  text-align: center;
+  height: 100%;
+  overflow: hidden;
+}
+
+.landingPageWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  position: relative;
+}
+
+.landingMonster {
+  width: 50%;
+  margin: 0 auto;
+  display: block;
+  height: auto;
+}
+
+.questionViewWrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.as-ui-mode-new .questionViewWrapper {
+  padding-top: 24px;
+}
+
+.as-ui-mode-new .nextQuestionInput {
+  position: relative;
+  margin: 80px auto 20px;
+}
+
+.as-ui-mode-new .feedbackContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 120px;
+  margin: 0;
+  z-index: 10;
+}
+
+.as-ui-mode-new .feedbackContainer.hidden {
+  pointer-events: none;
+}
+
+.chestWrapper {
+  width: 85%;
+  margin: 35px auto;
+  display: flex;
+}
+
+.chestdiv {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.nextQuestionInput {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 15px auto;
+}
+
+#pbutton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-basis: 85%;
+}
+
+.chestdiv img {
+  width: 60%;
+  aspect-ratio: 1008 / 1027;
+  object-fit: contain;
+}
+
+.as-ui-mode-new #chestImage {
+  max-width: 260px;
+  max-height: 260px;
+}
+
+.starWrapper {
+  width: 100%;
+  margin-top: 60px;
+  position: relative;
+  min-height: 60px;
+}
+
+.topstarh {
+  width: 8%;
+  padding-left: 1%;
+  padding-right: 1%;
+  visibility: hidden;
+}
+
+.topstarv {
+  width: 8%;
+  padding-left: 1%;
+  padding-right: 1%;
+  visibility: visible;
+}
+
+.endingPageWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 700px;
+}
+
+.bodyWrapper {
+  box-sizing: border-box;
+  margin: 0 auto;
+  font-family: BalooBhai2, Kalam, sans-serif;
+  text-align: center;
+  width: 100vw;
+  max-width: none;
+  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(180deg,
+      rgba(80, 90, 220, 1) 0%,
+      rgba(247, 247, 161, 1) 100%);
+  background-size: 100% 100%;
+  bottom: 0;
+  position: relative;
+}
+
+@media (min-width: 1081px) and (max-height: 649px) {
+  .bodyWrapper {
+    width: 380px;
+    max-width: 380px;
+  }
+}
+
+@media (min-width: 1081px) and (min-height: 650px) {
+  .bodyWrapper {
+    width: 500px;
+    max-width: 500px;
+  }
+}
+
+.bodyWrapper.as-host-theme-ftm-dim {
+  background: rgba(0, 0, 0, 0.70);
+}
+
+.questionContainer img {
+  max-width: 200px;
+  max-height: 200px;
+}
+
+.questionContainer {
+  width: 100%;
+  margin: 0 auto;
+  padding: 5px;
+  text-align: center;
+}
+
+.feedbackContainer {
+  display: flex;
+  border-radius: 10px;
+  background-color: beige;
+  border: 2px solid #323232;
+  margin: auto;
+  color: rgb(109, 204, 122);
+  width: 70%;
+  height: 80px;
+  font-size: 200%;
+  font-weight: bold;
+  position: relative;
+  z-index: 5;
+  justify-content: center;
+  align-items: center;
+}
+
+.visible {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.5s linear;
+}
+
+.hidden {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    visibility 0s 0.25s,
+    opacity 0.25s linear;
+}
+
+.answerContainer {
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 200px));
+  justify-content: center;
+  justify-items: stretch;
+  grid-column-gap: 4%;
+  grid-row-gap: 16px;
+  width: 85%;
+  height: auto;
+  min-height: 200px;
+  margin-top: -20px;
+}
+
+button {
+  border-radius: 10px;
+  border: 2px solid rgb(150, 150, 150);
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  min-height: 28px;
+  padding: 10px;
+  margin: 10px;
+}
+
+#startButton {
+  background-color: rgb(80, 143, 0);
+  border: none;
+  color: white;
+  padding: 10px 50px;
+  border-radius: 38px;
+}
+
+.answerButton {
+  margin-top: 16px;
+  padding: 16px 10px;
+  color: rgb(60, 67, 162);
+  min-height: 32px;
+
+  cursor: pointer;
+
+  max-height: 200px;
+  max-width: 200px;
+
+  background-color: #ffee6b;
+  border-radius: 4px;
+
+  font-family: BalooBhai2, Kalam, sans-serif;
+
+  transition: box-shadow 1s;
+
+  text-shadow: 0px 2px 6px rgba(80, 90, 220, 0.7);
+
+  font-size: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  overflow: hidden;
+}
+
+.as-ui-mode-new .answerContainer {
+  justify-items: center !important;
+  column-gap: 14px !important;
+}
+
+/* Drag-and-drop UI: ladybug button visuals */
+/* Keep both ladybug assets referenced up front so the pre asset swap rendering stays consistent
+   and does not show a brief decode delay the first time the dragging state appears. */
+.as-ui-mode-new .answerButton {
+  padding: 26px 10px 6px;
+  color: rgb(255, 255, 255);
+  background-color: transparent;
+  background-image: url('../img/ladybug_close.svg'), url('../img/ladybug_open.svg');
+  background-size: 82%, 0 0;
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, center;
+  transition: none;
+  overflow: visible;
+  position: relative;
+  width: 100%;
+  max-width: 105px;
+  justify-self: center;
+  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.as-ui-mode-new .answerButton.dragging {
+  background-size: 0 0, 82%;
+}
+
+/* Sparkle ✦ glitter — continuous twinkle around the ladybug edges while dragging.
+   No global opacity is ever 0, so the effect never blinks out.
+   Each star has a fixed position (text-shadow offset); only its colour cycles
+   between gold/white and transparent, so stars pop in/out at the same spot. */
+@keyframes sparkle-glitter-a {
+  0%, 100% {
+    text-shadow:
+       0px -50px 0 #FFD700,
+      36px -36px 0 transparent,
+      52px   0px 0 #FFFFFF,
+      38px  42px 0 transparent,
+       0px  52px 0 #FFEE58,
+     -40px  38px 0 transparent,
+     -52px  -5px 0 #FFF176,
+     -35px -40px 0 transparent;
+  }
+  25% {
+    text-shadow:
+       0px -50px 0 transparent,
+      36px -36px 0 #FFD700,
+      52px   0px 0 transparent,
+      38px  42px 0 #FFFFFF,
+       0px  52px 0 transparent,
+     -40px  38px 0 #FFEE58,
+     -52px  -5px 0 transparent,
+     -35px -40px 0 #FFF9C4;
+  }
+  50% {
+    text-shadow:
+       0px -50px 0 #FFEE58,
+      36px -36px 0 transparent,
+      52px   0px 0 #FFD700,
+      38px  42px 0 transparent,
+       0px  52px 0 #FFFFFF,
+     -40px  38px 0 transparent,
+     -52px  -5px 0 #FFF176,
+     -35px -40px 0 transparent;
+  }
+  75% {
+    text-shadow:
+       0px -50px 0 transparent,
+      36px -36px 0 #FFF176,
+      52px   0px 0 transparent,
+      38px  42px 0 #FFD700,
+       0px  52px 0 transparent,
+     -40px  38px 0 #FFFFFF,
+     -52px  -5px 0 transparent,
+     -35px -40px 0 #FFEE58;
+  }
+}
+
+@keyframes sparkle-glitter-b {
+  0%, 100% {
+    text-shadow:
+      48px -48px 0 transparent,
+      60px -12px 0 #FFD700,
+      45px  52px 0 transparent,
+     -45px  54px 0 #FFF9C4,
+     -60px   8px 0 transparent,
+     -50px -50px 0 #FFEE58;
+  }
+  33% {
+    text-shadow:
+      48px -48px 0 #FFFFFF,
+      60px -12px 0 transparent,
+      45px  52px 0 #FFD700,
+     -45px  54px 0 transparent,
+     -60px   8px 0 #FFF176,
+     -50px -50px 0 transparent;
+  }
+  66% {
+    text-shadow:
+      48px -48px 0 transparent,
+      60px -12px 0 #FFEE58,
+      45px  52px 0 transparent,
+     -45px  54px 0 #FFFFFF,
+     -60px   8px 0 transparent,
+     -50px -50px 0 #FFD700;
+  }
+}
+
+/* Large ✦ stars — 8 positions on the inner ring around the ladybug */
+.as-ui-mode-new .answerButton.dragging::before {
+  content: '\2726';
+  position: absolute;
+  font-size: 15px;
+  line-height: 1;
+  color: transparent;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: sparkle-glitter-a 1.6s linear infinite;
+}
+
+/* Small ✦ stars — 6 positions on the outer ring, offset so both rings always overlap */
+.as-ui-mode-new .answerButton.dragging::after {
+  content: '\2726';
+  position: absolute;
+  font-size: 9px;
+  line-height: 1;
+  color: transparent;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: sparkle-glitter-b 1.2s linear infinite 0.5s;
+}
+
+.answerButton img {
+  margin: 2% 2%;
+  width: 96%;
+  height: 96%;
+}
+
+/* Prevent browser native image drag (long-press ghost image) on all assets */
+.bodyWrapper img {
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+#nextqButton {
+  background-color: rgba(0, 0, 0, 0);
+  border: none;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+#loadingScreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  background-color: white;
+  flex-direction: column;
+}
+
+@media (min-width: 420px) {
+  #loading-screen {
+    max-width: 420px;
+  }
+}
+
+#loading-gif {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+}
+
+#progressBarContainer {
+  position: absolute;
+  top: 70%;
+  width: 62%;
+  height: 34px;
+  border: 2px solid orange;
+  border-radius: 2px;
+  overflow: hidden;
+  background-color: #343434;
+}
+
+#progressBar {
+  height: 100%;
+  width: 10%;
+  background-color: orange;
+  transition: width 1.5s ease-in-out;
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+#devModeModalToggleButtonContainer {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  color: white;
+  border: none;
+  border-radius: 100%;
+  cursor: pointer;
+  z-index: 100;
+  outline: none;
+  display: none;
+}
+
+#devModeModalToggleButton {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 100%;
+  cursor: pointer;
+  font-size: 10px;
+  width: 50px;
+  height: 50px;
+  outline: none;
+}
+
+#devModeSettingsModal {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(30, 30, 30, 0.7);
+  z-index: 80;
+  color: #ccc;
+}
+
+#devModeSettingsContainer {
+  width: 90%;
+  height: 80%;
+  overflow: hidden;
+  overflow-y: auto;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.devModeLabel {
+  font-size: 14px;
+  color: #9a9a9a;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+select {
+  width: 100%;
+  padding: 6px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  height: 40px;
+  background-color: #303030;
+  color: white;
+  border: 2px solid #ccc;
+}
+
+input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  padding: 6px;
+  margin-bottom: 16px;
+  font-size: 20px;
+  accent-color: #303030;
+  color: white;
+  outline: 2px solid #ccc;
+  align-self: flex-start;
+}
+
+#devModeBucketInfoContainer {
+  position: absolute;
+  bottom: 30px;
+  right: 12px;
+  color: white;
+  border: none;
+  z-index: 100;
+  display: none;
+  font-family: BalooBhai2, Kalam, sans-serif;
+  font-size: 12px;
+  text-align: left;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.correct-label {
+  background-color: rgb(102, 255, 99);
+  color: rgb(33, 33, 33);
+  font-size: 12px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+input[type='range'] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 14px;
+  background: #ddd;
+  border-radius: 5px;
+  outline: none;
+}
+
+/* Track styling for WebKit browsers (Chrome, Safari, Edge) */
+input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 14px;
+  background: rgb(33, 33, 33);
+  border-radius: 5px;
+}
+
+/* Thumb styling for WebKit browsers */
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: rgb(102, 255, 99);
+  border-radius: 50%;
+  cursor: pointer;
+  margin-top: -6px;
+}
+
+/* Track styling for Firefox */
+input[type='range']::-moz-range-track {
+  width: 100%;
+  height: 14px;
+  background: rgb(33, 33, 33);
+  border-radius: 5px;
+}
+
+/* Thumb styling for Firefox */
+input[type='range']::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: rgb(102, 255, 99);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Track styling for IE */
+input[type='range']::-ms-track {
+  width: 100%;
+  height: 14px;
+  background: rgb(33, 33, 33);
+  border-radius: 5px;
+}
+
+/* Thumb styling for IE */
+input[type='range']::-ms-thumb {
+  width: 24px;
+  height: 24px;
+  background: rgb(102, 255, 99);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Additional styles for IE to hide the tick marks */
+input[type='range']::-ms-fill-lower,
+input[type='range']::-ms-fill-upper {
+  background: #ddd;
+  border-radius: 5px;
+}
+
+#devModeAnimationSpeedMultiplierValue {
+  font-size: 16px;
+}

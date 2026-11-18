@@ -28,11 +28,15 @@ import org.curiouslearning.container.utilities.LocalWebContent;
 
 import org.curiouslearning.container.core.context.AppContext;
 import org.curiouslearning.container.core.context.AppContextKey;
+import org.curiouslearning.container.core.subapp.completion.StandaloneAssessmentCompletion;
 import org.curiouslearning.container.core.subapp.emitter.AppEventEmitter;
+import org.curiouslearning.container.core.subapp.handler.AppEventWriteCallback;
 import org.curiouslearning.container.integrations.CrashReporter;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.curiouslearning.container.core.usage.SubAppIdResolver;
 import org.curiouslearning.container.core.usage.SubAppUsageTracker;
 
@@ -70,6 +74,28 @@ public class WebApp extends BaseActivity {
     private boolean isLocalContent;
     /** Container-measured usage timing; null when this sub-app has no resolvable app_id. */
     private SubAppUsageTracker usageTracker;
+
+    // ---- Standalone assessment auto-exit (offline standalone flavors) ---------------------------
+    /** How long the finished assessment stays on screen once everything it sent has settled. */
+    private static final long ASSESSMENT_EXIT_DELAY_MS = 3000;
+    /** How long to wait for Firestore to acknowledge the final writes; offline it never does. */
+    private static final long ASSESSMENT_SERVER_ACK_WAIT_MS = 5000;
+    /** Upper bound on waiting for the writes at all, so a stuck write can never keep the screen open. */
+    private static final long ASSESSMENT_MAX_SETTLE_WAIT_MS = 10000;
+    private static final long ASSESSMENT_SETTLE_POLL_MS = 250;
+    /**
+     * True for an assessment opened directly from the catalog (not the one Feed The Monster embeds).
+     * Such a screen closes itself and returns to the container when the assessment is finished.
+     */
+    private boolean isStandaloneAssessment;
+    private final android.os.Handler assessmentExitHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    /** Bridge writes not yet durable in Firestore's local queue (neither queued nor failed). */
+    private final AtomicInteger assessmentWritesNotQueued = new AtomicInteger();
+    /** Bridge writes the server has neither acknowledged nor failed. */
+    private final AtomicInteger assessmentWritesNotSettled = new AtomicInteger();
+    private long assessmentCompletedAtMs = -1;
+    private boolean assessmentExitScheduled;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -246,6 +272,15 @@ public class WebApp extends BaseActivity {
 
         // Check if this is FTM app (off identityUrl so a local-dev redirect doesn't hide it)
         isFtmApp = identityUrl().contains("feedthemonster");
+        // CLT-175: every build (Play Store and offline standalone flavors) closes a finished
+        // standalone assessment and returns to the container; the FTM-embedded flow is excluded.
+        isStandaloneAssessment = StandaloneAssessmentCompletion.isStandaloneAssessment(
+                SubAppIdResolver.resolve(
+                        getIntent().getStringExtra(SubAppIdResolver.EXTRA_APP_ID), identityUrl()),
+                isFtmApp);
+        if (isStandaloneAssessment) {
+            Log.i("WebApp", "Standalone assessment: will return to the container when it is completed");
+        }
 
         // Create custom WebViewClient for FTM to handle monster state API
         webView.setWebViewClient(new WebViewClient() {
@@ -438,7 +473,20 @@ public class WebApp extends BaseActivity {
         public void logMessage(String payloadJson) {
             // Guards, parsing, validation and dispatch all live in the emitter, so a JS-originated
             // event and a container-originated one travel the identical path.
-            emitter.emitJson(payloadJson);
+            if (isStandaloneAssessment) {
+                // Tracked so the screen only closes once every write the assessment sent is safe.
+                emitter.emitJson(payloadJson, trackAssessmentWrite());
+                if (StandaloneAssessmentCompletion.isCompletionPayload(payloadJson)) {
+                    assessmentExitHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            onStandaloneAssessmentCompleted();
+                        }
+                    });
+                }
+            } else {
+                emitter.emitJson(payloadJson);
+            }
 
             // Independently of whether that payload was accepted, its arrival proves the sub-app was
             // alive just now, which sharpens a recovery estimate at no cost. Deliberately after the
@@ -700,9 +748,111 @@ public class WebApp extends BaseActivity {
         }
     }
 
+    /**
+     * A write callback that keeps the two pending-write counters honest for one bridge payload.
+     * Firestore may call back on any thread; the counters are atomic and the exit check runs on
+     * the main thread.
+     */
+    private AppEventWriteCallback trackAssessmentWrite() {
+        assessmentWritesNotQueued.incrementAndGet();
+        assessmentWritesNotSettled.incrementAndGet();
+        final AtomicBoolean queued = new AtomicBoolean(false);
+        final AtomicBoolean settled = new AtomicBoolean(false);
+        return new AppEventWriteCallback() {
+            @Override
+            public void onQueued() {
+                if (queued.compareAndSet(false, true)) {
+                    assessmentWritesNotQueued.decrementAndGet();
+                }
+            }
+
+            @Override
+            public void onWritten(String docId) {
+                settle();
+            }
+
+            @Override
+            public void onFailed(Exception e) {
+                settle();
+            }
+
+            private void settle() {
+                // A rejected payload is never queued; it still must not hold the screen open.
+                if (queued.compareAndSet(false, true)) {
+                    assessmentWritesNotQueued.decrementAndGet();
+                }
+                if (settled.compareAndSet(false, true)) {
+                    assessmentWritesNotSettled.decrementAndGet();
+                }
+            }
+        };
+    }
+
+    /**
+     * The standalone assessment has sent its final payload. Its own analytics (the {@code completed}
+     * Firebase/Statsig event) were tracked before that, so what is left is the container's side:
+     * wait until the summary and session writes are durable in Firestore's local queue (and,
+     * online, acknowledged by the server, within {@link #ASSESSMENT_SERVER_ACK_WAIT_MS}), then leave
+     * the end screen up for {@link #ASSESSMENT_EXIT_DELAY_MS} and return to the container.
+     */
+    private void onStandaloneAssessmentCompleted() {
+        if (assessmentCompletedAtMs >= 0 || isFinishing()) {
+            return;
+        }
+        assessmentCompletedAtMs = android.os.SystemClock.elapsedRealtime();
+        Log.i("WebApp", "Standalone assessment completed; waiting for its writes to settle");
+        checkAssessmentWritesSettled();
+    }
+
+    private void checkAssessmentWritesSettled() {
+        if (assessmentExitScheduled || isFinishing()) {
+            return;
+        }
+        long waited = android.os.SystemClock.elapsedRealtime() - assessmentCompletedAtMs;
+        int notQueued = assessmentWritesNotQueued.get();
+        int notSettled = assessmentWritesNotSettled.get();
+        boolean allAcknowledged = notQueued <= 0 && notSettled <= 0;
+        boolean durableAndAckWaitOver = notQueued <= 0 && waited >= ASSESSMENT_SERVER_ACK_WAIT_MS;
+        boolean waitedLongEnough = waited >= ASSESSMENT_MAX_SETTLE_WAIT_MS;
+        if (!allAcknowledged && !durableAndAckWaitOver && !waitedLongEnough) {
+            assessmentExitHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    checkAssessmentWritesSettled();
+                }
+            }, ASSESSMENT_SETTLE_POLL_MS);
+            return;
+        }
+        assessmentExitScheduled = true;
+        Log.i("WebApp", "Assessment writes settled after " + waited + " ms (not queued=" + notQueued
+                + ", unacknowledged=" + notSettled + "); returning to the container in "
+                + ASSESSMENT_EXIT_DELAY_MS + " ms");
+        assessmentExitHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                exitFinishedAssessment();
+            }
+        }, ASSESSMENT_EXIT_DELAY_MS);
+    }
+
+    private void exitFinishedAssessment() {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        Log.i("WebApp", "Closing completed standalone assessment");
+        logAppExitEvent();
+        if (webView != null) {
+            // Unloading the page fires pagehide, the point at which the web analytics SDKs
+            // (Firebase, Statsig) flush anything still batched, before the WebView goes away.
+            webView.loadUrl("about:blank");
+        }
+        finish();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        assessmentExitHandler.removeCallbacksAndMessages(null);
         // Stop periodic state checks
         if (monsterStateCheckHandler != null && monsterStateCheckRunnable != null) {
             monsterStateCheckHandler.removeCallbacks(monsterStateCheckRunnable);

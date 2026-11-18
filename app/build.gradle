@@ -76,7 +76,7 @@ android {
     //               existed; every BuildConfig flag below is inert here.
     //  mwfCongo   - MWF PDE standalone APK for the Republic of Congo (French + English).
     //  mwfAngola  - MWF PDE standalone APK for Angola (Brazilian Portuguese + English).
-    //  soorty     - Soorty partnership standalone APK for Pakistan (Urdu + English).
+    //  soorty     - Soorty partnership standalone APK for Pakistan (Urdu + Pashto + English).
     //
     // The two mwf* flavors are fully offline from first launch: the catalog is the bundled
     // web_apps_manifest.json in the flavor's assets, icons and Feed The Monster are packaged in
@@ -105,7 +105,7 @@ android {
             buildConfigField "boolean", "OFFLINE_STANDALONE", "true"
             buildConfigField "String", "DEFAULT_LANGUAGE", "\"\""
         }
-        // Opens straight into Urdu; English stays available from the settings (language) button.
+        // Opens straight into Urdu; Pashto and English stay available from the settings (language) button.
         soorty {
             dimension "distribution"
             buildConfigField "boolean", "OFFLINE_STANDALONE", "true"

@@ -1,5 +1,5 @@
 {
-  "version": "soorty-2",
+  "version": "soorty-3",
   "web_apps": [
     {
       "appId": 272,
@@ -35,11 +35,74 @@
       "languageInEnglishName": "Urdu"
     },
     {
+      "appId": 9101,
+      "app_id": "assessment",
+      "appIconUrl": "file:///android_asset/images/assessment_letter_sounds.png",
+      "title": "Assessment Letter Sounds Urdu",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/assessment/index.html?data=urdu-lettersounds",
+      "language": "اردو",
+      "languageInEnglishName": "Urdu"
+    },
+    {
+      "appId": 9102,
+      "app_id": "assessment",
+      "appIconUrl": "file:///android_asset/images/assessment_sight_words.png",
+      "title": "Assessment Sight Words Urdu",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/assessment/index.html?data=urdu-sightwords",
+      "language": "اردو",
+      "languageInEnglishName": "Urdu"
+    },
+    {
+      "appId": 41,
+      "app_id": "feed-the-monster",
+      "appIconUrl": "file:///android_asset/images/ftm_pashto.png",
+      "title": "Feed The Monster Pashto",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=pashto",
+      "language": "پښتو",
+      "languageInEnglishName": "Pashto"
+    },
+    {
+      "appId": 9103,
+      "app_id": "assessment",
+      "appIconUrl": "file:///android_asset/images/assessment_letter_sounds.png",
+      "title": "Assessment Letter Sounds Pashto",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/assessment/index.html?data=pashto-lettersounds",
+      "language": "پښتو",
+      "languageInEnglishName": "Pashto"
+    },
+    {
+      "appId": 9104,
+      "app_id": "assessment",
+      "appIconUrl": "file:///android_asset/images/assessment_sight_words.png",
+      "title": "Assessment Sight Words Pashto",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/assessment/index.html?data=pashto-sightwords",
+      "language": "پښتو",
+      "languageInEnglishName": "Pashto"
+    },
+    {
       "appId": 0,
       "app_id": "feed-the-monster",
       "appIconUrl": "file:///android_asset/images/ftm_english.png",
       "title": "Feed The Monster US English",
       "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/feedthemonster/index.html?cr_lang=english",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 9105,
+      "app_id": "assessment",
+      "appIconUrl": "file:///android_asset/images/assessment_letter_sounds.png",
+      "title": "Assessment Letter Sounds English",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/assessment/index.html?data=english-lettersounds",
+      "language": "English - US",
+      "languageInEnglishName": "English"
+    },
+    {
+      "appId": 9106,
+      "app_id": "assessment",
+      "appIconUrl": "file:///android_asset/images/assessment_sight_words.png",
+      "title": "Assessment Sight Words English",
+      "appUrl": "https://soorty_urdu_english_cr-ftm-standalone.androidplatform.net/assets/assessment/index.html?data=english-sightwords",
       "language": "English - US",
       "languageInEnglishName": "English"
     },

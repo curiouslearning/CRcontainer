@@ -1,0 +1,26 @@
+{
+  "packagedAt": "2026-11-17T08:36:25.981Z",
+  "sourceBuildDir": "(temporary build directory)",
+  "source": "curiouslearning/assessment-survey-js main cfc01833054223756f4f22d34742b8c54fefe98d (= npm 1.3.0, the version FTM embeds) + tools/patches/assessment-survey-js-standalone-sw-attribute.patch; built with NODE_ENV=production webpack",
+  "dataKeys": [
+    "english-lettersounds",
+    "english-sightwords",
+    "urdu-lettersounds",
+    "urdu-sightwords",
+    "pashto-lettersounds",
+    "pashto-sightwords"
+  ],
+  "sharedContent": "feedthemonster/assessment-survey (used by the FTM-embedded player and by this page)",
+  "serviceWorker": "not shipped; index.html sets data-enable-service-worker=\"false\"",
+  "indexHtmlChanges": [
+    "asset base -> /assets/feedthemonster/assessment-survey",
+    "data-enable-service-worker=false",
+    "gsap CDN script removed",
+    "CRFeatureFlags.gate:mr-75=true seed"
+  ],
+  "sizes": {
+    "standalonePage": "0.9 MB",
+    "sharedContent": "36.6 MB"
+  },
+  "missingAudio": []
+}

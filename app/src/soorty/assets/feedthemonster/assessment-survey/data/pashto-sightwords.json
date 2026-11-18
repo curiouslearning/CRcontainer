@@ -1,0 +1,479 @@
+{
+  "quizName": "Pashto sight words",
+  "appType": "assessment",
+  "assessmentType": "sight-words",
+  "feedbackText": "په زړه پورې کار",
+  "contentVersion": "v0.2",
+  "buckets": [
+    {
+      "bucketID": 1,
+      "bucketName": "Pashtosw-b-1",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "ما",
+          "itemText": "ما"
+        },
+        {
+          "itemName": "دا",
+          "itemText": "دا"
+        },
+        {
+          "itemName": "هو",
+          "itemText": "هو"
+        },
+        {
+          "itemName": "نه",
+          "itemText": "نه"
+        },
+        {
+          "itemName": "را",
+          "itemText": "را"
+        },
+        {
+          "itemName": "ور",
+          "itemText": "ور"
+        },
+        {
+          "itemName": "کور",
+          "itemText": "کور"
+        },
+        {
+          "itemName": "مور",
+          "itemText": "مور"
+        },
+        {
+          "itemName": "لار",
+          "itemText": "لار"
+        },
+        {
+          "itemName": "مار",
+          "itemText": "مار"
+        }
+      ]
+    },
+    {
+      "bucketID": 2,
+      "bucketName": "Pashtosw-b-2",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "دود",
+          "itemText": "دود"
+        },
+        {
+          "itemName": "ریڼ",
+          "itemText": "ریڼ"
+        },
+        {
+          "itemName": "ملا",
+          "itemText": "ملا"
+        },
+        {
+          "itemName": "کلی",
+          "itemText": "کلی"
+        },
+        {
+          "itemName": "هلک",
+          "itemText": "هلک"
+        },
+        {
+          "itemName": "ونه",
+          "itemText": "ونه"
+        },
+        {
+          "itemName": "لاس",
+          "itemText": "لاس"
+        },
+        {
+          "itemName": "دره",
+          "itemText": "دره"
+        },
+        {
+          "itemName": "کال",
+          "itemText": "کال"
+        },
+        {
+          "itemName": "مال",
+          "itemText": "مال"
+        }
+      ]
+    },
+    {
+      "bucketID": 3,
+      "bucketName": "Pashtosw-b-3",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "اور",
+          "itemText": "اور"
+        },
+        {
+          "itemName": "لور",
+          "itemText": "لور"
+        },
+        {
+          "itemName": "نوم",
+          "itemText": "نوم"
+        },
+        {
+          "itemName": "ریده",
+          "itemText": "ریده"
+        },
+        {
+          "itemName": "ملک",
+          "itemText": "ملک"
+        },
+        {
+          "itemName": "وران",
+          "itemText": "وران"
+        },
+        {
+          "itemName": "باد",
+          "itemText": "باد"
+        },
+        {
+          "itemName": "پلار",
+          "itemText": "پلار"
+        },
+        {
+          "itemName": "تور",
+          "itemText": "تور"
+        },
+        {
+          "itemName": "سپی",
+          "itemText": "سپی"
+        }
+      ]
+    },
+    {
+      "bucketID": 4,
+      "bucketName": "Pashtosw-b-4",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "جګ",
+          "itemText": "جګ"
+        },
+        {
+          "itemName": "چا",
+          "itemText": "چا"
+        },
+        {
+          "itemName": "سر",
+          "itemText": "سر"
+        },
+        {
+          "itemName": "شپه",
+          "itemText": "شپه"
+        },
+        {
+          "itemName": "زوی",
+          "itemText": "زوی"
+        },
+        {
+          "itemName": "ښځه",
+          "itemText": "ښځه"
+        },
+        {
+          "itemName": "بچی",
+          "itemText": "بچی"
+        },
+        {
+          "itemName": "کتاب",
+          "itemText": "کتاب"
+        },
+        {
+          "itemName": "ستا",
+          "itemText": "ستا"
+        },
+        {
+          "itemName": "ساتی",
+          "itemText": "ساتی"
+        }
+      ]
+    },
+    {
+      "bucketID": 5,
+      "bucketName": "Pashtosw-b-5",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "بسته",
+          "itemText": "بسته"
+        },
+        {
+          "itemName": "ستره",
+          "itemText": "ستره"
+        },
+        {
+          "itemName": "پښتو",
+          "itemText": "پښتو"
+        },
+        {
+          "itemName": "جنګ",
+          "itemText": "جنګ"
+        },
+        {
+          "itemName": "شنه",
+          "itemText": "شنه"
+        },
+        {
+          "itemName": "زړه",
+          "itemText": "زړه"
+        },
+        {
+          "itemName": "باغ",
+          "itemText": "باغ"
+        },
+        {
+          "itemName": "سکول",
+          "itemText": "سکول"
+        },
+        {
+          "itemName": "پوهنتون",
+          "itemText": "پوهنتون"
+        },
+        {
+          "itemName": "سبا",
+          "itemText": "سبا"
+        }
+      ]
+    },
+    {
+      "bucketID": 6,
+      "bucketName": "Pashtosw-b-6",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "ناست",
+          "itemText": "ناست"
+        },
+        {
+          "itemName": "ډوډۍ",
+          "itemText": "ډوډۍ"
+        },
+        {
+          "itemName": "ټال",
+          "itemText": "ټال"
+        },
+        {
+          "itemName": "ډک",
+          "itemText": "ډک"
+        },
+        {
+          "itemName": "ړوند",
+          "itemText": "ړوند"
+        },
+        {
+          "itemName": "ڼوستل",
+          "itemText": "ڼوستل"
+        },
+        {
+          "itemName": "ښار",
+          "itemText": "ښار"
+        },
+        {
+          "itemName": "ږغ",
+          "itemText": "ږغ"
+        },
+        {
+          "itemName": "ټکی",
+          "itemText": "ټکی"
+        },
+        {
+          "itemName": "اوډه",
+          "itemText": "اوډه"
+        }
+      ]
+    },
+    {
+      "bucketID": 7,
+      "bucketName": "Pashtosw-b-7",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "مڼه",
+          "itemText": "مڼه"
+        },
+        {
+          "itemName": "لوړ",
+          "itemText": "لوړ"
+        },
+        {
+          "itemName": "ورور",
+          "itemText": "ورور"
+        },
+        {
+          "itemName": "ښوونکی",
+          "itemText": "ښوونکی"
+        },
+        {
+          "itemName": "حال",
+          "itemText": "حال"
+        },
+        {
+          "itemName": "خوړل",
+          "itemText": "خوړل"
+        },
+        {
+          "itemName": "قلم",
+          "itemText": "قلم"
+        },
+        {
+          "itemName": "خوشحاله",
+          "itemText": "خوشحاله"
+        },
+        {
+          "itemName": "ټولګی",
+          "itemText": "ټولګی"
+        },
+        {
+          "itemName": "پوښتنه",
+          "itemText": "پوښتنه"
+        }
+      ]
+    },
+    {
+      "bucketID": 8,
+      "bucketName": "Pashtosw-b-8",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "حکومت",
+          "itemText": "حکومت"
+        },
+        {
+          "itemName": "خلک",
+          "itemText": "خلک"
+        },
+        {
+          "itemName": "اختر",
+          "itemText": "اختر"
+        },
+        {
+          "itemName": "مخ",
+          "itemText": "مخ"
+        },
+        {
+          "itemName": "خوب",
+          "itemText": "خوب"
+        },
+        {
+          "itemName": "قصه",
+          "itemText": "قصه"
+        },
+        {
+          "itemName": "ثابت",
+          "itemText": "ثابت"
+        },
+        {
+          "itemName": "صبر",
+          "itemText": "صبر"
+        },
+        {
+          "itemName": "طالب",
+          "itemText": "طالب"
+        },
+        {
+          "itemName": "عمر",
+          "itemText": "عمر"
+        }
+      ]
+    },
+    {
+      "bucketID": 9,
+      "bucketName": "Pashtosw-b-9",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "غر",
+          "itemText": "غر"
+        },
+        {
+          "itemName": "ذهن",
+          "itemText": "ذهن"
+        },
+        {
+          "itemName": "ضرور",
+          "itemText": "ضرور"
+        },
+        {
+          "itemName": "ظلم",
+          "itemText": "ظلم"
+        },
+        {
+          "itemName": "عقل",
+          "itemText": "عقل"
+        },
+        {
+          "itemName": "غوښه",
+          "itemText": "غوښه"
+        },
+        {
+          "itemName": "علم",
+          "itemText": "علم"
+        },
+        {
+          "itemName": "صنف",
+          "itemText": "صنف"
+        },
+        {
+          "itemName": "افغانستان",
+          "itemText": "افغانستان"
+        },
+        {
+          "itemName": "مکتب",
+          "itemText": "مکتب"
+        }
+      ]
+    },
+    {
+      "bucketID": 10,
+      "bucketName": "Pashtosw-b-10",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "معلوم",
+          "itemText": "معلوم"
+        },
+        {
+          "itemName": "استاذ",
+          "itemText": "استاذ"
+        },
+        {
+          "itemName": "مضمون",
+          "itemText": "مضمون"
+        },
+        {
+          "itemName": "اقتصاد",
+          "itemText": "اقتصاد"
+        },
+        {
+          "itemName": "ضرورت",
+          "itemText": "ضرورت"
+        },
+        {
+          "itemName": "غوښتل",
+          "itemText": "غوښتل"
+        },
+        {
+          "itemName": "اختلاف",
+          "itemText": "اختلاف"
+        },
+        {
+          "itemName": "مسؤلیت",
+          "itemText": "مسؤلیت"
+        },
+        {
+          "itemName": "پوهنځی",
+          "itemText": "پوهنځی"
+        },
+        {
+          "itemName": "تعلیم",
+          "itemText": "تعلیم"
+        }
+      ]
+    }
+  ]
+}
