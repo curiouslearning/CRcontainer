@@ -82,6 +82,15 @@ results reach the container offline).
 * Not verified here: on a device/emulator (no Android SDK in the session), and the real Statsig
   trigger in FTM.
 
+## New (drag-and-drop) assessment UI offline
+
+assessment-survey-js chooses its UI from the Statsig gate `drag-drop-assessment-ui` (on in
+production). Offline Statsig is unreachable, the gate evaluates false and the player falls back to the
+old (legacy) UI. Both packaged pages (FTM's `index.html` and the standalone assessment `index.html`)
+therefore seed `CRFeatureFlags` with `gate:drag-drop-assessment-ui` = true next to `gate:mr-75`
+(`SEEDED_GATES` in `tools/package-ftm.js` and `tools/package-assessment.js`), so the embedded and the
+standalone assessments show the new UI on a device that has never been online.
+
 ## Known differences from production
 
 * **When FTM opens an embedded assessment** is decided by the Statsig dynamic config

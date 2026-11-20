@@ -25,3 +25,9 @@ __pycache__/
 *.py[cod]
 
 .ignore/
+
+# Gradle release outputs (signed APK/AAB, baseline profiles, output-metadata.json).
+# Release APKs are distributed outside git; the soorty APK is ~250 MB, over GitHub's 100 MB limit.
+/app/release/
+/app/*/release/
+!/app/src/release/

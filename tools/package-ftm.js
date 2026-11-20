@@ -38,6 +38,8 @@
  *          when that Statsig gate is true. Offline, Statsig cannot be reached and the gate evaluates
  *          false, so without this seed a fully offline device would never report progress. The seed
  *          is written once, never expires, and is skipped when a value is already present.
+ *          The drag-drop-assessment-ui gate is seeded the same way: it selects the new assessment UI
+ *          (on in production) for the player embedded in FTM; offline it would fall back to the old UI.
  *     Nothing in the FTM source is modified; this is a packaging-time change to one HTML file,
  *     recorded in PACKAGE_INFO.json next to it.
  *  5. Writes PACKAGE_INFO.json (source commit, build time, languages, sizes) for traceability.
@@ -51,6 +53,10 @@ const { execSync } = require('child_process');
 const REPO_ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(REPO_ROOT, 'app', 'src', 'mwfShared', 'assets', 'feedthemonster');
 const ANDROID_BRIDGE_GATE = 'mr-75';
+// assessment-survey-js picks its UI from the Statsig gate drag-drop-assessment-ui (on in production).
+// Offline the gate evaluates false and the old (legacy) assessment UI would show, so it is seeded too.
+const DRAG_DROP_ASSESSMENT_UI_GATE = 'drag-drop-assessment-ui';
+const SEEDED_GATES = [ANDROID_BRIDGE_GATE, DRAG_DROP_ASSESSMENT_UI_GATE];
 
 function parseArgs(argv) {
     const args = { langs: ['english', 'french', 'brazilianportuguese'], includeAssessment: false };
@@ -133,12 +139,16 @@ function seedScript(langs) {
       }
     }
     var flagsKey = "CRFeatureFlags";
-    var gateKey = "gate:${ANDROID_BRIDGE_GATE}";
+    var gates = ${JSON.stringify(SEEDED_GATES)};
     var flags = JSON.parse(localStorage.getItem(flagsKey) || "{}");
-    if (!flags[gateKey]) {
-      flags[gateKey] = { __value: true };
-      localStorage.setItem(flagsKey, JSON.stringify(flags));
+    var changed = false;
+    for (var i = 0; i < gates.length; i++) {
+      if (!flags["gate:" + gates[i]]) {
+        flags["gate:" + gates[i]] = { __value: true };
+        changed = true;
+      }
     }
+    if (changed) localStorage.setItem(flagsKey, JSON.stringify(flags));
   } catch (e) {
     console.warn("offline seed failed", e);
   }
@@ -208,7 +218,7 @@ function main() {
         languages: args.langs,
         serviceWorkerRemoved: true,
         assessmentSurveyIncluded: args.includeAssessment,
-        indexHtmlSeeds: ['is_cached[<cr_lang>]=true', 'CRFeatureFlags.gate:' + ANDROID_BRIDGE_GATE + '=true'],
+        indexHtmlSeeds: ['is_cached[<cr_lang>]=true', ...SEEDED_GATES.map(g => 'CRFeatureFlags.gate:' + g + '=true')],
         sizes: {
             total: mb(dirSize(outDir)),
             assets: mb(dirSize(path.join(outDir, 'assets'))),

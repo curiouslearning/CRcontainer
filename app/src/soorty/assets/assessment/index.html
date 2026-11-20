@@ -43,12 +43,16 @@
 (function () {
   try {
     var flagsKey = "CRFeatureFlags";
-    var gateKey = "gate:mr-75";
+    var gates = ["mr-75","drag-drop-assessment-ui"];
     var flags = JSON.parse(localStorage.getItem(flagsKey) || "{}");
-    if (!flags[gateKey]) {
-      flags[gateKey] = { __value: true };
-      localStorage.setItem(flagsKey, JSON.stringify(flags));
+    var changed = false;
+    for (var i = 0; i < gates.length; i++) {
+      if (!flags["gate:" + gates[i]]) {
+        flags["gate:" + gates[i]] = { __value: true };
+        changed = true;
+      }
     }
+    if (changed) localStorage.setItem(flagsKey, JSON.stringify(flags));
   } catch (e) {
     console.warn("offline seed failed", e);
   }

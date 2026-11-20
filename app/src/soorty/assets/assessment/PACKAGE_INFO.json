@@ -16,7 +16,8 @@
     "asset base -> /assets/feedthemonster/assessment-survey",
     "data-enable-service-worker=false",
     "gsap CDN script removed",
-    "CRFeatureFlags.gate:mr-75=true seed"
+    "CRFeatureFlags.gate:mr-75=true seed",
+    "CRFeatureFlags.gate:drag-drop-assessment-ui=true seed"
   ],
   "sizes": {
     "standalonePage": "0.9 MB",

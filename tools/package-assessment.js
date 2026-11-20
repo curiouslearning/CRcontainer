@@ -46,7 +46,10 @@
  *      In standalone mode assessment-survey-js only sends summary_data / user_sessions_data to the
  *      container when that Statsig gate is on; offline Statsig is unreachable and the gate would
  *      evaluate false, losing the result and the completion signal the container closes the screen
- *      on. Online, a value from Statsig replaces the seed.
+ *      on. Note that @curiouslearning/features reads its cache before Statsig and never caches
+ *      false, so a seeded true stays in effect online too.
+ *      The drag-drop-assessment-ui gate is seeded the same way, so the page shows the new
+ *      assessment UI (as production does) instead of falling back to the legacy UI offline.
  */
 'use strict';
 
@@ -56,6 +59,10 @@ const { execSync } = require('child_process');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const ANDROID_BRIDGE_GATE = 'mr-75';
+// assessment-survey-js picks its UI from the Statsig gate drag-drop-assessment-ui (on in production).
+// Offline the gate evaluates false and the old (legacy) assessment UI would show, so it is seeded too.
+const DRAG_DROP_ASSESSMENT_UI_GATE = 'drag-drop-assessment-ui';
+const SEEDED_GATES = [ANDROID_BRIDGE_GATE, DRAG_DROP_ASSESSMENT_UI_GATE];
 const SHARED_URL_BASE = '/assets/feedthemonster/assessment-survey';
 const SHARED_AUDIO = ['Correct.wav', 'sound-effects'];
 
@@ -122,12 +129,16 @@ function seedScript() {
 (function () {
   try {
     var flagsKey = "CRFeatureFlags";
-    var gateKey = "gate:${ANDROID_BRIDGE_GATE}";
+    var gates = ${JSON.stringify(SEEDED_GATES)};
     var flags = JSON.parse(localStorage.getItem(flagsKey) || "{}");
-    if (!flags[gateKey]) {
-      flags[gateKey] = { __value: true };
-      localStorage.setItem(flagsKey, JSON.stringify(flags));
+    var changed = false;
+    for (var i = 0; i < gates.length; i++) {
+      if (!flags["gate:" + gates[i]]) {
+        flags["gate:" + gates[i]] = { __value: true };
+        changed = true;
+      }
     }
+    if (changed) localStorage.setItem(flagsKey, JSON.stringify(flags));
   } catch (e) {
     console.warn("offline seed failed", e);
   }
@@ -227,7 +238,7 @@ function main() {
         dataKeys: args.keys,
         sharedContent: 'feedthemonster/assessment-survey (used by the FTM-embedded player and by this page)',
         serviceWorker: 'not shipped; index.html sets data-enable-service-worker="false"',
-        indexHtmlChanges: ['asset base -> ' + SHARED_URL_BASE, 'data-enable-service-worker=false', 'gsap CDN script removed', 'CRFeatureFlags.gate:' + ANDROID_BRIDGE_GATE + '=true seed'],
+        indexHtmlChanges: ['asset base -> ' + SHARED_URL_BASE, 'data-enable-service-worker=false', 'gsap CDN script removed', ...SEEDED_GATES.map(g => 'CRFeatureFlags.gate:' + g + '=true seed')],
         sizes: { standalonePage: mb(dirSize(standaloneOut)), sharedContent: mb(dirSize(sharedOut)) },
         missingAudio: missing,
     };
