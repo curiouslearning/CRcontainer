@@ -15,7 +15,7 @@ config.properties
 .externalNativeBuild
 .cxx
 local.properties
-
+CRapp
 
 # Sentry Config File
 sentry.properties

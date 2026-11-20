@@ -463,10 +463,22 @@ public class WebApp extends BaseActivity {
 
         @JavascriptInterface
         public void closeWebView() {
-            goBack.setVisibility(View.GONE);
-            logAppExitEvent();
-            audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
-            finish();
+            // @JavascriptInterface methods run on WebView's JavaBridge thread, not the UI thread.
+            // Touching goBack from here throws CalledFromWrongThreadException (surfaced to JS as
+            // "Java exception was raised during method invocation") before finish() is reached,
+            // which left the learner on the finished sub-app's blank end screen (CLT-175).
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+                    goBack.setVisibility(View.GONE);
+                    logAppExitEvent();
+                    audioPlayer.play(WebApp.this, R.raw.sound_button_pressed);
+                    finish();
+                }
+            });
         }
 
         @JavascriptInterface
