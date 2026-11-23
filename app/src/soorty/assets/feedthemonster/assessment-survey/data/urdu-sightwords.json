@@ -1,0 +1,479 @@
+{
+  "quizName": "urdu sight words",
+  "appType": "assessment",
+  "assessmentType": "sight-words",
+  "feedbackText": "!شاندار",
+  "contentVersion": "v0.1",
+  "buckets": [
+    {
+      "bucketID": 1,
+      "bucketName": "urdusw-b-1",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "آم",
+          "itemText": "آم"
+        },
+        {
+          "itemName": "اب",
+          "itemText": "اب"
+        },
+        {
+          "itemName": "وہ",
+          "itemText": "وہ"
+        },
+        {
+          "itemName": "یہ",
+          "itemText": "یہ"
+        },
+        {
+          "itemName": "دو",
+          "itemText": "دو"
+        },
+        {
+          "itemName": "آج",
+          "itemText": "آج"
+        },
+        {
+          "itemName": "رات",
+          "itemText": "رات"
+        },
+        {
+          "itemName": "دن",
+          "itemText": "دن"
+        },
+        {
+          "itemName": "من",
+          "itemText": "من"
+        },
+        {
+          "itemName": "نام",
+          "itemText": "نام"
+        }
+      ]
+    },
+    {
+      "bucketID": 2,
+      "bucketName": "urdusw-b-2",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "ماں",
+          "itemText": "ماں"
+        },
+        {
+          "itemName": "باپ",
+          "itemText": "باپ"
+        },
+        {
+          "itemName": "گھر",
+          "itemText": "گھر"
+        },
+        {
+          "itemName": "بھائی",
+          "itemText": "بھائی"
+        },
+        {
+          "itemName": "پانی",
+          "itemText": "پانی"
+        },
+        {
+          "itemName": "کام",
+          "itemText": "کام"
+        },
+        {
+          "itemName": "ہاتھ",
+          "itemText": "ہاتھ"
+        },
+        {
+          "itemName": "کان",
+          "itemText": "کان"
+        },
+        {
+          "itemName": "ناک",
+          "itemText": "ناک"
+        },
+        {
+          "itemName": "آنکھ",
+          "itemText": "آنکھ"
+        }
+      ]
+    },
+    {
+      "bucketID": 3,
+      "bucketName": "urdusw-b-3",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "دانت",
+          "itemText": "دانت"
+        },
+        {
+          "itemName": "پاؤں",
+          "itemText": "پاؤں"
+        },
+        {
+          "itemName": "بال",
+          "itemText": "بال"
+        },
+        {
+          "itemName": "منہ",
+          "itemText": "منہ"
+        },
+        {
+          "itemName": "سر",
+          "itemText": "سر"
+        },
+        {
+          "itemName": "بچہ",
+          "itemText": "بچہ"
+        },
+        {
+          "itemName": "کتاب",
+          "itemText": "کتاب"
+        },
+        {
+          "itemName": "سکول",
+          "itemText": "سکول"
+        },
+        {
+          "itemName": "دودھ",
+          "itemText": "دودھ"
+        },
+        {
+          "itemName": "روٹی",
+          "itemText": "روٹی"
+        }
+      ]
+    },
+    {
+      "bucketID": 4,
+      "bucketName": "urdusw-b-4",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "پھل",
+          "itemText": "پھل"
+        },
+        {
+          "itemName": "گائے",
+          "itemText": "گائے"
+        },
+        {
+          "itemName": "بکری",
+          "itemText": "بکری"
+        },
+        {
+          "itemName": "مرغی",
+          "itemText": "مرغی"
+        },
+        {
+          "itemName": "مچھلی",
+          "itemText": "مچھلی"
+        },
+        {
+          "itemName": "درخت",
+          "itemText": "درخت"
+        },
+        {
+          "itemName": "پتّا",
+          "itemText": "پتّا"
+        },
+        {
+          "itemName": "پھول",
+          "itemText": "پھول"
+        },
+        {
+          "itemName": "سورج",
+          "itemText": "سورج"
+        },
+        {
+          "itemName": "چاند",
+          "itemText": "چاند"
+        }
+      ]
+    },
+    {
+      "bucketID": 5,
+      "bucketName": "urdusw-b-5",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "صبح",
+          "itemText": "صبح"
+        },
+        {
+          "itemName": "حکم",
+          "itemText": "حکم"
+        },
+        {
+          "itemName": "ثمر",
+          "itemText": "ثمر"
+        },
+        {
+          "itemName": "خط",
+          "itemText": "خط"
+        },
+        {
+          "itemName": "ضرور",
+          "itemText": "ضرور"
+        },
+        {
+          "itemName": "عقل",
+          "itemText": "عقل"
+        },
+        {
+          "itemName": "غریب",
+          "itemText": "غریب"
+        },
+        {
+          "itemName": "ذہن",
+          "itemText": "ذہن"
+        },
+        {
+          "itemName": "فصل",
+          "itemText": "فصل"
+        },
+        {
+          "itemName": "قلم",
+          "itemText": "قلم"
+        }
+      ]
+    },
+    {
+      "bucketID": 6,
+      "bucketName": "urdusw-b-6",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "زمین",
+          "itemText": "زمین"
+        },
+        {
+          "itemName": "آسمان",
+          "itemText": "آسمان"
+        },
+        {
+          "itemName": "سمندر",
+          "itemText": "سمندر"
+        },
+        {
+          "itemName": "پہاڑ",
+          "itemText": "پہاڑ"
+        },
+        {
+          "itemName": "جنگل",
+          "itemText": "جنگل"
+        },
+        {
+          "itemName": "استاد",
+          "itemText": "استاد"
+        },
+        {
+          "itemName": "طالب",
+          "itemText": "طالب"
+        },
+        {
+          "itemName": "عورت",
+          "itemText": "عورت"
+        },
+        {
+          "itemName": "مسجد",
+          "itemText": "مسجد"
+        },
+        {
+          "itemName": "بازار",
+          "itemText": "بازار"
+        }
+      ]
+    },
+    {
+      "bucketID": 7,
+      "bucketName": "urdusw-b-7",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "کمرہ",
+          "itemText": "کمرہ"
+        },
+        {
+          "itemName": "دروازہ",
+          "itemText": "دروازہ"
+        },
+        {
+          "itemName": "کھڑکی",
+          "itemText": "کھڑکی"
+        },
+        {
+          "itemName": "دیوار",
+          "itemText": "دیوار"
+        },
+        {
+          "itemName": "چھت",
+          "itemText": "چھت"
+        },
+        {
+          "itemName": "میز",
+          "itemText": "میز"
+        },
+        {
+          "itemName": "کرسی",
+          "itemText": "کرسی"
+        },
+        {
+          "itemName": "بستر",
+          "itemText": "بستر"
+        },
+        {
+          "itemName": "برتن",
+          "itemText": "برتن"
+        },
+        {
+          "itemName": "باغ",
+          "itemText": "باغ"
+        }
+      ]
+    },
+    {
+      "bucketID": 8,
+      "bucketName": "urdusw-b-8",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "تتلی",
+          "itemText": "تتلی"
+        },
+        {
+          "itemName": "چڑیا",
+          "itemText": "چڑیا"
+        },
+        {
+          "itemName": "بھیڑیا",
+          "itemText": "بھیڑیا"
+        },
+        {
+          "itemName": "ہاتھی",
+          "itemText": "ہاتھی"
+        },
+        {
+          "itemName": "شیر",
+          "itemText": "شیر"
+        },
+        {
+          "itemName": "بندر",
+          "itemText": "بندر"
+        },
+        {
+          "itemName": "خرگوش",
+          "itemText": "خرگوش"
+        },
+        {
+          "itemName": "طوطا",
+          "itemText": "طوطا"
+        },
+        {
+          "itemName": "چھتری",
+          "itemText": "چھتری"
+        },
+        {
+          "itemName": "تھیلا",
+          "itemText": "تھیلا"
+        }
+      ]
+    },
+    {
+      "bucketID": 9,
+      "bucketName": "urdusw-b-9",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "کھیلنا",
+          "itemText": "کھیلنا"
+        },
+        {
+          "itemName": "پڑھنا",
+          "itemText": "پڑھنا"
+        },
+        {
+          "itemName": "لکھنا",
+          "itemText": "لکھنا"
+        },
+        {
+          "itemName": "دیکھنا",
+          "itemText": "دیکھنا"
+        },
+        {
+          "itemName": "سننا",
+          "itemText": "سننا"
+        },
+        {
+          "itemName": "تعلیم",
+          "itemText": "تعلیم"
+        },
+        {
+          "itemName": "مطالعہ",
+          "itemText": "مطالعہ"
+        },
+        {
+          "itemName": "محنتی",
+          "itemText": "محنتی"
+        },
+        {
+          "itemName": "خوبصورت",
+          "itemText": "خوبصورت"
+        },
+        {
+          "itemName": "بیمار",
+          "itemText": "بیمار"
+        }
+      ]
+    },
+    {
+      "bucketID": 10,
+      "bucketName": "urdusw-b-10",
+      "usedItems": [],
+      "items": [
+        {
+          "itemName": "صحت مند",
+          "itemText": "صحت مند"
+        },
+        {
+          "itemName": "دوستانہ",
+          "itemText": "دوستانہ"
+        },
+        {
+          "itemName": "ایمانداری",
+          "itemText": "ایمانداری"
+        },
+        {
+          "itemName": "پریشانی",
+          "itemText": "پریشانی"
+        },
+        {
+          "itemName": "محبت",
+          "itemText": "محبت"
+        },
+        {
+          "itemName": "ژالہ باری",
+          "itemText": "ژالہ باری"
+        },
+        {
+          "itemName": "خوشحالی",
+          "itemText": "خوشحالی"
+        },
+        {
+          "itemName": "تجربہ",
+          "itemText": "تجربہ"
+        },
+        {
+          "itemName": "ذمہ داری",
+          "itemText": "ذمہ داری"
+        },
+        {
+          "itemName": "انسانیت",
+          "itemText": "انسانیت"
+        }
+      ]
+    }
+  ]
+}

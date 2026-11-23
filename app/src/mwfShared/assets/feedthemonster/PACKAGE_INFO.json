@@ -12,7 +12,8 @@
   "assessmentSurveyIncluded": false,
   "indexHtmlSeeds": [
     "is_cached[<cr_lang>]=true",
-    "CRFeatureFlags.gate:mr-75=true"
+    "CRFeatureFlags.gate:mr-75=true",
+    "CRFeatureFlags.gate:drag-drop-assessment-ui=true"
   ],
   "sizes": {
     "total": "28.6 MB",

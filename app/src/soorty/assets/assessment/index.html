@@ -1,0 +1,63 @@
+<!doctype html>
+<html class="assessment-survey-standalone">
+  <head>
+    <meta charset="utf-8" />
+    <title>Assessment / Survey</title>
+
+    <meta name="description" content="Assessment/Survey from Curious Learning" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <link rel="manifest" href="manifest.json" />
+    <link id="assessment-stylesheet" rel="stylesheet" href="/assets/feedthemonster/assessment-survey/css/style.css" />
+  </head>
+
+  <body class="assessment-survey-standalone">
+    <div
+      id="assessment-survey-root"
+      data-asset-base-url="/assets/feedthemonster/assessment-survey" data-enable-service-worker="false"
+      data-host-theme="default"
+      data-show-loading-screen="true"
+      data-show-ending-screen="true"
+      data-show-devmode-bucket-info="true"
+      data-show-devmode-toggle-button="true"
+      data-show-devmode-settings="true"
+    >
+     <div id="loadingScreen">
+        <img id="loading-gif" src="/assets/feedthemonster/assessment-survey/img/loadingImg.gif" alt="Loading Animation" />
+        <div id="progressBarContainer">
+          <div id="progressBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-DGTWM534Z4"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		gtag('js', new Date());
+
+		gtag('config', 'G-DGTWM534Z4');
+	</script> -->
+
+<script>
+/* Injected by CRcontainer tools/package-assessment.js (offline standalone build). See that file for why. */
+(function () {
+  try {
+    var flagsKey = "CRFeatureFlags";
+    var gates = ["mr-75","drag-drop-assessment-ui"];
+    var flags = JSON.parse(localStorage.getItem(flagsKey) || "{}");
+    var changed = false;
+    for (var i = 0; i < gates.length; i++) {
+      if (!flags["gate:" + gates[i]]) {
+        flags["gate:" + gates[i]] = { __value: true };
+        changed = true;
+      }
+    }
+    if (changed) localStorage.setItem(flagsKey, JSON.stringify(flags));
+  } catch (e) {
+    console.warn("offline seed failed", e);
+  }
+})();
+</script>
+    <script src="bundle.js"></script>
+  </body>
+</html>

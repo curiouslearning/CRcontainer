@@ -120,7 +120,9 @@ public final class LocalWebContent {
      * {@code assessment-survey/data/<key>.json} with a {@code HEAD} before it opens its in-game
      * assessment overlay; tools/package-ftm.js does not ship that module, and a fast, definite
      * "not here" is what lets FTM skip the assessment and carry on with the level instead of
-     * dimming the game behind a player that can never load.
+     * dimming the game behind a player that can never load. A flavor that does package the
+     * module (soorty, via tools/package-assessment.js) is served normally: the file is looked up
+     * before this rule applies, so only files that are genuinely missing get the fast 404.
      */
     private static final String[] KNOWN_ABSENT_DIRS = {
             FTM_ASSET_DIR + "/assessment-survey/",
@@ -366,12 +368,14 @@ public final class LocalWebContent {
                 if (isKnownAbsent(candidate)) {
                     return null;
                 }
-                if (isInKnownAbsentDirectory(candidate)) {
-                    return notFound();
-                }
+                // Opened first: a flavor may package a directory the shared build leaves out
+                // (soorty ships feedthemonster/assessment-survey/), and then it must be served.
                 WebResourceResponse response = open(candidate, range);
                 if (response != null) {
                     return response;
+                }
+                if (isInKnownAbsentDirectory(candidate)) {
+                    return notFound();
                 }
             }
             // Logged so a file missing from the package shows up in logcat as such rather than as
